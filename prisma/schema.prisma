@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  passwordHash String
+  name         String
+  role         String        @default("admin")
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  reservations Reservation[] @relation("CreatedBy")
+}
+
+model RestaurantTable {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  section      String?
+  minCapacity  Int           @default(1)
+  maxCapacity  Int           @default(4)
+  isActive     Boolean       @default(true)
+  sortOrder    Int           @default(0)
+  reservations Reservation[]
+}
+
+model Reservation {
+  id              Int               @id @default(autoincrement())
+  code            String            @unique
+  guestName       String
+  guestPhone      String
+  guestEmail      String?
+  partySize       Int
+  date            String
+  time            String
+  endTime         String
+  durationMin     Int
+  specialRequests String?
+  source          String            @default("widget")
+  status          String            @default("pending")
+  tableId         Int?
+  table           RestaurantTable?  @relation(fields: [tableId], references: [id])
+  originalTime    String?
+  counterExpires  String?
+  createdById     Int?
+  createdBy       User?             @relation("CreatedBy", fields: [createdById], references: [id])
+  approvedAt      DateTime?
+  arrivedAt       DateTime?
+  seatedAt        DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  notifications   NotificationLog[]
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model NotificationLog {
+  id            Int          @id @default(autoincrement())
+  reservationId Int?
+  reservation   Reservation? @relation(fields: [reservationId], references: [id])
+  channel       String
+  recipient     String
+  messageType   String
+  body          String
+  status        String       @default("sent")
+  createdAt     DateTime     @default(now())
+}
+
+model DayOverride {
+  id        Int     @id @default(autoincrement())
+  date      String  @unique
+  isClosed  Boolean @default(false)
+  openTime  String?
+  closeTime String?
+  maxCovers Int?
+  note      String?
+}

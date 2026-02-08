@@ -2,6 +2,21 @@
 import { useState, useEffect, useCallback } from "react";
 
 interface Slot { time: string; available: boolean }
+interface AvailabilityDeposit {
+  required: boolean;
+  amount: number;
+  minParty: number;
+  message: string;
+  source?: string;
+  label?: string | null;
+}
+
+interface LoyaltyLookupResponse {
+  enabled: boolean;
+  known: boolean;
+  optedIn: boolean;
+}
+
 interface ReserveWidgetClientProps {
   restaurantName: string;
   embedded?: boolean;
@@ -13,6 +28,10 @@ interface ReserveWidgetClientProps {
   reserveRequestDisclaimer?: string;
   reserveRequestPlaceholder?: string;
   reserveRequestSamples?: string[];
+  loyaltyOptInEnabled?: boolean;
+  loyaltyProgramName?: string;
+  loyaltyOptInMessage?: string;
+  loyaltyOptInLabel?: string;
   depositsEnabled?: boolean;
   depositAmount?: number;
   depositMinParty?: number;
@@ -29,6 +48,13 @@ function getAccent(accent?: string): string {
   return /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(accent) ? accent : "#2563eb";
 }
 
+function normalizePhone(value: string): string | null {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) return digits.slice(1);
+  if (digits.length < 10 || digits.length > 15) return null;
+  return digits;
+}
+
 export default function ReserveWidgetClient({
   restaurantName,
   embedded = false,
@@ -40,6 +66,10 @@ export default function ReserveWidgetClient({
   reserveRequestDisclaimer = "Your request will be reviewed and confirmed shortly.",
   reserveRequestPlaceholder = "e.g., Birthday dinner, window seat, stroller space",
   reserveRequestSamples = ["Birthday celebration", "Window seat", "High chair"],
+  loyaltyOptInEnabled = false,
+  loyaltyProgramName = "Loyalty Program",
+  loyaltyOptInMessage = "Join our loyalty list for offers and updates by SMS.",
+  loyaltyOptInLabel = "Yes, opt me in for loyalty messages.",
   depositsEnabled = false,
   depositAmount = 0,
   depositMinParty = 2,
@@ -58,6 +88,18 @@ export default function ReserveWidgetClient({
   const [confirmCode, setConfirmCode] = useState("");
   const [error, setError] = useState("");
   const [depositMeta, setDepositMeta] = useState<{ required: boolean; amount: number; message: string | null }>({ required: false, amount: 0, message: null });
+  const [loyaltyChecking, setLoyaltyChecking] = useState(false);
+  const [loyaltyKnown, setLoyaltyKnown] = useState(false);
+  const [loyaltyKnownOptIn, setLoyaltyKnownOptIn] = useState(false);
+  const [loyaltyOptInChoice, setLoyaltyOptInChoice] = useState(false);
+  const [availabilityDeposit, setAvailabilityDeposit] = useState<AvailabilityDeposit>({
+    required: depositsEnabled && depositAmount > 0 && partySize >= Math.max(1, depositMinParty),
+    amount: depositAmount,
+    minParty: depositMinParty,
+    message: depositMessage,
+    source: "global",
+    label: null,
+  });
 
   const isDark = theme === "dark";
   const primary = getAccent(accent);
@@ -89,15 +131,87 @@ export default function ReserveWidgetClient({
     setLoading(true);
     setSelectedTime("");
     const res = await fetch(`/api/availability?date=${date}&partySize=${partySize}`);
-    setSlots((await res.json()).slots || []);
+    const payload = await res.json();
+    setSlots(payload.slots || []);
+    if (payload.deposit) {
+      setAvailabilityDeposit({
+        required: Boolean(payload.deposit.required),
+        amount: Number(payload.deposit.amount || 0),
+        minParty: Number(payload.deposit.minParty || Math.max(1, depositMinParty)),
+        message: String(payload.deposit.message || depositMessage),
+        source: payload.deposit.source || "global",
+        label: payload.deposit.label || null,
+      });
+    } else {
+      setAvailabilityDeposit({
+        required: depositsEnabled && depositAmount > 0 && partySize >= Math.max(1, depositMinParty),
+        amount: depositAmount,
+        minParty: depositMinParty,
+        message: depositMessage,
+        source: "global",
+        label: null,
+      });
+    }
     setLoading(false);
-  }, [date, partySize]);
+  }, [date, partySize, depositAmount, depositMessage, depositMinParty, depositsEnabled]);
 
   useEffect(() => {
     loadSlots();
   }, [loadSlots]);
 
-  const depositApplies = depositsEnabled && depositAmount > 0 && partySize >= Math.max(1, depositMinParty);
+  useEffect(() => {
+    if (!loyaltyOptInEnabled) {
+      setLoyaltyChecking(false);
+      setLoyaltyKnown(false);
+      setLoyaltyKnownOptIn(false);
+      return;
+    }
+
+    const normalized = normalizePhone(phone);
+    if (!normalized) {
+      setLoyaltyChecking(false);
+      setLoyaltyKnown(false);
+      setLoyaltyKnownOptIn(false);
+      return;
+    }
+
+    setLoyaltyKnown(false);
+    setLoyaltyKnownOptIn(false);
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setLoyaltyChecking(true);
+      try {
+        const res = await fetch(`/api/loyalty/consent?phone=${encodeURIComponent(phone)}`);
+        if (!res.ok) {
+          if (!cancelled) {
+            setLoyaltyKnown(false);
+            setLoyaltyKnownOptIn(false);
+          }
+          return;
+        }
+        const data = (await res.json()) as LoyaltyLookupResponse;
+        if (cancelled) return;
+        if (!data.enabled) {
+          setLoyaltyKnown(false);
+          setLoyaltyKnownOptIn(false);
+          return;
+        }
+        setLoyaltyKnown(Boolean(data.known));
+        setLoyaltyKnownOptIn(Boolean(data.optedIn));
+      } finally {
+        if (!cancelled) setLoyaltyChecking(false);
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [phone, loyaltyOptInEnabled]);
+
+  const depositApplies = availabilityDeposit.required;
+  const canCaptureLoyalty = loyaltyOptInEnabled && Boolean(normalizePhone(phone)) && !loyaltyKnown && !loyaltyChecking;
 
   function applySample(sample: string) {
     const trimmed = sample.trim();
@@ -123,6 +237,7 @@ export default function ReserveWidgetClient({
         date,
         time: selectedTime,
         specialRequests: notes || null,
+        loyaltyOptIn: canCaptureLoyalty ? loyaltyOptInChoice : undefined,
       }),
     });
     if (res.ok) {
@@ -240,13 +355,45 @@ export default function ReserveWidgetClient({
           <p className="text-sm font-medium mb-3">{fmt(selectedTime)} · Party of {partySize} · {date}</p>
           {depositApplies && (
             <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              {depositMessage} Deposit amount: ${depositAmount}.
+              {availabilityDeposit.message || depositMessage}
+              {availabilityDeposit.amount > 0 ? ` Deposit amount: $${availabilityDeposit.amount}.` : ""}
             </div>
           )}
           {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
           <input placeholder="Your name *" value={name} onChange={e => setName(e.target.value)} className={`${inputClass} mb-3`} required />
           <input placeholder="Phone number *" type="tel" value={phone} onChange={e => setPhone(e.target.value)} className={`${inputClass} mb-3`} required />
           <input placeholder="Email (optional)" type="email" value={email} onChange={e => setEmail(e.target.value)} className={`${inputClass} mb-3`} />
+          {loyaltyOptInEnabled && (
+            <div className={`mb-3 rounded-lg border px-3 py-2 ${isDark ? "border-zinc-700 bg-zinc-900/60" : "border-emerald-200 bg-emerald-50"}`}>
+              <p className={`text-xs font-semibold ${isDark ? "text-zinc-100" : "text-emerald-900"}`}>{loyaltyProgramName}</p>
+              <p className={`text-xs mt-1 ${isDark ? "text-zinc-300" : "text-emerald-800"}`}>{loyaltyOptInMessage}</p>
+              {loyaltyChecking && (
+                <div className={`mt-2 text-xs flex items-center gap-2 ${textSoftClass}`}>
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Checking phone preference...
+                </div>
+              )}
+              {!loyaltyChecking && !normalizePhone(phone) && (
+                <p className={`text-xs mt-2 ${textSoftClass}`}>Enter a valid phone number to show loyalty preference.</p>
+              )}
+              {!loyaltyChecking && loyaltyKnown && (
+                <p className={`text-xs mt-2 ${isDark ? "text-zinc-300" : "text-emerald-900"}`}>
+                  {loyaltyKnownOptIn ? "This number is already opted in." : "Preference already saved for this number."}
+                </p>
+              )}
+              {!loyaltyChecking && canCaptureLoyalty && (
+                <label className={`mt-2 flex items-start gap-2 text-xs ${isDark ? "text-zinc-200" : "text-emerald-900"}`}>
+                  <input
+                    type="checkbox"
+                    checked={loyaltyOptInChoice}
+                    onChange={e => setLoyaltyOptInChoice(e.target.checked)}
+                    className="mt-0.5 h-4 w-4"
+                  />
+                  <span>{loyaltyOptInLabel}</span>
+                </label>
+              )}
+            </div>
+          )}
           <textarea placeholder={reserveRequestPlaceholder} value={notes} onChange={e => setNotes(e.target.value)} className={textareaClass} rows={2} />
           {reserveRequestSamples.length > 0 && (
             <div className="mb-3">

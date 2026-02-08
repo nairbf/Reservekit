@@ -1,5 +1,7 @@
 "use client";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+
+type SettingsTab = "restaurant" | "operations" | "communications" | "booking" | "integrations";
 
 interface TableItem {
   id: number;
@@ -19,6 +21,68 @@ interface SpotOnStatus {
   openChecks: number;
 }
 
+const TABS: Array<{ key: SettingsTab; label: string; desc: string }> = [
+  { key: "restaurant", label: "Restaurant", desc: "Basic identity and contact info" },
+  { key: "operations", label: "Operations", desc: "Capacity and fallback hours" },
+  { key: "communications", label: "Comms", desc: "Email + SMS delivery setup" },
+  { key: "booking", label: "Booking UI", desc: "Deposit policy and guest messaging" },
+  { key: "integrations", label: "Integrations", desc: "SpotOn POS sync and mapping" },
+];
+
+interface TabButtonProps {
+  tab: SettingsTab;
+  label: string;
+  desc: string;
+  activeTab: SettingsTab;
+  onSelect: (tab: SettingsTab) => void;
+}
+
+function TabButton({ tab, label, desc, activeTab, onSelect }: TabButtonProps) {
+  const active = activeTab === tab;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(tab)}
+      className={`text-left rounded-xl border px-3 py-2 min-w-[170px] transition-all duration-200 ${active ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white hover:border-gray-300"}`}
+    >
+      <div className={`text-sm font-semibold ${active ? "text-blue-700" : "text-gray-800"}`}>{label}</div>
+      <div className="text-[11px] text-gray-500">{desc}</div>
+    </button>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+      <h2 className="font-bold text-lg mb-4">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+interface FieldProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  type?: string;
+  placeholder?: string;
+}
+
+function Field({ label, value, onChange, type, placeholder }: FieldProps) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <input
+        type={type || "text"}
+        value={value || ""}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-11 w-full border rounded px-3 text-sm"
+      />
+    </div>
+  );
+}
+
 function makeRowId() {
   return `map-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -34,6 +98,8 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<SettingsTab>("restaurant");
+
   const [tables, setTables] = useState<TableItem[]>([]);
   const [mappingRows, setMappingRows] = useState<MappingRow[]>([{ rowId: makeRowId(), reservekitTableId: "", spotOnTable: "" }]);
   const [mappingMessage, setMappingMessage] = useState<string>("");
@@ -209,29 +275,13 @@ export default function SettingsPage() {
     });
   }
 
-  function Section({ title, children }: { title: string; children: React.ReactNode }) {
-    return (
-      <div className="bg-white rounded-xl shadow p-4 sm:p-6 mb-6">
-        <h2 className="font-bold text-lg mb-4">{title}</h2>
-        {children}
-      </div>
-    );
-  }
-
-  function Field({ label, value, onChange, type, placeholder }: { label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string }) {
-    return (
-      <div>
-        <label className="block text-sm font-medium mb-1">{label}</label>
-        <input
-          type={type || "text"}
-          value={value || ""}
-          onChange={e => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="h-11 w-full border rounded px-3 text-sm"
-        />
-      </div>
-    );
-  }
+  const samplePreview = useMemo(
+    () => (settings.reserveRequestSamples || "")
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean),
+    [settings.reserveRequestSamples],
+  );
 
   if (loading) {
     return (
@@ -243,189 +293,309 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl">
-      <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
+    <div className="max-w-5xl space-y-6">
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-gray-500 text-sm">General configuration, email, SMS, and POS</p>
+          <p className="text-gray-500 text-sm">Use tabs to expand only the setup area you need.</p>
         </div>
         <button onClick={save} className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">
           {saved ? "✓ Saved" : "Save Changes"}
         </button>
       </div>
 
-      <Section title="Restaurant Details">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Name" value={settings.restaurantName} onChange={v => set("restaurantName", v)} placeholder="My Restaurant" />
-          <Field label="Phone" value={settings.phone} onChange={v => set("phone", v)} placeholder="(555) 123-4567" />
-        </div>
-        <div className="mt-4">
-          <Field label="Address" value={settings.address} onChange={v => set("address", v)} />
-        </div>
-      </Section>
-
-      <Section title="Hours & Capacity">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Open Time" value={settings.openTime} onChange={v => set("openTime", v)} type="time" />
-          <Field label="Close Time" value={settings.closeTime} onChange={v => set("closeTime", v)} type="time" />
-          <Field label="Slot Interval (min)" value={settings.slotInterval} onChange={v => set("slotInterval", v)} />
-          <Field label="Max Covers/Slot" value={settings.maxCoversPerSlot} onChange={v => set("maxCoversPerSlot", v)} />
-          <Field label="Max Party Size" value={settings.maxPartySize} onChange={v => set("maxPartySize", v)} />
-        </div>
-      </Section>
-
-      <Section title="Email (SMTP)">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="SMTP Host" value={settings.smtpHost} onChange={v => set("smtpHost", v)} placeholder="smtp.gmail.com" />
-          <Field label="SMTP Port" value={settings.smtpPort} onChange={v => set("smtpPort", v)} placeholder="587" />
-          <Field label="SMTP User" value={settings.smtpUser} onChange={v => set("smtpUser", v)} placeholder="you@gmail.com" />
-          <Field label="SMTP Password" value={settings.smtpPass} onChange={v => set("smtpPass", v)} type="password" />
-        </div>
-        <div className="mt-4">
-          <Field label="From Address" value={settings.smtpFrom} onChange={v => set("smtpFrom", v)} placeholder="reservations@yourrestaurant.com" />
-        </div>
-      </Section>
-
-      <Section title="SMS Add-On">
-        <Field label="License Key" value={settings.license_sms} onChange={v => set("license_sms", v)} placeholder="RK-SMS-XXXXXXXX" />
-        <div className="grid sm:grid-cols-2 gap-4 mt-4">
-          <Field label="Twilio Account SID" value={settings.twilioSid} onChange={v => set("twilioSid", v)} placeholder="AC..." />
-          <Field label="Twilio Auth Token" value={settings.twilioToken} onChange={v => set("twilioToken", v)} type="password" />
-        </div>
-        <div className="mt-4">
-          <Field label="Twilio Phone Number" value={settings.twilioPhone} onChange={v => set("twilioPhone", v)} placeholder="+15551234567" />
-          <p className="text-xs text-gray-400 mt-2">Get credentials at twilio.com/console. You pay Twilio directly for SMS.</p>
-        </div>
-      </Section>
-
-      <Section title="SpotOn POS Integration">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="POS License Key" value={settings.license_pos} onChange={v => set("license_pos", v)} placeholder="RK-POS-XXXXXXXX" />
-          <Field label="SpotOn API Key" value={settings.spotonApiKey} onChange={v => set("spotonApiKey", v)} placeholder="Your SpotOn API key" />
-          <Field label="Location ID" value={settings.spotonLocationId} onChange={v => set("spotonLocationId", v)} placeholder="Location152" />
-          <div>
-            <label className="block text-sm font-medium mb-1">Environment</label>
-            <select
-              value={settings.spotonEnvironment || "production"}
-              onChange={e => set("spotonEnvironment", e.target.value)}
-              className="h-11 w-full border rounded px-3 text-sm"
-            >
-              <option value="production">Production</option>
-              <option value="qa">QA</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center gap-2">
-          <input
-            id="spotonUseMock"
-            type="checkbox"
-            checked={settings.spotonUseMock === "true"}
-            onChange={e => set("spotonUseMock", e.target.checked ? "true" : "false")}
-            className="h-4 w-4"
+      <div className="flex flex-wrap gap-2">
+        {TABS.map(tab => (
+          <TabButton
+            key={tab.key}
+            tab={tab.key}
+            label={tab.label}
+            desc={tab.desc}
+            activeTab={activeTab}
+            onSelect={setActiveTab}
           />
-          <label htmlFor="spotonUseMock" className="text-sm text-gray-700">Use Mock Data</label>
+        ))}
+      </div>
+
+      {activeTab === "restaurant" && (
+        <Section title="Restaurant Details">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="Name" value={settings.restaurantName} onChange={v => set("restaurantName", v)} placeholder="My Restaurant" />
+            <Field label="Phone" value={settings.phone} onChange={v => set("phone", v)} placeholder="(555) 123-4567" />
+          </div>
+          <div className="mt-4">
+            <Field label="Address" value={settings.address} onChange={v => set("address", v)} />
+          </div>
+        </Section>
+      )}
+
+      {activeTab === "operations" && (
+        <Section title="Operations Defaults">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Field label="Default Open Time" value={settings.openTime} onChange={v => set("openTime", v)} type="time" />
+            <Field label="Default Close Time" value={settings.closeTime} onChange={v => set("closeTime", v)} type="time" />
+            <Field label="Slot Interval (min)" value={settings.slotInterval} onChange={v => set("slotInterval", v)} />
+            <Field label="Last Seating Buffer (min)" value={settings.lastSeatingBufferMin} onChange={v => set("lastSeatingBufferMin", v)} />
+            <Field label="Max Covers/Slot" value={settings.maxCoversPerSlot} onChange={v => set("maxCoversPerSlot", v)} />
+            <Field label="Max Party Size" value={settings.maxPartySize} onChange={v => set("maxPartySize", v)} />
+          </div>
+          <p className="text-xs text-gray-500 mt-3">Tip: weekly/day-specific schedule editing lives in the Scheduling page.</p>
+        </Section>
+      )}
+
+      {activeTab === "communications" && (
+        <div className="space-y-6">
+          <Section title="Email (SMTP)">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label="SMTP Host" value={settings.smtpHost} onChange={v => set("smtpHost", v)} placeholder="smtp.gmail.com" />
+              <Field label="SMTP Port" value={settings.smtpPort} onChange={v => set("smtpPort", v)} placeholder="587" />
+              <Field label="SMTP User" value={settings.smtpUser} onChange={v => set("smtpUser", v)} placeholder="you@gmail.com" />
+              <Field label="SMTP Password" value={settings.smtpPass} onChange={v => set("smtpPass", v)} type="password" />
+            </div>
+            <div className="mt-4">
+              <Field label="From Address" value={settings.smtpFrom} onChange={v => set("smtpFrom", v)} placeholder="reservations@yourrestaurant.com" />
+            </div>
+          </Section>
+
+          <Section title="SMS Add-On">
+            <Field label="License Key" value={settings.license_sms} onChange={v => set("license_sms", v)} placeholder="RK-SMS-XXXXXXXX" />
+            <div className="grid sm:grid-cols-2 gap-4 mt-4">
+              <Field label="Twilio Account SID" value={settings.twilioSid} onChange={v => set("twilioSid", v)} placeholder="AC..." />
+              <Field label="Twilio Auth Token" value={settings.twilioToken} onChange={v => set("twilioToken", v)} type="password" />
+            </div>
+            <div className="mt-4">
+              <Field label="Twilio Phone Number" value={settings.twilioPhone} onChange={v => set("twilioPhone", v)} placeholder="+15551234567" />
+              <p className="text-xs text-gray-400 mt-2">Get credentials at twilio.com/console. You pay Twilio directly for SMS.</p>
+            </div>
+          </Section>
         </div>
+      )}
 
-        <div className="mt-4 rounded-lg border border-gray-200 p-3 bg-gray-50 text-sm">
-          <div className="font-medium text-gray-800">Sync Status</div>
-          <div className="text-gray-600 mt-1">Configured: {spotOnStatus.configured ? "Yes" : "No"}</div>
-          <div className="text-gray-600">Last Sync: {formatSyncTime(spotOnStatus.spotonLastSync)}</div>
-          <div className="text-gray-600">Open Checks: {spotOnStatus.openChecks}</div>
+      {activeTab === "booking" && (
+        <div className="space-y-6">
+          <Section title="Reservation Request Controls">
+            <label className="flex items-center gap-2 text-sm font-medium mb-4">
+              <input
+                type="checkbox"
+                checked={settings.depositsEnabled === "true"}
+                onChange={e => set("depositsEnabled", e.target.checked ? "true" : "false")}
+                className="h-4 w-4"
+              />
+              Enable default deposit policy
+            </label>
+
+            {settings.depositsEnabled === "true" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <Field label="Default Deposit Amount (USD)" value={settings.depositAmount || "0"} onChange={v => set("depositAmount", v)} type="number" />
+                <Field label="Default Apply at Party Size" value={settings.depositMinParty || "2"} onChange={v => set("depositMinParty", v)} type="number" />
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium mb-1">Default Deposit Message</label>
+                  <textarea
+                    value={settings.depositMessage || ""}
+                    onChange={e => set("depositMessage", e.target.value)}
+                    className="w-full border rounded px-3 py-2 text-sm"
+                    rows={2}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <Field label="Reserve Heading" value={settings.reserveHeading || ""} onChange={v => set("reserveHeading", v)} />
+              <Field label="Reserve Subheading" value={settings.reserveSubheading || ""} onChange={v => set("reserveSubheading", v)} />
+              <div className="sm:col-span-2">
+                <Field label="Confirmation Message" value={settings.reserveConfirmationMessage || ""} onChange={v => set("reserveConfirmationMessage", v)} />
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Request Form Helper Text" value={settings.reserveRequestDisclaimer || ""} onChange={v => set("reserveRequestDisclaimer", v)} />
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Special Request Placeholder" value={settings.reserveRequestPlaceholder || ""} onChange={v => set("reserveRequestPlaceholder", v)} />
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Quick Request Samples (comma-separated)" value={settings.reserveRequestSamples || ""} onChange={v => set("reserveRequestSamples", v)} />
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-gray-50 border p-3">
+              <p className="text-xs font-medium text-gray-500 mb-2">Quick sample button preview</p>
+              <div className="flex flex-wrap gap-2">
+                {samplePreview.length > 0 ? samplePreview.map(sample => (
+                  <span key={sample} className="px-2 py-1 text-xs rounded-full bg-white border text-gray-600">{sample}</span>
+                )) : <span className="text-xs text-gray-400">No samples configured.</span>}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="Loyalty Opt-In">
+            <label className="flex items-center gap-2 text-sm font-medium mb-4">
+              <input
+                type="checkbox"
+                checked={settings.loyaltyOptInEnabled === "true"}
+                onChange={e => set("loyaltyOptInEnabled", e.target.checked ? "true" : "false")}
+                className="h-4 w-4"
+              />
+              Ask new phone numbers to opt in to loyalty communications
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field
+                label="Program Name"
+                value={settings.loyaltyProgramName || ""}
+                onChange={v => set("loyaltyProgramName", v)}
+                placeholder="VIP Club"
+              />
+              <Field
+                label="Checkbox Label"
+                value={settings.loyaltyOptInLabel || ""}
+                onChange={v => set("loyaltyOptInLabel", v)}
+                placeholder="Yes, send me loyalty updates by SMS."
+              />
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Prompt Message</label>
+                <textarea
+                  value={settings.loyaltyOptInMessage || ""}
+                  onChange={e => set("loyaltyOptInMessage", e.target.value)}
+                  rows={2}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  placeholder="Join our loyalty list for offers and event updates."
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-3">Guests are prompted once per phone number and their choice is remembered.</p>
+          </Section>
+
+          <Section title="Widget Embed Code">
+            <p className="text-sm text-gray-600 mb-2">Paste this on your restaurant website:</p>
+            <div className="bg-gray-100 rounded-lg p-3 text-xs font-mono break-all select-all">
+              {`<script data-reservekit src="${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/widget.js"></script>`}
+            </div>
+          </Section>
         </div>
+      )}
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            onClick={testConnection}
-            disabled={testingConnection}
-            className="h-11 px-4 rounded-lg border border-gray-200 bg-white text-sm font-medium transition-all duration-200 disabled:opacity-60"
-          >
-            {testingConnection ? "Testing..." : "Test Connection"}
-          </button>
-          <button
-            onClick={syncNow}
-            disabled={syncingSpotOn}
-            className="h-11 px-4 rounded-lg bg-gray-900 text-white text-sm font-medium transition-all duration-200 disabled:opacity-60"
-          >
-            {syncingSpotOn ? "Syncing..." : "Sync Now"}
-          </button>
-        </div>
-
-        {spotOnMessage && (
-          <p className={`text-sm mt-3 ${spotOnMessage.toLowerCase().includes("failed") ? "text-red-600" : "text-green-700"}`}>
-            {spotOnMessage}
-          </p>
-        )}
-
-        <div className="mt-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-            <h3 className="font-semibold">Table Name Mapping</h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={autoMatch}
-                disabled={savingMapping}
-                className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200 disabled:opacity-60"
+      {activeTab === "integrations" && (
+        <Section title="SpotOn POS Integration">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Field label="POS License Key" value={settings.license_pos} onChange={v => set("license_pos", v)} placeholder="RK-POS-XXXXXXXX" />
+            <Field label="SpotOn API Key" value={settings.spotonApiKey} onChange={v => set("spotonApiKey", v)} placeholder="Your SpotOn API key" />
+            <Field label="Location ID" value={settings.spotonLocationId} onChange={v => set("spotonLocationId", v)} placeholder="Location152" />
+            <div>
+              <label className="block text-sm font-medium mb-1">Environment</label>
+              <select
+                value={settings.spotonEnvironment || "production"}
+                onChange={e => set("spotonEnvironment", e.target.value)}
+                className="h-11 w-full border rounded px-3 text-sm"
               >
-                Auto-Match
-              </button>
-              <button
-                onClick={saveMapping}
-                disabled={savingMapping}
-                className="h-11 px-3 rounded-lg bg-blue-600 text-white text-sm transition-all duration-200 disabled:opacity-60"
-              >
-                Save Mapping
-              </button>
+                <option value="production">Production</option>
+                <option value="qa">QA</option>
+              </select>
             </div>
           </div>
 
-          <div className="space-y-2">
-            {mappingRows.map(row => (
-              <div key={row.rowId} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                <select
-                  value={row.reservekitTableId}
-                  onChange={e => setMappingRow(row.rowId, { reservekitTableId: e.target.value ? Number(e.target.value) : "" })}
-                  className="h-11 border rounded px-3 text-sm"
-                >
-                  <option value="">ReserveKit Table</option>
-                  {tables.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={row.spotOnTable}
-                  onChange={e => setMappingRow(row.rowId, { spotOnTable: e.target.value })}
-                  placeholder="SpotOn Table #"
-                  className="h-11 border rounded px-3 text-sm"
-                />
-                <button
-                  onClick={() => removeMappingRow(row.rowId)}
-                  className="h-11 px-3 rounded-lg border border-red-200 text-red-700 text-sm transition-all duration-200"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+          <div className="mt-4 flex items-center gap-2">
+            <input
+              id="spotonUseMock"
+              type="checkbox"
+              checked={settings.spotonUseMock === "true"}
+              onChange={e => set("spotonUseMock", e.target.checked ? "true" : "false")}
+              className="h-4 w-4"
+            />
+            <label htmlFor="spotonUseMock" className="text-sm text-gray-700">Use Mock Data</label>
           </div>
 
-          <button
-            onClick={addMappingRow}
-            className="mt-3 h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200"
-          >
-            + Add Mapping Row
-          </button>
+          <div className="mt-4 rounded-lg border border-gray-200 p-3 bg-gray-50 text-sm">
+            <div className="font-medium text-gray-800">Sync Status</div>
+            <div className="text-gray-600 mt-1">Configured: {spotOnStatus.configured ? "Yes" : "No"}</div>
+            <div className="text-gray-600">Last Sync: {formatSyncTime(spotOnStatus.spotonLastSync)}</div>
+            <div className="text-gray-600">Open Checks: {spotOnStatus.openChecks}</div>
+          </div>
 
-          {mappingMessage && <p className="text-sm mt-2 text-gray-700">{mappingMessage}</p>}
-        </div>
-      </Section>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={testConnection}
+              disabled={testingConnection}
+              className="h-11 px-4 rounded-lg border border-gray-200 bg-white text-sm font-medium transition-all duration-200 disabled:opacity-60"
+            >
+              {testingConnection ? "Testing..." : "Test Connection"}
+            </button>
+            <button
+              onClick={syncNow}
+              disabled={syncingSpotOn}
+              className="h-11 px-4 rounded-lg bg-gray-900 text-white text-sm font-medium transition-all duration-200 disabled:opacity-60"
+            >
+              {syncingSpotOn ? "Syncing..." : "Sync Now"}
+            </button>
+          </div>
 
-      <Section title="Widget Embed Code">
-        <p className="text-sm text-gray-600 mb-2">Paste this on your restaurant website:</p>
-        <div className="bg-gray-100 rounded-lg p-3 text-xs font-mono break-all select-all">
-          {`<script data-reservekit src="${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/widget.js"></script>`}
-        </div>
-      </Section>
+          {spotOnMessage && (
+            <p className={`text-sm mt-3 ${spotOnMessage.toLowerCase().includes("failed") ? "text-red-600" : "text-green-700"}`}>
+              {spotOnMessage}
+            </p>
+          )}
+
+          <div className="mt-6">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <h3 className="font-semibold">Table Name Mapping</h3>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={autoMatch}
+                  disabled={savingMapping}
+                  className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200 disabled:opacity-60"
+                >
+                  Auto-Match
+                </button>
+                <button
+                  onClick={saveMapping}
+                  disabled={savingMapping}
+                  className="h-11 px-3 rounded-lg bg-blue-600 text-white text-sm transition-all duration-200 disabled:opacity-60"
+                >
+                  Save Mapping
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {mappingRows.map(row => (
+                <div key={row.rowId} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+                  <select
+                    value={row.reservekitTableId}
+                    onChange={e => setMappingRow(row.rowId, { reservekitTableId: e.target.value ? Number(e.target.value) : "" })}
+                    className="h-11 border rounded px-3 text-sm"
+                  >
+                    <option value="">ReserveKit Table</option>
+                    {tables.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    value={row.spotOnTable}
+                    onChange={e => setMappingRow(row.rowId, { spotOnTable: e.target.value })}
+                    placeholder="SpotOn Table #"
+                    className="h-11 border rounded px-3 text-sm"
+                  />
+                  <button
+                    onClick={() => removeMappingRow(row.rowId)}
+                    className="h-11 px-3 rounded-lg border border-red-200 text-red-700 text-sm transition-all duration-200"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={addMappingRow}
+              className="mt-3 h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200"
+            >
+              + Add Mapping Row
+            </button>
+
+            {mappingMessage && <p className="text-sm mt-2 text-gray-700">{mappingMessage}</p>}
+          </div>
+        </Section>
+      )}
     </div>
   );
 }

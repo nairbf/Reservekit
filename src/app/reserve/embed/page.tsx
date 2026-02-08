@@ -22,6 +22,10 @@ export default async function ReserveEmbedPage({
       reserveRequestDisclaimer={settings.reserveRequestDisclaimer}
       reserveRequestPlaceholder={settings.reserveRequestPlaceholder}
       reserveRequestSamples={settings.reserveRequestSamples}
+      loyaltyOptInEnabled={settings.loyaltyOptInEnabled}
+      loyaltyProgramName={settings.loyaltyProgramName}
+      loyaltyOptInMessage={settings.loyaltyOptInMessage}
+      loyaltyOptInLabel={settings.loyaltyOptInLabel}
       depositsEnabled={settings.depositsEnabled}
       depositAmount={settings.depositAmount}
       depositMinParty={settings.depositMinParty}

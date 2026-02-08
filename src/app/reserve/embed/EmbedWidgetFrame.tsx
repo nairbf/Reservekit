@@ -12,6 +12,10 @@ interface EmbedWidgetFrameProps {
   reserveRequestDisclaimer: string;
   reserveRequestPlaceholder: string;
   reserveRequestSamples: string[];
+  loyaltyOptInEnabled: boolean;
+  loyaltyProgramName: string;
+  loyaltyOptInMessage: string;
+  loyaltyOptInLabel: string;
   depositsEnabled: boolean;
   depositAmount: number;
   depositMinParty: number;
@@ -28,6 +32,10 @@ export default function EmbedWidgetFrame({
   reserveRequestDisclaimer,
   reserveRequestPlaceholder,
   reserveRequestSamples,
+  loyaltyOptInEnabled,
+  loyaltyProgramName,
+  loyaltyOptInMessage,
+  loyaltyOptInLabel,
   depositsEnabled,
   depositAmount,
   depositMinParty,
@@ -73,6 +81,10 @@ export default function EmbedWidgetFrame({
         reserveRequestDisclaimer={reserveRequestDisclaimer}
         reserveRequestPlaceholder={reserveRequestPlaceholder}
         reserveRequestSamples={reserveRequestSamples}
+        loyaltyOptInEnabled={loyaltyOptInEnabled}
+        loyaltyProgramName={loyaltyProgramName}
+        loyaltyOptInMessage={loyaltyOptInMessage}
+        loyaltyOptInLabel={loyaltyOptInLabel}
         depositsEnabled={depositsEnabled}
         depositAmount={depositAmount}
         depositMinParty={depositMinParty}

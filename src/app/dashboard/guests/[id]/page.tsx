@@ -30,6 +30,16 @@ interface GuestDetail {
   reservations: GuestReservation[];
 }
 
+function formatTime12(value: string): string {
+  const match = (value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return value;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return value;
+  const h = hour % 12 || 12;
+  return `${h}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
 export default function GuestDetailPage() {
   const params = useParams<{ id: string }>();
   const guestId = Number(params.id);
@@ -232,7 +242,7 @@ export default function GuestDetailPage() {
               {guest.reservations.map(r => (
                 <div key={r.id} className="p-3 text-sm flex items-center justify-between gap-3">
                   <div>
-                    <div className="font-medium">{r.date} at {r.time}</div>
+                    <div className="font-medium">{r.date} at {formatTime12(r.time)}</div>
                     <div className="text-gray-500">Party {r.partySize} · {r.status.replace("_", " ")}</div>
                   </div>
                   <div className="text-xs text-gray-500">{r.table?.name || "No table"}</div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAvailableSlots } from "@/lib/availability";
-import { getSettings, getDiningDuration } from "@/lib/settings";
+import { getSettings, getDiningDuration, getEffectiveDepositForRequest } from "@/lib/settings";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -10,5 +10,19 @@ export async function GET(req: NextRequest) {
   const settings = await getSettings();
   const duration = getDiningDuration(settings.diningDurations, partySize);
   const slots = await getAvailableSlots(date, partySize);
-  return NextResponse.json({ date, partySize, diningDurationMinutes: duration, slots });
+  const deposit = getEffectiveDepositForRequest(settings, date, partySize);
+  return NextResponse.json({
+    date,
+    partySize,
+    diningDurationMinutes: duration,
+    slots,
+    deposit: {
+      required: deposit.required,
+      amount: deposit.amount,
+      minParty: deposit.minParty,
+      message: deposit.message,
+      source: deposit.source,
+      label: deposit.label,
+    },
+  });
 }

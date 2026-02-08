@@ -80,6 +80,16 @@ function minutesSince(timestamp: string): number | null {
   return Math.max(0, Math.round((Date.now() - dt.getTime()) / 60000));
 }
 
+function formatTime12(value: string): string {
+  const match = (value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return value;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return value;
+  const h = hour % 12 || 12;
+  return `${h}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
 export default function FloorPlanPage() {
   const [mode, setMode] = useState<"live" | "edit">("live");
   const [tables, setTables] = useState<TableItem[]>([]);
@@ -424,7 +434,7 @@ export default function FloorPlanPage() {
                     if (mode === "edit") setSelectedId(t.id);
                     else setDetailsId(t.id);
                   }}
-                  className={`absolute relative flex flex-col items-center justify-center text-center border shadow-sm ${shapeClass} ${statusClass} ${selectedId === t.id ? "ring-2 ring-blue-500" : ""} ${untracked ? "ring-2 ring-orange-400" : ""} ${draggingId === t.id ? "cursor-grabbing transition-none" : mode === "edit" ? "cursor-grab transition-all duration-150" : "transition-all duration-200"}`}
+                  className={`absolute flex flex-col items-center justify-center text-center border shadow-sm ${shapeClass} ${statusClass} ${selectedId === t.id ? "ring-2 ring-blue-500" : ""} ${untracked ? "ring-2 ring-orange-400" : ""} ${draggingId === t.id ? "cursor-grabbing transition-none" : mode === "edit" ? "cursor-grab transition-all duration-150" : "transition-all duration-200"}`}
                   style={{
                     left: `${t.posX ?? 0}%`,
                     top: `${t.posY ?? 0}%`,
@@ -619,7 +629,7 @@ export default function FloorPlanPage() {
               return (
                 <div>
                   <div className="text-lg font-bold mb-1">{res.guestName}</div>
-                  <div className="text-sm text-gray-500 mb-4">Party of {res.partySize} · {res.time} · {res.code}</div>
+                  <div className="text-sm text-gray-500 mb-4">Party of {res.partySize} · {formatTime12(res.time)} · {res.code}</div>
                   {pos && (
                     <div className="text-xs text-gray-600 mb-3">
                       POS: Open check {formatMoney(pos.checkTotal)}

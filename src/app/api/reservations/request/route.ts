@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getSettings, getDiningDuration } from "@/lib/settings";
+import { getSettings, getDiningDuration, getEffectiveDepositForRequest } from "@/lib/settings";
 import { generateCode } from "@/lib/codes";
 import { timeToMinutes, minutesToTime } from "@/lib/availability";
 import { notifyRequestReceived } from "@/lib/notifications";
 import { linkGuestToReservation } from "@/lib/guest";
+import { saveLoyaltyConsent } from "@/lib/loyalty";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { guestName, guestPhone, guestEmail, partySize, date, time, specialRequests } = body;
+  const { guestName, guestPhone, guestEmail, partySize, date, time, specialRequests, loyaltyOptIn } = body;
   if (!guestName || !guestPhone || !partySize || !date || !time) return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
 
   const settings = await getSettings();
@@ -23,7 +24,10 @@ export async function POST(req: NextRequest) {
   while (await prisma.reservation.findUnique({ where: { code } })) code = generateCode();
 
   const reservation = await prisma.reservation.create({ data: { code, guestName, guestPhone, guestEmail: guestEmail || null, partySize, date, time, endTime, durationMin: duration, specialRequests: specialRequests || null, source: "widget", status: "pending" } });
-  const depositRequired = settings.depositsEnabled && settings.depositAmount > 0 && partySize >= Math.max(1, settings.depositMinParty);
+  const deposit = getEffectiveDepositForRequest(settings, date, partySize);
+  if (typeof loyaltyOptIn === "boolean") {
+    saveLoyaltyConsent(guestPhone, loyaltyOptIn, "reservation_request").catch(console.error);
+  }
   linkGuestToReservation(reservation.id).catch(console.error);
   notifyRequestReceived(reservation).catch(console.error);
   return NextResponse.json({
@@ -31,8 +35,8 @@ export async function POST(req: NextRequest) {
     code: reservation.code,
     status: "pending",
     message: "Your reservation request has been received.",
-    depositRequired,
-    depositAmount: depositRequired ? settings.depositAmount : 0,
-    depositMessage: depositRequired ? settings.depositMessage : null,
+    depositRequired: deposit.required,
+    depositAmount: deposit.required ? deposit.amount : 0,
+    depositMessage: deposit.required ? deposit.message : null,
   }, { status: 201 });
 }

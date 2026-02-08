@@ -19,6 +19,13 @@ interface Reservation {
   } | null;
 }
 interface TableItem { id: number; name: string; maxCapacity: number }
+interface UpcomingResponse {
+  fromDate: string;
+  endDate: string;
+  days: number;
+  count: number;
+  reservations: Reservation[];
+}
 interface PosStatusEntry {
   tableId: number;
   orderId: string;
@@ -60,19 +67,63 @@ function formatMoney(value: string): string {
   return value.startsWith("$") ? value : `$${value}`;
 }
 
+function formatTime12(value: string): string {
+  const match = (value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return value;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return value;
+  const h = hour % 12 || 12;
+  return `${h}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
+function formatDateLabel(value: string): string {
+  const dt = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(dt.getTime())) return value;
+  return dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 export default function TonightPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<TableItem[]>([]);
   const [posStatusMap, setPosStatusMap] = useState<Record<number, PosStatusEntry>>({});
+  const [upcoming, setUpcoming] = useState<Reservation[]>([]);
+  const [showUpcoming, setShowUpcoming] = useState(false);
+  const [loadingUpcoming, setLoadingUpcoming] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const today = new Date().toISOString().split("T")[0];
+  const [selectedDate, setSelectedDate] = useState(today);
 
   const load = useCallback(async () => {
-    const [r, t] = await Promise.all([fetch(`/api/reservations?status=all&date=${today}`), fetch("/api/tables")]);
+    const [r, t] = await Promise.all([fetch(`/api/reservations?status=all&date=${selectedDate}`), fetch("/api/tables")]);
     setReservations(await r.json());
     setTables(await t.json());
     setLoaded(true);
-  }, [today]);
+  }, [selectedDate]);
+
+  const loadUpcoming = useCallback(async () => {
+    setLoadingUpcoming(true);
+    try {
+      const res = await fetch(`/api/reservations/upcoming?fromDate=${selectedDate}&days=14`);
+      if (!res.ok) {
+        setUpcoming([]);
+        return;
+      }
+      const data = await res.json() as UpcomingResponse;
+      setUpcoming(Array.isArray(data.reservations) ? data.reservations : []);
+    } finally {
+      setLoadingUpcoming(false);
+    }
+  }, [selectedDate]);
 
   const loadPosStatus = useCallback(async () => {
     const res = await fetch("/api/spoton/sync");
@@ -91,18 +142,20 @@ export default function TonightPage() {
   }, []);
 
   useEffect(() => {
-    Promise.all([load(), loadPosStatus()]);
+    Promise.all([load(), loadPosStatus(), loadUpcoming()]);
     const reservationTimer = setInterval(load, 10000);
     const posTimer = setInterval(loadPosStatus, 30000);
+    const upcomingTimer = setInterval(loadUpcoming, 60000);
     return () => {
       clearInterval(reservationTimer);
       clearInterval(posTimer);
+      clearInterval(upcomingTimer);
     };
-  }, [load, loadPosStatus]);
+  }, [load, loadPosStatus, loadUpcoming]);
 
   async function doAction(id: number, action: string, extra?: Record<string, unknown>) {
     await fetch(`/api/reservations/${id}/action`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });
-    load();
+    Promise.all([load(), loadUpcoming()]);
   }
 
   async function addWalkin() {
@@ -110,7 +163,57 @@ export default function TonightPage() {
     const size = prompt("Party size:", "2"); if (!size) return;
     const tid = prompt("Table ID (or leave blank):");
     await fetch("/api/reservations/staff-create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ guestName: name, partySize: parseInt(size), source: "walkin", tableId: tid ? parseInt(tid) : null }) });
-    load();
+    Promise.all([load(), loadUpcoming()]);
+  }
+
+  function printDaySheet() {
+    const active = reservations
+      .filter(r => !["cancelled", "declined", "expired"].includes(r.status))
+      .sort((a, b) => a.time.localeCompare(b.time) || a.guestName.localeCompare(b.guestName));
+    const covers = active.reduce((sum, r) => sum + r.partySize, 0);
+
+    const rows = active.map(r => {
+      const guest = escapeHtml(r.guestName);
+      const status = escapeHtml(r.status.replace("_", " "));
+      const table = escapeHtml(r.table?.name || "Unassigned");
+      const time = escapeHtml(formatTime12(r.time));
+      return `<tr><td>${time}</td><td>${guest}</td><td>${r.partySize}</td><td>${table}</td><td>${status}</td><td>${escapeHtml(r.code)}</td></tr>`;
+    }).join("");
+
+    const html = `
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Reservations ${selectedDate}</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 24px; color: #111827; }
+      h1 { margin: 0 0 4px 0; font-size: 22px; }
+      p { margin: 0 0 16px 0; color: #4b5563; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { border-bottom: 1px solid #e5e7eb; text-align: left; padding: 8px; }
+      th { color: #374151; font-weight: 600; background: #f9fafb; }
+      .meta { margin-bottom: 16px; font-size: 12px; color: #6b7280; }
+    </style>
+  </head>
+  <body>
+    <h1>Reservation Sheet</h1>
+    <p>${escapeHtml(formatDateLabel(selectedDate))} (${escapeHtml(selectedDate)})</p>
+    <div class="meta">Total reservations: ${active.length} · Total covers: ${covers}</div>
+    <table>
+      <thead><tr><th>Time</th><th>Guest</th><th>Party</th><th>Table</th><th>Status</th><th>Ref</th></tr></thead>
+      <tbody>${rows || `<tr><td colspan="6">No reservations.</td></tr>`}</tbody>
+    </table>
+  </body>
+</html>`;
+
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!printWindow) return;
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
   }
 
   if (!loaded) {
@@ -141,11 +244,61 @@ export default function TonightPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Tonight — {today}</h1>
+          <h1 className="text-2xl font-bold">Service Board — {formatDateLabel(selectedDate)}</h1>
           <p className="text-sm text-gray-500">{seatedCovers} seated / {totalCovers} total covers</p>
         </div>
-        <button onClick={addWalkin} className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">+ Walk-in</button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setShowUpcoming(v => !v)}
+            className="h-11 px-3 rounded-lg border border-gray-200 bg-white text-sm transition-all duration-200"
+          >
+            Upcoming ({upcoming.length})
+          </button>
+          <button
+            onClick={printDaySheet}
+            className="h-11 px-3 rounded-lg border border-gray-200 bg-white text-sm transition-all duration-200"
+            title="Print or Save as PDF"
+          >
+            Print/PDF
+          </button>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            className="h-11 border rounded px-3 text-sm"
+          />
+          <button
+            onClick={() => setSelectedDate(today)}
+            className="h-11 px-3 rounded-lg border border-gray-200 bg-white text-sm transition-all duration-200"
+          >
+            Today
+          </button>
+          <button onClick={addWalkin} className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">+ Walk-in</button>
+        </div>
       </div>
+
+      {showUpcoming && (
+        <div className="bg-white rounded-xl shadow p-4 mb-6">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="font-semibold">Upcoming Reservations</h2>
+            <span className="text-xs text-gray-500">From {formatDateLabel(selectedDate)} · Next 14 days</span>
+          </div>
+          {loadingUpcoming ? (
+            <div className="text-sm text-gray-500">Loading upcoming...</div>
+          ) : upcoming.length === 0 ? (
+            <div className="text-sm text-gray-500">No upcoming reservations in this window.</div>
+          ) : (
+            <div className="divide-y border rounded-lg">
+              {upcoming.slice(0, 40).map(r => (
+                <div key={r.id} className="px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <div className="font-medium">{formatDateLabel(r.date)} · {formatTime12(r.time)} · {r.guestName}</div>
+                  <div className="text-gray-500">{r.partySize} guests {r.table ? `· ${r.table.name}` : ""}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
         {tables.map(t => {
@@ -163,7 +316,7 @@ export default function TonightPage() {
       <div className="space-y-4">
         {sortedTimes.map(time => (
           <div key={time}>
-            <h2 className="font-bold text-lg mb-2">{time}</h2>
+            <h2 className="font-bold text-lg mb-2">{formatTime12(time)}</h2>
             <div className="space-y-2">
               {byTime[time].map(r => (
                 <div key={r.id} className="bg-white rounded-xl shadow px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -173,7 +326,7 @@ export default function TonightPage() {
                       <span className="font-medium">{r.guestName}</span>
                       <span className="text-sm text-gray-500">({r.partySize})</span>
                       {r.table && <span className="text-sm text-gray-400">{r.table.name}</span>}
-                      {r.guest?.totalVisits && r.guest.totalVisits > 1 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest.totalVisits)} visit</span>}
+                      {(r.guest?.totalVisits ?? 0) > 1 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest?.totalVisits ?? 0)} visit</span>}
                       {r.guest?.vipStatus === "vip" && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>}
                       {r.guest?.allergyNotes && <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Allergies</span>}
                     </div>

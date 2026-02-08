@@ -4,6 +4,7 @@ const PUBLIC_API_EXACT = new Set([
   "/api/auth/login",
   "/api/availability",
   "/api/reservations/request",
+  "/api/loyalty/consent",
   "/api/checkout",
   "/api/health",
 ]);

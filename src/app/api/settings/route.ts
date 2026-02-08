@@ -4,7 +4,15 @@ import { requireAuth } from "@/lib/auth";
 
 export async function GET() {
   try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
-  const rows = await prisma.setting.findMany();
+  const rows = await prisma.setting.findMany({
+    where: {
+      NOT: [
+        { key: { startsWith: "pos_status_" } },
+        { key: { startsWith: "spoton_table_" } },
+        { key: { startsWith: "loyalty_phone_" } },
+      ],
+    },
+  });
   const s: Record<string, string> = {};
   for (const r of rows) s[r.key] = r.value;
   return NextResponse.json(s);

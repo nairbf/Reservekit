@@ -6,6 +6,7 @@ interface Reservation {
   code: string;
   guestName: string;
   guestPhone: string;
+  guestEmail: string | null;
   partySize: number;
   date: string;
   time: string;
@@ -76,15 +77,19 @@ function fmtDate(value: string): string {
 }
 
 function cleanSpecialRequests(value: string | null): string | null {
-  const normalized = (value || "").trim();
-  if (!normalized) return null;
-  if (["0", "n/a", "na", "none"].includes(normalized.toLowerCase())) return null;
-  return normalized;
+  return cleanText(value);
 }
 
 function displayPhone(value: string): string {
-  const normalized = (value || "").trim();
-  if (!normalized || normalized === "0") return "No phone provided";
+  const normalized = cleanText(value);
+  if (!normalized) return "No phone provided";
+  return normalized;
+}
+
+function cleanText(value: string | null | undefined): string | null {
+  const normalized = String(value || "").trim();
+  if (!normalized) return null;
+  if (["0", "n/a", "na", "none", "null", "undefined"].includes(normalized.toLowerCase())) return null;
   return normalized;
 }
 
@@ -156,6 +161,9 @@ export default function InboxPage() {
         {reservations.map(r => {
           const cleanedRequest = cleanSpecialRequests(r.specialRequests);
           const partySize = r.partySize > 0 ? r.partySize : null;
+          const cleanedSource = cleanText(r.source) || "unknown";
+          const cleanedCode = cleanText(r.code);
+          const cleanedEmail = cleanText(r.guestEmail);
           return (
             <div key={r.id} className="bg-white rounded-xl shadow p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3 mb-3">
@@ -163,8 +171,8 @@ export default function InboxPage() {
                   <div className="text-lg font-bold leading-tight">{r.guestName || "Guest"}</div>
                   <div className="text-sm text-gray-500">{partySize ? `Party of ${partySize}` : "Party size not set"}</div>
                   <div className="mt-1 flex flex-wrap gap-1">
-                    {r.guest?.totalVisits && r.guest.totalVisits > 1 && (
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest.totalVisits)} visit</span>
+                    {(r.guest?.totalVisits ?? 0) > 1 && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest?.totalVisits ?? 0)} visit</span>
                     )}
                     {r.guest?.vipStatus === "vip" && (
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>
@@ -176,7 +184,7 @@ export default function InboxPage() {
                 </div>
                 <div className="text-right">
                   <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_PILL[r.status] || "bg-gray-100 text-gray-600"}`}>{r.status.replace(/_/g, " ")}</span>
-                  <div className="text-xs text-gray-400 mt-1">Ref: {r.code || "N/A"}</div>
+                  <div className="text-xs text-gray-400 mt-1">Ref: {cleanedCode || "N/A"}</div>
                 </div>
               </div>
 
@@ -192,12 +200,18 @@ export default function InboxPage() {
                   </div>
                   <div>
                     <div className="text-[11px] uppercase tracking-wide text-gray-400">Source</div>
-                    <div className="font-medium text-gray-700 capitalize">{(r.source || "unknown").replace(/_/g, " ")}</div>
+                    <div className="font-medium text-gray-700 capitalize">{cleanedSource.replace(/_/g, " ")}</div>
                   </div>
                   <div>
                     <div className="text-[11px] uppercase tracking-wide text-gray-400">Party</div>
                     <div className="font-medium text-gray-700">{partySize ? `${partySize} guests` : "Unspecified"}</div>
                   </div>
+                  {cleanedEmail && (
+                    <div className="sm:col-span-2">
+                      <div className="text-[11px] uppercase tracking-wide text-gray-400">Email</div>
+                      <div className="font-medium text-gray-800 break-all">{cleanedEmail}</div>
+                    </div>
+                  )}
                 </div>
               </div>
 

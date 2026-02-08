@@ -24,22 +24,44 @@ function normalizeKey(value: string): string {
   return clean(value).toUpperCase().replace(/\s+/g, "");
 }
 
+function buildLookupCandidates(tableNumber: string): string[] {
+  const raw = clean(tableNumber);
+  const normalized = normalizeKey(raw);
+  const set = new Set<string>();
+  if (raw) set.add(raw);
+  if (normalized) set.add(normalized);
+
+  const digitsMatch = normalized.match(/\d+/g);
+  if (digitsMatch && digitsMatch.length > 0) {
+    const digits = String(parseInt(digitsMatch[0], 10));
+    if (digits && digits !== "NaN") {
+      set.add(digits);
+      set.add(`T${digits}`);
+      set.add(`TABLE${digits}`);
+    }
+  }
+
+  if (/^TABLE\d+$/.test(normalized)) {
+    set.add(normalized.replace(/^TABLE/, "T"));
+  }
+  if (/^T\d+$/.test(normalized)) {
+    set.add(normalized.replace(/^T/, ""));
+  }
+
+  return [...set].filter(Boolean);
+}
+
 function resolveMappedTableId(mapping: Map<string, number>, tableNumber: string): number | null {
   if (!tableNumber) return null;
-  const raw = clean(tableNumber);
-  if (mapping.has(raw)) return mapping.get(raw) || null;
 
   const normalizedMap = new Map<string, number>();
   for (const [key, tableId] of mapping.entries()) normalizedMap.set(normalizeKey(key), tableId);
 
-  const normalized = normalizeKey(raw);
-  if (normalizedMap.has(normalized)) return normalizedMap.get(normalized) || null;
-
-  const digitMatch = normalized.match(/\d+/);
-  if (digitMatch) {
-    const digits = String(parseInt(digitMatch[0], 10));
-    if (mapping.has(digits)) return mapping.get(digits) || null;
-    if (normalizedMap.has(digits)) return normalizedMap.get(digits) || null;
+  const candidates = buildLookupCandidates(tableNumber);
+  for (const candidate of candidates) {
+    if (mapping.has(candidate)) return mapping.get(candidate) || null;
+    const normalizedCandidate = normalizeKey(candidate);
+    if (normalizedMap.has(normalizedCandidate)) return normalizedMap.get(normalizedCandidate) || null;
   }
 
   return null;

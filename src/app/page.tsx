@@ -17,14 +17,14 @@ interface Bundle {
   note: string;
 }
 
-const CORE_PRICE = 1299;
+const CORE_PRICE = 1799;
 
 const ADD_ONS: AddOn[] = [
-  { id: "sms", name: "SMS Notifications", price: 149, desc: "Twilio-powered confirmations, reminders, and guest replies" },
-  { id: "floorplan", name: "Visual Floor Plan", price: 199, desc: "Drag-and-drop layout with live table state" },
-  { id: "reports", name: "Reporting Dashboard", price: 129, desc: "Covers, no-show trends, and service performance" },
-  { id: "guesthistory", name: "Guest History", price: 129, desc: "Repeat-guest timeline, notes, and loyalty context" },
-  { id: "eventticketing", name: "Event Ticketing", price: 69, desc: "Sell pre-paid tickets for dinners and special events" },
+  { id: "sms", name: "SMS Notifications", price: 199, desc: "Twilio-powered confirmations, reminders, and guest replies" },
+  { id: "floorplan", name: "Visual Floor Plan", price: 249, desc: "Drag-and-drop layout with live table state" },
+  { id: "reports", name: "Reporting Dashboard", price: 179, desc: "Covers, no-show trends, and service performance" },
+  { id: "guesthistory", name: "Guest History", price: 179, desc: "Repeat-guest timeline, notes, and loyalty context" },
+  { id: "eventticketing", name: "Event Ticketing", price: 129, desc: "Sell pre-paid tickets for dinners and special events" },
 ];
 
 const BUNDLES: Bundle[] = [
@@ -216,11 +216,11 @@ export default function LandingPage() {
                 </thead>
                 <tbody>
                   {[
-                    ["Upfront cost", "$1,299 once", "$0", "$0"],
+                    ["Upfront cost", "$1,799 once", "$0", "$0"],
                     ["Monthly fee", "$0-$15", "$249-$449", "$249-$899"],
                     ["Per-cover fee", "Never", "$0.25-$1.00", "None"],
-                    ["Year 1 (core only)", "$1,299-$1,479", "$3,500+", "$2,988+"],
-                    ["Year 1 (full suite)", "$1,905-$2,085", "$3,500+ plus cover fees", "$2,988+"],
+                    ["Year 1 (core only)", "$1,799-$1,979", "$3,500+", "$2,988+"],
+                    ["Year 1 (full suite)", "$2,734-$2,914", "$3,500+ plus cover fees", "$2,988+"],
                     ["Own your data", "Yes", "No", "No"],
                     ["Self-hostable", "Yes", "No", "No"],
                   ].map(([label, ...values]) => (

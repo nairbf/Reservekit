@@ -1,7 +1,23 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 
-interface Reservation { id: number; code: string; guestName: string; partySize: number; date: string; time: string; status: string; source: string; table: { id: number; name: string } | null }
+interface Reservation {
+  id: number;
+  code: string;
+  guestName: string;
+  partySize: number;
+  date: string;
+  time: string;
+  status: string;
+  source: string;
+  table: { id: number; name: string } | null;
+  guest: {
+    id: number;
+    totalVisits: number;
+    vipStatus: string | null;
+    allergyNotes: string | null;
+  } | null;
+}
 interface TableItem { id: number; name: string; maxCapacity: number }
 const SC: Record<string, string> = {
   approved: "bg-blue-50 text-blue-700",
@@ -11,6 +27,15 @@ const SC: Record<string, string> = {
   completed: "bg-gray-100 text-gray-600",
   no_show: "bg-red-50 text-red-700",
 };
+
+function nth(value: number): string {
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+  if (value % 10 === 1) return `${value}st`;
+  if (value % 10 === 2) return `${value}nd`;
+  if (value % 10 === 3) return `${value}rd`;
+  return `${value}th`;
+}
 
 export default function TonightPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -99,6 +124,9 @@ export default function TonightPage() {
                     <span className="font-medium">{r.guestName}</span>
                     <span className="text-sm text-gray-500">({r.partySize})</span>
                     {r.table && <span className="text-sm text-gray-400">{r.table.name}</span>}
+                    {r.guest?.totalVisits && r.guest.totalVisits > 1 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest.totalVisits)} visit</span>}
+                    {r.guest?.vipStatus === "vip" && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>}
+                    {r.guest?.allergyNotes && <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Allergies</span>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(["approved", "confirmed"].includes(r.status)) && (

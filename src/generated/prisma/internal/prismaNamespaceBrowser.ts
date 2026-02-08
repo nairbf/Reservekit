@@ -54,6 +54,7 @@ export const ModelName = {
   User: 'User',
   RestaurantTable: 'RestaurantTable',
   Reservation: 'Reservation',
+  Guest: 'Guest',
   Setting: 'Setting',
   NotificationLog: 'NotificationLog',
   DayOverride: 'DayOverride'
@@ -92,7 +93,13 @@ export const RestaurantTableScalarFieldEnum = {
   minCapacity: 'minCapacity',
   maxCapacity: 'maxCapacity',
   isActive: 'isActive',
-  sortOrder: 'sortOrder'
+  sortOrder: 'sortOrder',
+  posX: 'posX',
+  posY: 'posY',
+  shape: 'shape',
+  width: 'width',
+  height: 'height',
+  rotation: 'rotation'
 } as const
 
 export type RestaurantTableScalarFieldEnum = (typeof RestaurantTableScalarFieldEnum)[keyof typeof RestaurantTableScalarFieldEnum]
@@ -104,6 +111,7 @@ export const ReservationScalarFieldEnum = {
   guestName: 'guestName',
   guestPhone: 'guestPhone',
   guestEmail: 'guestEmail',
+  guestId: 'guestId',
   partySize: 'partySize',
   date: 'date',
   time: 'time',
@@ -126,6 +134,28 @@ export const ReservationScalarFieldEnum = {
 } as const
 
 export type ReservationScalarFieldEnum = (typeof ReservationScalarFieldEnum)[keyof typeof ReservationScalarFieldEnum]
+
+
+export const GuestScalarFieldEnum = {
+  id: 'id',
+  phone: 'phone',
+  name: 'name',
+  email: 'email',
+  vipStatus: 'vipStatus',
+  dietaryNotes: 'dietaryNotes',
+  allergyNotes: 'allergyNotes',
+  generalNotes: 'generalNotes',
+  tags: 'tags',
+  totalVisits: 'totalVisits',
+  totalNoShows: 'totalNoShows',
+  totalCovers: 'totalCovers',
+  lastVisitDate: 'lastVisitDate',
+  firstVisitDate: 'firstVisitDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GuestScalarFieldEnum = (typeof GuestScalarFieldEnum)[keyof typeof GuestScalarFieldEnum]
 
 
 export const SettingScalarFieldEnum = {

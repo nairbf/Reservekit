@@ -11,6 +11,7 @@
 export type * from './models/User'
 export type * from './models/RestaurantTable'
 export type * from './models/Reservation'
+export type * from './models/Guest'
 export type * from './models/Setting'
 export type * from './models/NotificationLog'
 export type * from './models/DayOverride'

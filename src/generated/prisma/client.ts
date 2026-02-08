@@ -55,6 +55,11 @@ export type RestaurantTable = Prisma.RestaurantTableModel
  */
 export type Reservation = Prisma.ReservationModel
 /**
+ * Model Guest
+ * 
+ */
+export type Guest = Prisma.GuestModel
+/**
  * Model Setting
  * 
  */

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { timeToMinutes, minutesToTime } from "@/lib/availability";
 import { notifyApproved, notifyDeclined, notifyCancelled } from "@/lib/notifications";
+import { updateGuestStats } from "@/lib/guest";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
@@ -47,6 +48,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const updated = await prisma.reservation.update({ where: { id: parseInt(id) }, data: update, include: { table: true } });
+  if (["complete", "noshow"].includes(action) && updated.guestId) {
+    updateGuestStats(updated.guestId).catch(console.error);
+  }
   if (action === "approve") notifyApproved(updated).catch(console.error);
   if (action === "decline") notifyDeclined(updated).catch(console.error);
   if (action === "cancel") notifyCancelled(updated).catch(console.error);

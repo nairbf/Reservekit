@@ -41,6 +41,8 @@ model Reservation {
   guestName       String
   guestPhone      String
   guestEmail      String?
+  guestId         Int?
+  guest           Guest?            @relation(fields: [guestId], references: [id])
   partySize       Int
   date            String
   time            String
@@ -63,6 +65,26 @@ model Reservation {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   notifications   NotificationLog[]
+}
+
+model Guest {
+  id             Int           @id @default(autoincrement())
+  phone          String        @unique
+  name           String
+  email          String?
+  vipStatus      String?       @default("regular")
+  dietaryNotes   String?
+  allergyNotes   String?
+  generalNotes   String?
+  tags           String?
+  totalVisits    Int           @default(0)
+  totalNoShows   Int           @default(0)
+  totalCovers    Int           @default(0)
+  lastVisitDate  String?
+  firstVisitDate String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  reservations   Reservation[]
 }
 
 model Setting {

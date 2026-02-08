@@ -387,6 +387,7 @@ export const ModelName = {
   User: 'User',
   RestaurantTable: 'RestaurantTable',
   Reservation: 'Reservation',
+  Guest: 'Guest',
   Setting: 'Setting',
   NotificationLog: 'NotificationLog',
   DayOverride: 'DayOverride'
@@ -405,7 +406,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "restaurantTable" | "reservation" | "setting" | "notificationLog" | "dayOverride"
+    modelProps: "user" | "restaurantTable" | "reservation" | "guest" | "setting" | "notificationLog" | "dayOverride"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -628,6 +629,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ReservationCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ReservationCountAggregateOutputType> | number
+        }
+      }
+    }
+    Guest: {
+      payload: Prisma.$GuestPayload<ExtArgs>
+      fields: Prisma.GuestFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GuestFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GuestFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload>
+        }
+        findFirst: {
+          args: Prisma.GuestFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GuestFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload>
+        }
+        findMany: {
+          args: Prisma.GuestFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload>[]
+        }
+        create: {
+          args: Prisma.GuestCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload>
+        }
+        createMany: {
+          args: Prisma.GuestCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GuestCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload>[]
+        }
+        delete: {
+          args: Prisma.GuestDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload>
+        }
+        update: {
+          args: Prisma.GuestUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload>
+        }
+        deleteMany: {
+          args: Prisma.GuestDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GuestUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GuestUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload>[]
+        }
+        upsert: {
+          args: Prisma.GuestUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GuestPayload>
+        }
+        aggregate: {
+          args: Prisma.GuestAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGuest>
+        }
+        groupBy: {
+          args: Prisma.GuestGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GuestGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GuestCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GuestCountAggregateOutputType> | number
         }
       }
     }
@@ -909,7 +984,13 @@ export const RestaurantTableScalarFieldEnum = {
   minCapacity: 'minCapacity',
   maxCapacity: 'maxCapacity',
   isActive: 'isActive',
-  sortOrder: 'sortOrder'
+  sortOrder: 'sortOrder',
+  posX: 'posX',
+  posY: 'posY',
+  shape: 'shape',
+  width: 'width',
+  height: 'height',
+  rotation: 'rotation'
 } as const
 
 export type RestaurantTableScalarFieldEnum = (typeof RestaurantTableScalarFieldEnum)[keyof typeof RestaurantTableScalarFieldEnum]
@@ -921,6 +1002,7 @@ export const ReservationScalarFieldEnum = {
   guestName: 'guestName',
   guestPhone: 'guestPhone',
   guestEmail: 'guestEmail',
+  guestId: 'guestId',
   partySize: 'partySize',
   date: 'date',
   time: 'time',
@@ -943,6 +1025,28 @@ export const ReservationScalarFieldEnum = {
 } as const
 
 export type ReservationScalarFieldEnum = (typeof ReservationScalarFieldEnum)[keyof typeof ReservationScalarFieldEnum]
+
+
+export const GuestScalarFieldEnum = {
+  id: 'id',
+  phone: 'phone',
+  name: 'name',
+  email: 'email',
+  vipStatus: 'vipStatus',
+  dietaryNotes: 'dietaryNotes',
+  allergyNotes: 'allergyNotes',
+  generalNotes: 'generalNotes',
+  tags: 'tags',
+  totalVisits: 'totalVisits',
+  totalNoShows: 'totalNoShows',
+  totalCovers: 'totalCovers',
+  lastVisitDate: 'lastVisitDate',
+  firstVisitDate: 'firstVisitDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type GuestScalarFieldEnum = (typeof GuestScalarFieldEnum)[keyof typeof GuestScalarFieldEnum]
 
 
 export const SettingScalarFieldEnum = {
@@ -1134,6 +1238,7 @@ export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   restaurantTable?: Prisma.RestaurantTableOmit
   reservation?: Prisma.ReservationOmit
+  guest?: Prisma.GuestOmit
   setting?: Prisma.SettingOmit
   notificationLog?: Prisma.NotificationLogOmit
   dayOverride?: Prisma.DayOverrideOmit

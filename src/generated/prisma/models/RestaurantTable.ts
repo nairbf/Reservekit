@@ -31,6 +31,11 @@ export type RestaurantTableAvgAggregateOutputType = {
   minCapacity: number | null
   maxCapacity: number | null
   sortOrder: number | null
+  posX: number | null
+  posY: number | null
+  width: number | null
+  height: number | null
+  rotation: number | null
 }
 
 export type RestaurantTableSumAggregateOutputType = {
@@ -38,6 +43,11 @@ export type RestaurantTableSumAggregateOutputType = {
   minCapacity: number | null
   maxCapacity: number | null
   sortOrder: number | null
+  posX: number | null
+  posY: number | null
+  width: number | null
+  height: number | null
+  rotation: number | null
 }
 
 export type RestaurantTableMinAggregateOutputType = {
@@ -48,6 +58,12 @@ export type RestaurantTableMinAggregateOutputType = {
   maxCapacity: number | null
   isActive: boolean | null
   sortOrder: number | null
+  posX: number | null
+  posY: number | null
+  shape: string | null
+  width: number | null
+  height: number | null
+  rotation: number | null
 }
 
 export type RestaurantTableMaxAggregateOutputType = {
@@ -58,6 +74,12 @@ export type RestaurantTableMaxAggregateOutputType = {
   maxCapacity: number | null
   isActive: boolean | null
   sortOrder: number | null
+  posX: number | null
+  posY: number | null
+  shape: string | null
+  width: number | null
+  height: number | null
+  rotation: number | null
 }
 
 export type RestaurantTableCountAggregateOutputType = {
@@ -68,6 +90,12 @@ export type RestaurantTableCountAggregateOutputType = {
   maxCapacity: number
   isActive: number
   sortOrder: number
+  posX: number
+  posY: number
+  shape: number
+  width: number
+  height: number
+  rotation: number
   _all: number
 }
 
@@ -77,6 +105,11 @@ export type RestaurantTableAvgAggregateInputType = {
   minCapacity?: true
   maxCapacity?: true
   sortOrder?: true
+  posX?: true
+  posY?: true
+  width?: true
+  height?: true
+  rotation?: true
 }
 
 export type RestaurantTableSumAggregateInputType = {
@@ -84,6 +117,11 @@ export type RestaurantTableSumAggregateInputType = {
   minCapacity?: true
   maxCapacity?: true
   sortOrder?: true
+  posX?: true
+  posY?: true
+  width?: true
+  height?: true
+  rotation?: true
 }
 
 export type RestaurantTableMinAggregateInputType = {
@@ -94,6 +132,12 @@ export type RestaurantTableMinAggregateInputType = {
   maxCapacity?: true
   isActive?: true
   sortOrder?: true
+  posX?: true
+  posY?: true
+  shape?: true
+  width?: true
+  height?: true
+  rotation?: true
 }
 
 export type RestaurantTableMaxAggregateInputType = {
@@ -104,6 +148,12 @@ export type RestaurantTableMaxAggregateInputType = {
   maxCapacity?: true
   isActive?: true
   sortOrder?: true
+  posX?: true
+  posY?: true
+  shape?: true
+  width?: true
+  height?: true
+  rotation?: true
 }
 
 export type RestaurantTableCountAggregateInputType = {
@@ -114,6 +164,12 @@ export type RestaurantTableCountAggregateInputType = {
   maxCapacity?: true
   isActive?: true
   sortOrder?: true
+  posX?: true
+  posY?: true
+  shape?: true
+  width?: true
+  height?: true
+  rotation?: true
   _all?: true
 }
 
@@ -211,6 +267,12 @@ export type RestaurantTableGroupByOutputType = {
   maxCapacity: number
   isActive: boolean
   sortOrder: number
+  posX: number | null
+  posY: number | null
+  shape: string | null
+  width: number | null
+  height: number | null
+  rotation: number | null
   _count: RestaurantTableCountAggregateOutputType | null
   _avg: RestaurantTableAvgAggregateOutputType | null
   _sum: RestaurantTableSumAggregateOutputType | null
@@ -244,6 +306,12 @@ export type RestaurantTableWhereInput = {
   maxCapacity?: Prisma.IntFilter<"RestaurantTable"> | number
   isActive?: Prisma.BoolFilter<"RestaurantTable"> | boolean
   sortOrder?: Prisma.IntFilter<"RestaurantTable"> | number
+  posX?: Prisma.FloatNullableFilter<"RestaurantTable"> | number | null
+  posY?: Prisma.FloatNullableFilter<"RestaurantTable"> | number | null
+  shape?: Prisma.StringNullableFilter<"RestaurantTable"> | string | null
+  width?: Prisma.FloatNullableFilter<"RestaurantTable"> | number | null
+  height?: Prisma.FloatNullableFilter<"RestaurantTable"> | number | null
+  rotation?: Prisma.IntNullableFilter<"RestaurantTable"> | number | null
   reservations?: Prisma.ReservationListRelationFilter
 }
 
@@ -255,6 +323,12 @@ export type RestaurantTableOrderByWithRelationInput = {
   maxCapacity?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  posX?: Prisma.SortOrderInput | Prisma.SortOrder
+  posY?: Prisma.SortOrderInput | Prisma.SortOrder
+  shape?: Prisma.SortOrderInput | Prisma.SortOrder
+  width?: Prisma.SortOrderInput | Prisma.SortOrder
+  height?: Prisma.SortOrderInput | Prisma.SortOrder
+  rotation?: Prisma.SortOrderInput | Prisma.SortOrder
   reservations?: Prisma.ReservationOrderByRelationAggregateInput
 }
 
@@ -269,6 +343,12 @@ export type RestaurantTableWhereUniqueInput = Prisma.AtLeast<{
   maxCapacity?: Prisma.IntFilter<"RestaurantTable"> | number
   isActive?: Prisma.BoolFilter<"RestaurantTable"> | boolean
   sortOrder?: Prisma.IntFilter<"RestaurantTable"> | number
+  posX?: Prisma.FloatNullableFilter<"RestaurantTable"> | number | null
+  posY?: Prisma.FloatNullableFilter<"RestaurantTable"> | number | null
+  shape?: Prisma.StringNullableFilter<"RestaurantTable"> | string | null
+  width?: Prisma.FloatNullableFilter<"RestaurantTable"> | number | null
+  height?: Prisma.FloatNullableFilter<"RestaurantTable"> | number | null
+  rotation?: Prisma.IntNullableFilter<"RestaurantTable"> | number | null
   reservations?: Prisma.ReservationListRelationFilter
 }, "id" | "name">
 
@@ -280,6 +360,12 @@ export type RestaurantTableOrderByWithAggregationInput = {
   maxCapacity?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  posX?: Prisma.SortOrderInput | Prisma.SortOrder
+  posY?: Prisma.SortOrderInput | Prisma.SortOrder
+  shape?: Prisma.SortOrderInput | Prisma.SortOrder
+  width?: Prisma.SortOrderInput | Prisma.SortOrder
+  height?: Prisma.SortOrderInput | Prisma.SortOrder
+  rotation?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.RestaurantTableCountOrderByAggregateInput
   _avg?: Prisma.RestaurantTableAvgOrderByAggregateInput
   _max?: Prisma.RestaurantTableMaxOrderByAggregateInput
@@ -298,6 +384,12 @@ export type RestaurantTableScalarWhereWithAggregatesInput = {
   maxCapacity?: Prisma.IntWithAggregatesFilter<"RestaurantTable"> | number
   isActive?: Prisma.BoolWithAggregatesFilter<"RestaurantTable"> | boolean
   sortOrder?: Prisma.IntWithAggregatesFilter<"RestaurantTable"> | number
+  posX?: Prisma.FloatNullableWithAggregatesFilter<"RestaurantTable"> | number | null
+  posY?: Prisma.FloatNullableWithAggregatesFilter<"RestaurantTable"> | number | null
+  shape?: Prisma.StringNullableWithAggregatesFilter<"RestaurantTable"> | string | null
+  width?: Prisma.FloatNullableWithAggregatesFilter<"RestaurantTable"> | number | null
+  height?: Prisma.FloatNullableWithAggregatesFilter<"RestaurantTable"> | number | null
+  rotation?: Prisma.IntNullableWithAggregatesFilter<"RestaurantTable"> | number | null
 }
 
 export type RestaurantTableCreateInput = {
@@ -307,6 +399,12 @@ export type RestaurantTableCreateInput = {
   maxCapacity?: number
   isActive?: boolean
   sortOrder?: number
+  posX?: number | null
+  posY?: number | null
+  shape?: string | null
+  width?: number | null
+  height?: number | null
+  rotation?: number | null
   reservations?: Prisma.ReservationCreateNestedManyWithoutTableInput
 }
 
@@ -318,6 +416,12 @@ export type RestaurantTableUncheckedCreateInput = {
   maxCapacity?: number
   isActive?: boolean
   sortOrder?: number
+  posX?: number | null
+  posY?: number | null
+  shape?: string | null
+  width?: number | null
+  height?: number | null
+  rotation?: number | null
   reservations?: Prisma.ReservationUncheckedCreateNestedManyWithoutTableInput
 }
 
@@ -328,6 +432,12 @@ export type RestaurantTableUpdateInput = {
   maxCapacity?: Prisma.IntFieldUpdateOperationsInput | number
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  posX?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  posY?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  shape?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  width?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  height?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rotation?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   reservations?: Prisma.ReservationUpdateManyWithoutTableNestedInput
 }
 
@@ -339,6 +449,12 @@ export type RestaurantTableUncheckedUpdateInput = {
   maxCapacity?: Prisma.IntFieldUpdateOperationsInput | number
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  posX?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  posY?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  shape?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  width?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  height?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rotation?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   reservations?: Prisma.ReservationUncheckedUpdateManyWithoutTableNestedInput
 }
 
@@ -350,6 +466,12 @@ export type RestaurantTableCreateManyInput = {
   maxCapacity?: number
   isActive?: boolean
   sortOrder?: number
+  posX?: number | null
+  posY?: number | null
+  shape?: string | null
+  width?: number | null
+  height?: number | null
+  rotation?: number | null
 }
 
 export type RestaurantTableUpdateManyMutationInput = {
@@ -359,6 +481,12 @@ export type RestaurantTableUpdateManyMutationInput = {
   maxCapacity?: Prisma.IntFieldUpdateOperationsInput | number
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  posX?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  posY?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  shape?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  width?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  height?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rotation?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type RestaurantTableUncheckedUpdateManyInput = {
@@ -369,6 +497,12 @@ export type RestaurantTableUncheckedUpdateManyInput = {
   maxCapacity?: Prisma.IntFieldUpdateOperationsInput | number
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  posX?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  posY?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  shape?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  width?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  height?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rotation?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type RestaurantTableCountOrderByAggregateInput = {
@@ -379,6 +513,12 @@ export type RestaurantTableCountOrderByAggregateInput = {
   maxCapacity?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  posX?: Prisma.SortOrder
+  posY?: Prisma.SortOrder
+  shape?: Prisma.SortOrder
+  width?: Prisma.SortOrder
+  height?: Prisma.SortOrder
+  rotation?: Prisma.SortOrder
 }
 
 export type RestaurantTableAvgOrderByAggregateInput = {
@@ -386,6 +526,11 @@ export type RestaurantTableAvgOrderByAggregateInput = {
   minCapacity?: Prisma.SortOrder
   maxCapacity?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  posX?: Prisma.SortOrder
+  posY?: Prisma.SortOrder
+  width?: Prisma.SortOrder
+  height?: Prisma.SortOrder
+  rotation?: Prisma.SortOrder
 }
 
 export type RestaurantTableMaxOrderByAggregateInput = {
@@ -396,6 +541,12 @@ export type RestaurantTableMaxOrderByAggregateInput = {
   maxCapacity?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  posX?: Prisma.SortOrder
+  posY?: Prisma.SortOrder
+  shape?: Prisma.SortOrder
+  width?: Prisma.SortOrder
+  height?: Prisma.SortOrder
+  rotation?: Prisma.SortOrder
 }
 
 export type RestaurantTableMinOrderByAggregateInput = {
@@ -406,6 +557,12 @@ export type RestaurantTableMinOrderByAggregateInput = {
   maxCapacity?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  posX?: Prisma.SortOrder
+  posY?: Prisma.SortOrder
+  shape?: Prisma.SortOrder
+  width?: Prisma.SortOrder
+  height?: Prisma.SortOrder
+  rotation?: Prisma.SortOrder
 }
 
 export type RestaurantTableSumOrderByAggregateInput = {
@@ -413,6 +570,11 @@ export type RestaurantTableSumOrderByAggregateInput = {
   minCapacity?: Prisma.SortOrder
   maxCapacity?: Prisma.SortOrder
   sortOrder?: Prisma.SortOrder
+  posX?: Prisma.SortOrder
+  posY?: Prisma.SortOrder
+  width?: Prisma.SortOrder
+  height?: Prisma.SortOrder
+  rotation?: Prisma.SortOrder
 }
 
 export type RestaurantTableNullableScalarRelationFilter = {
@@ -422,6 +584,22 @@ export type RestaurantTableNullableScalarRelationFilter = {
 
 export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
+}
+
+export type NullableFloatFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
+export type NullableIntFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
 }
 
 export type RestaurantTableCreateNestedOneWithoutReservationsInput = {
@@ -447,6 +625,12 @@ export type RestaurantTableCreateWithoutReservationsInput = {
   maxCapacity?: number
   isActive?: boolean
   sortOrder?: number
+  posX?: number | null
+  posY?: number | null
+  shape?: string | null
+  width?: number | null
+  height?: number | null
+  rotation?: number | null
 }
 
 export type RestaurantTableUncheckedCreateWithoutReservationsInput = {
@@ -457,6 +641,12 @@ export type RestaurantTableUncheckedCreateWithoutReservationsInput = {
   maxCapacity?: number
   isActive?: boolean
   sortOrder?: number
+  posX?: number | null
+  posY?: number | null
+  shape?: string | null
+  width?: number | null
+  height?: number | null
+  rotation?: number | null
 }
 
 export type RestaurantTableCreateOrConnectWithoutReservationsInput = {
@@ -482,6 +672,12 @@ export type RestaurantTableUpdateWithoutReservationsInput = {
   maxCapacity?: Prisma.IntFieldUpdateOperationsInput | number
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  posX?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  posY?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  shape?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  width?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  height?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rotation?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 export type RestaurantTableUncheckedUpdateWithoutReservationsInput = {
@@ -492,6 +688,12 @@ export type RestaurantTableUncheckedUpdateWithoutReservationsInput = {
   maxCapacity?: Prisma.IntFieldUpdateOperationsInput | number
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
+  posX?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  posY?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  shape?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  width?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  height?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  rotation?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
 }
 
 
@@ -533,6 +735,12 @@ export type RestaurantTableSelect<ExtArgs extends runtime.Types.Extensions.Inter
   maxCapacity?: boolean
   isActive?: boolean
   sortOrder?: boolean
+  posX?: boolean
+  posY?: boolean
+  shape?: boolean
+  width?: boolean
+  height?: boolean
+  rotation?: boolean
   reservations?: boolean | Prisma.RestaurantTable$reservationsArgs<ExtArgs>
   _count?: boolean | Prisma.RestaurantTableCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["restaurantTable"]>
@@ -545,6 +753,12 @@ export type RestaurantTableSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   maxCapacity?: boolean
   isActive?: boolean
   sortOrder?: boolean
+  posX?: boolean
+  posY?: boolean
+  shape?: boolean
+  width?: boolean
+  height?: boolean
+  rotation?: boolean
 }, ExtArgs["result"]["restaurantTable"]>
 
 export type RestaurantTableSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -555,6 +769,12 @@ export type RestaurantTableSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   maxCapacity?: boolean
   isActive?: boolean
   sortOrder?: boolean
+  posX?: boolean
+  posY?: boolean
+  shape?: boolean
+  width?: boolean
+  height?: boolean
+  rotation?: boolean
 }, ExtArgs["result"]["restaurantTable"]>
 
 export type RestaurantTableSelectScalar = {
@@ -565,9 +785,15 @@ export type RestaurantTableSelectScalar = {
   maxCapacity?: boolean
   isActive?: boolean
   sortOrder?: boolean
+  posX?: boolean
+  posY?: boolean
+  shape?: boolean
+  width?: boolean
+  height?: boolean
+  rotation?: boolean
 }
 
-export type RestaurantTableOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "section" | "minCapacity" | "maxCapacity" | "isActive" | "sortOrder", ExtArgs["result"]["restaurantTable"]>
+export type RestaurantTableOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "section" | "minCapacity" | "maxCapacity" | "isActive" | "sortOrder" | "posX" | "posY" | "shape" | "width" | "height" | "rotation", ExtArgs["result"]["restaurantTable"]>
 export type RestaurantTableInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   reservations?: boolean | Prisma.RestaurantTable$reservationsArgs<ExtArgs>
   _count?: boolean | Prisma.RestaurantTableCountOutputTypeDefaultArgs<ExtArgs>
@@ -588,6 +814,12 @@ export type $RestaurantTablePayload<ExtArgs extends runtime.Types.Extensions.Int
     maxCapacity: number
     isActive: boolean
     sortOrder: number
+    posX: number | null
+    posY: number | null
+    shape: string | null
+    width: number | null
+    height: number | null
+    rotation: number | null
   }, ExtArgs["result"]["restaurantTable"]>
   composites: {}
 }
@@ -1019,6 +1251,12 @@ export interface RestaurantTableFieldRefs {
   readonly maxCapacity: Prisma.FieldRef<"RestaurantTable", 'Int'>
   readonly isActive: Prisma.FieldRef<"RestaurantTable", 'Boolean'>
   readonly sortOrder: Prisma.FieldRef<"RestaurantTable", 'Int'>
+  readonly posX: Prisma.FieldRef<"RestaurantTable", 'Float'>
+  readonly posY: Prisma.FieldRef<"RestaurantTable", 'Float'>
+  readonly shape: Prisma.FieldRef<"RestaurantTable", 'String'>
+  readonly width: Prisma.FieldRef<"RestaurantTable", 'Float'>
+  readonly height: Prisma.FieldRef<"RestaurantTable", 'Float'>
+  readonly rotation: Prisma.FieldRef<"RestaurantTable", 'Int'>
 }
     
 

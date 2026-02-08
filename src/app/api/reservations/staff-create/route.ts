@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { getSettings, getDiningDuration } from "@/lib/settings";
 import { generateCode } from "@/lib/codes";
 import { timeToMinutes, minutesToTime } from "@/lib/availability";
+import { linkGuestToReservation } from "@/lib/guest";
 
 export async function POST(req: NextRequest) {
   let session;
@@ -26,5 +27,6 @@ export async function POST(req: NextRequest) {
     data: { code, guestName, guestPhone: guestPhone || "", partySize, date: resDate, time: resTime, endTime: minutesToTime(timeToMinutes(resTime) + duration), durationMin: duration, source, status: isWalkin ? "seated" : "approved", tableId: tableId || null, createdById: session.userId, approvedAt: now, seatedAt: isWalkin ? now : null },
     include: { table: true },
   });
+  linkGuestToReservation(reservation.id).catch(console.error);
   return NextResponse.json(reservation, { status: 201 });
 }

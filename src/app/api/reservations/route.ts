@@ -10,6 +10,6 @@ export async function GET(req: NextRequest) {
   const where: Record<string, unknown> = {};
   if (status !== "all") { where.status = status.includes(",") ? { in: status.split(",") } : status; }
   if (date) where.date = date;
-  const reservations = await prisma.reservation.findMany({ where, include: { table: true }, orderBy: [{ date: "asc" }, { time: "asc" }] });
+  const reservations = await prisma.reservation.findMany({ where, include: { table: true, guest: true }, orderBy: [{ date: "asc" }, { time: "asc" }] });
   return NextResponse.json(reservations);
 }

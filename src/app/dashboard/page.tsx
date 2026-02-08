@@ -13,6 +13,12 @@ interface Reservation {
   status: string;
   source: string;
   table: { id: number; name: string } | null;
+  guest: {
+    id: number;
+    totalVisits: number;
+    vipStatus: string | null;
+    allergyNotes: string | null;
+  } | null;
 }
 interface TableItem { id: number; name: string; maxCapacity: number }
 
@@ -20,6 +26,15 @@ const STATUS_PILL: Record<string, string> = {
   pending: "bg-blue-50 text-blue-700",
   counter_offered: "bg-amber-50 text-amber-700",
 };
+
+function nth(value: number): string {
+  const mod100 = value % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${value}th`;
+  if (value % 10 === 1) return `${value}st`;
+  if (value % 10 === 2) return `${value}nd`;
+  if (value % 10 === 3) return `${value}rd`;
+  return `${value}th`;
+}
 
 export default function InboxPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -92,6 +107,17 @@ export default function InboxPage() {
               <div>
                 <div className="text-lg font-bold">{r.guestName}</div>
                 <div className="text-sm text-gray-500">Party of {r.partySize}</div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {r.guest?.totalVisits && r.guest.totalVisits > 1 && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest.totalVisits)} visit</span>
+                  )}
+                  {r.guest?.vipStatus === "vip" && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>
+                  )}
+                  {r.guest?.allergyNotes && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Allergies</span>
+                  )}
+                </div>
               </div>
               <div className="text-right">
                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_PILL[r.status] || "bg-gray-100 text-gray-600"}`}>{r.status.replace("_", " ")}</span>

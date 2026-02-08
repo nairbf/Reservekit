@@ -4,6 +4,7 @@ import { getSettings, getDiningDuration } from "@/lib/settings";
 import { generateCode } from "@/lib/codes";
 import { timeToMinutes, minutesToTime } from "@/lib/availability";
 import { notifyRequestReceived } from "@/lib/notifications";
+import { linkGuestToReservation } from "@/lib/guest";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -22,6 +23,7 @@ export async function POST(req: NextRequest) {
   while (await prisma.reservation.findUnique({ where: { code } })) code = generateCode();
 
   const reservation = await prisma.reservation.create({ data: { code, guestName, guestPhone, guestEmail: guestEmail || null, partySize, date, time, endTime, durationMin: duration, specialRequests: specialRequests || null, source: "widget", status: "pending" } });
+  linkGuestToReservation(reservation.id).catch(console.error);
   notifyRequestReceived(reservation).catch(console.error);
   return NextResponse.json({ id: reservation.id, code: reservation.code, status: "pending", message: "Your reservation request has been received." }, { status: 201 });
 }

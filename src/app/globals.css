@@ -1,1 +1,13 @@
 @import "tailwindcss";
+
+:root {
+  --rk-primary: #2563eb;
+  --rk-primary-hover: #1d4ed8;
+  --rk-success: #16a34a;
+  --rk-warning: #d97706;
+  --rk-danger: #dc2626;
+  --rk-gray-50: #f9fafb;
+  --rk-gray-100: #f3f4f6;
+  --rk-gray-500: #6b7280;
+  --rk-gray-900: #111827;
+}

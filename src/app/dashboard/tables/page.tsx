@@ -7,44 +7,127 @@ export default function TablesPage() {
   const [tables, setTables] = useState<TableItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", section: "", minCapacity: 1, maxCapacity: 4 });
-  const load = useCallback(async () => { setTables(await (await fetch("/api/tables")).json()); }, []);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(async () => {
+    setTables(await (await fetch("/api/tables")).json());
+    setLoaded(true);
+  }, []);
+
   useEffect(() => { load(); }, [load]);
 
   async function addTable(e: React.FormEvent) {
     e.preventDefault();
     await fetch("/api/tables", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    setForm({ name: "", section: "", minCapacity: 1, maxCapacity: 4 }); setShowForm(false); load();
+    setForm({ name: "", section: "", minCapacity: 1, maxCapacity: 4 });
+    setShowForm(false);
+    load();
   }
-  async function deleteTable(id: number) { if (!confirm("Delete this table?")) return; await fetch(`/api/tables/${id}`, { method: "DELETE" }); load(); }
+
+  async function deleteTable(id: number) {
+    if (!confirm("Delete this table?")) return;
+    await fetch(`/api/tables/${id}`, { method: "DELETE" });
+    load();
+  }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Tables</h1>
-        <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded">+ Add Table</button>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Tables</h1>
+          <p className="text-sm text-gray-500">Manage dining room capacity</p>
+        </div>
+        <button onClick={() => setShowForm(true)} className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">+ Add Table</button>
       </div>
-      {showForm && (
-        <form onSubmit={addTable} className="bg-white p-4 rounded shadow mb-6 flex gap-3 items-end flex-wrap">
-          <div><label className="block text-sm font-medium mb-1">Name</label><input className="border rounded px-2 py-1" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
-          <div><label className="block text-sm font-medium mb-1">Section</label><input className="border rounded px-2 py-1" value={form.section} onChange={e => setForm({ ...form, section: e.target.value })} /></div>
-          <div><label className="block text-sm font-medium mb-1">Min</label><input type="number" className="border rounded px-2 py-1 w-16" value={form.minCapacity} onChange={e => setForm({ ...form, minCapacity: parseInt(e.target.value) })} /></div>
-          <div><label className="block text-sm font-medium mb-1">Max</label><input type="number" className="border rounded px-2 py-1 w-16" value={form.maxCapacity} onChange={e => setForm({ ...form, maxCapacity: parseInt(e.target.value) })} /></div>
-          <button type="submit" className="bg-green-600 text-white px-4 py-1 rounded">Save</button>
-        </form>
-      )}
-      <div className="bg-white rounded shadow">
-        {tables.map(t => (
-          <div key={t.id} className="flex items-center justify-between px-4 py-3 border-b last:border-0">
-            <div><span className="font-medium">{t.name}</span>{t.section && <span className="text-gray-500 ml-2">({t.section})</span>}</div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">Seats {t.minCapacity}–{t.maxCapacity}</span>
-              <span className="text-xs text-gray-400">ID: {t.id}</span>
-              <button onClick={() => deleteTable(t.id)} className="text-red-500 text-sm">Delete</button>
-            </div>
+
+      {!loaded ? (
+        <div className="flex items-center gap-3 text-gray-500">
+          <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+          Loading tables...
+        </div>
+      ) : (
+        <>
+          <div className="md:hidden space-y-3">
+            {tables.map(t => (
+              <div key={t.id} className="bg-white rounded-xl shadow p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-bold text-lg">{t.name}</div>
+                    {t.section && <div className="text-sm text-gray-500">{t.section}</div>}
+                  </div>
+                  <button onClick={() => deleteTable(t.id)} className="h-11 px-3 rounded-lg border border-red-200 text-red-600 text-sm transition-all duration-200">Delete</button>
+                </div>
+                <div className="text-sm text-gray-600 mt-2">Seats {t.minCapacity}–{t.maxCapacity}</div>
+                <div className="text-xs text-gray-400 mt-1">ID: {t.id}</div>
+              </div>
+            ))}
+            {tables.length === 0 && <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">No tables yet. Add your first table.</div>}
           </div>
-        ))}
-        {tables.length === 0 && <p className="p-4 text-gray-500">No tables yet. Add your first table above.</p>}
-      </div>
+
+          <div className="hidden md:block bg-white rounded-xl shadow overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left p-4 font-medium">Name</th>
+                  <th className="text-left p-4 font-medium">Section</th>
+                  <th className="text-left p-4 font-medium">Capacity</th>
+                  <th className="text-right p-4 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tables.map(t => (
+                  <tr key={t.id} className="border-b last:border-0">
+                    <td className="p-4 font-medium">{t.name}</td>
+                    <td className="p-4 text-gray-500">{t.section || "—"}</td>
+                    <td className="p-4 text-gray-600">{t.minCapacity}–{t.maxCapacity}</td>
+                    <td className="p-4 text-right">
+                      <button onClick={() => deleteTable(t.id)} className="text-red-600 text-sm">Delete</button>
+                    </td>
+                  </tr>
+                ))}
+                {tables.length === 0 && (
+                  <tr><td colSpan={4} className="p-6 text-center text-gray-500">No tables yet. Add your first table.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <form onSubmit={addTable} className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">Add Table</h2>
+              <button type="button" onClick={() => setShowForm(false)} className="h-11 w-11 rounded-lg border border-gray-200">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name</label>
+                <input className="h-11 w-full border rounded px-3 text-sm" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Section</label>
+                <input className="h-11 w-full border rounded px-3 text-sm" value={form.section} onChange={e => setForm({ ...form, section: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Min</label>
+                  <input type="number" className="h-11 w-full border rounded px-3 text-sm" value={form.minCapacity} onChange={e => setForm({ ...form, minCapacity: parseInt(e.target.value) })} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Max</label>
+                  <input type="number" className="h-11 w-full border rounded px-3 text-sm" value={form.maxCapacity} onChange={e => setForm({ ...form, maxCapacity: parseInt(e.target.value) })} />
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 flex gap-2">
+              <button type="button" onClick={() => setShowForm(false)} className="h-11 flex-1 rounded-lg border border-gray-200 text-gray-700 transition-all duration-200">Cancel</button>
+              <button type="submit" className="h-11 flex-1 rounded-lg bg-blue-600 text-white font-medium transition-all duration-200">Save Table</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

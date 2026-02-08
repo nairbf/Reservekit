@@ -6,6 +6,7 @@ const PREFIXES: Record<string, string> = {
   floorplan: "RK-FLR-",
   reports: "RK-RPT-",
   guesthistory: "RK-GST-",
+  pos: "RK-POS-",
   multilocation: "RK-MLT-",
 };
 

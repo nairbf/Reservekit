@@ -19,6 +19,15 @@ interface Reservation {
   } | null;
 }
 interface TableItem { id: number; name: string; maxCapacity: number }
+interface PosStatusEntry {
+  tableId: number;
+  orderId: string;
+  checkTotal: string;
+  balanceDue: string;
+  serverName: string;
+  openedAt: string;
+  isOpen: boolean;
+}
 const SC: Record<string, string> = {
   approved: "bg-blue-50 text-blue-700",
   confirmed: "bg-blue-100 text-blue-800",
@@ -37,9 +46,24 @@ function nth(value: number): string {
   return `${value}th`;
 }
 
+function minutesSince(timestamp: string): number | null {
+  if (!timestamp) return null;
+  const dt = new Date(timestamp);
+  if (Number.isNaN(dt.getTime())) return null;
+  return Math.max(0, Math.round((Date.now() - dt.getTime()) / 60000));
+}
+
+function formatMoney(value: string): string {
+  const num = Number(value);
+  if (Number.isFinite(num)) return `$${num.toFixed(2)}`;
+  if (!value) return "$0.00";
+  return value.startsWith("$") ? value : `$${value}`;
+}
+
 export default function TonightPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<TableItem[]>([]);
+  const [posStatusMap, setPosStatusMap] = useState<Record<number, PosStatusEntry>>({});
   const [loaded, setLoaded] = useState(false);
   const today = new Date().toISOString().split("T")[0];
 
@@ -50,7 +74,31 @@ export default function TonightPage() {
     setLoaded(true);
   }, [today]);
 
-  useEffect(() => { load(); const i = setInterval(load, 10000); return () => clearInterval(i); }, [load]);
+  const loadPosStatus = useCallback(async () => {
+    const res = await fetch("/api/spoton/sync");
+    if (!res.ok) {
+      setPosStatusMap({});
+      return;
+    }
+    const data = await res.json();
+    const nextMap: Record<number, PosStatusEntry> = {};
+    const list = Array.isArray(data.status) ? data.status as PosStatusEntry[] : [];
+    for (const item of list) {
+      if (!item || !item.tableId) continue;
+      nextMap[item.tableId] = item;
+    }
+    setPosStatusMap(nextMap);
+  }, []);
+
+  useEffect(() => {
+    Promise.all([load(), loadPosStatus()]);
+    const reservationTimer = setInterval(load, 10000);
+    const posTimer = setInterval(loadPosStatus, 30000);
+    return () => {
+      clearInterval(reservationTimer);
+      clearInterval(posTimer);
+    };
+  }, [load, loadPosStatus]);
 
   async function doAction(id: number, action: string, extra?: Record<string, unknown>) {
     await fetch(`/api/reservations/${id}/action`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });
@@ -119,14 +167,24 @@ export default function TonightPage() {
             <div className="space-y-2">
               {byTime[time].map(r => (
                 <div key={r.id} className="bg-white rounded-xl shadow px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SC[r.status] || "bg-gray-100 text-gray-600"}`}>{r.status.replace("_", " ")}</span>
-                    <span className="font-medium">{r.guestName}</span>
-                    <span className="text-sm text-gray-500">({r.partySize})</span>
-                    {r.table && <span className="text-sm text-gray-400">{r.table.name}</span>}
-                    {r.guest?.totalVisits && r.guest.totalVisits > 1 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest.totalVisits)} visit</span>}
-                    {r.guest?.vipStatus === "vip" && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>}
-                    {r.guest?.allergyNotes && <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Allergies</span>}
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SC[r.status] || "bg-gray-100 text-gray-600"}`}>{r.status.replace("_", " ")}</span>
+                      <span className="font-medium">{r.guestName}</span>
+                      <span className="text-sm text-gray-500">({r.partySize})</span>
+                      {r.table && <span className="text-sm text-gray-400">{r.table.name}</span>}
+                      {r.guest?.totalVisits && r.guest.totalVisits > 1 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest.totalVisits)} visit</span>}
+                      {r.guest?.vipStatus === "vip" && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>}
+                      {r.guest?.allergyNotes && <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Allergies</span>}
+                    </div>
+                    {r.table && posStatusMap[r.table.id] && (
+                      <div className="text-xs text-emerald-700 mt-1">
+                        {`💲 POS: Open check — ${formatMoney(posStatusMap[r.table.id].checkTotal)} (${minutesSince(posStatusMap[r.table.id].openedAt) ?? 0} min)`}
+                      </div>
+                    )}
+                    {r.table && r.status === "seated" && !posStatusMap[r.table.id] && (
+                      <div className="text-xs text-orange-700 mt-1">⚠ No POS check found</div>
+                    )}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(["approved", "confirmed"].includes(r.status)) && (

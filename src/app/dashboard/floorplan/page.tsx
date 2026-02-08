@@ -34,6 +34,18 @@ interface StatusEntry {
   timeStatus: "empty" | "upcoming" | "arrived" | "seated" | "almost_done";
 }
 
+interface PosStatusEntry {
+  tableId: number;
+  orderId: string;
+  checkTotal: string;
+  balanceDue: string;
+  serverName: string;
+  openedAt: string;
+  closedAt: string | null;
+  isOpen: boolean;
+  syncedAt: string;
+}
+
 function normalizeTable(t: TableItem): TableItem {
   return {
     ...t,
@@ -54,10 +66,25 @@ const STATUS_STYLES: Record<string, string> = {
   almost_done: "bg-orange-50 border-orange-400 text-orange-800",
 };
 
+function formatMoney(value: string): string {
+  const num = Number(value);
+  if (Number.isFinite(num)) return `$${num.toFixed(2)}`;
+  if (!value) return "$0.00";
+  return value.startsWith("$") ? value : `$${value}`;
+}
+
+function minutesSince(timestamp: string): number | null {
+  if (!timestamp) return null;
+  const dt = new Date(timestamp);
+  if (Number.isNaN(dt.getTime())) return null;
+  return Math.max(0, Math.round((Date.now() - dt.getTime()) / 60000));
+}
+
 export default function FloorPlanPage() {
   const [mode, setMode] = useState<"live" | "edit">("live");
   const [tables, setTables] = useState<TableItem[]>([]);
   const [statusData, setStatusData] = useState<StatusEntry[]>([]);
+  const [posStatusMap, setPosStatusMap] = useState<Record<number, PosStatusEntry>>({});
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detailsId, setDetailsId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -126,11 +153,28 @@ export default function FloorPlanPage() {
     if (!initialLoadedRef.current || !silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const res = await fetch("/api/floorplan/status");
-      const data = await res.json();
+      const [statusRes, posRes] = await Promise.all([
+        fetch("/api/floorplan/status"),
+        fetch("/api/spoton/sync").catch(() => null),
+      ]);
+      const data = await statusRes.json();
       const entries = data as StatusEntry[];
       setStatusData(entries);
       setTables(entries.map(e => normalizeTable(e.table)));
+
+      if (posRes && posRes.ok) {
+        const posData = await posRes.json();
+        const nextPosMap: Record<number, PosStatusEntry> = {};
+        const list = Array.isArray(posData.status) ? posData.status as PosStatusEntry[] : [];
+        for (const item of list) {
+          if (!item || !item.tableId) continue;
+          nextPosMap[item.tableId] = item;
+        }
+        setPosStatusMap(nextPosMap);
+      } else {
+        setPosStatusMap({});
+      }
+
       initialLoadedRef.current = true;
     } finally {
       setLoading(false);
@@ -268,6 +312,23 @@ export default function FloorPlanPage() {
     setDetailsId(null);
   }
 
+  async function createWalkinFromPos(tableId: number) {
+    const table = tables.find(t => t.id === tableId);
+    const partySize = Math.max(1, Math.min(table?.maxCapacity || 2, 8));
+    await fetch("/api/reservations/staff-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        guestName: `Walk-in ${table?.name || `Table ${tableId}`}`,
+        partySize,
+        source: "walkin",
+        tableId,
+      }),
+    });
+    setDetailsId(null);
+    loadStatus(true);
+  }
+
   const selected = tables.find(t => t.id === selectedId) || null;
   const liveMap = useMemo(() => new Map(statusData.map(s => [s.table.id, s])), [statusData]);
 
@@ -330,6 +391,10 @@ export default function FloorPlanPage() {
             {tables.map(t => {
               const status = mode === "live" ? (liveMap.get(t.id)?.timeStatus || "empty") : "empty";
               const res = mode === "live" ? liveMap.get(t.id)?.reservation || null : null;
+              const pos = mode === "live" ? posStatusMap[t.id] : undefined;
+              const openMinutes = pos ? minutesSince(pos.openedAt) : null;
+              const longCheck = openMinutes !== null && openMinutes > 90;
+              const untracked = Boolean(pos && !res);
               const shapeClass = t.shape === "rect" ? "rounded-lg" : "rounded-full";
               const statusClass = mode === "edit" ? "bg-white border-gray-200 text-gray-700" : STATUS_STYLES[status];
               return (
@@ -359,7 +424,7 @@ export default function FloorPlanPage() {
                     if (mode === "edit") setSelectedId(t.id);
                     else setDetailsId(t.id);
                   }}
-                  className={`absolute flex flex-col items-center justify-center text-center border shadow-sm ${shapeClass} ${statusClass} ${selectedId === t.id ? "ring-2 ring-blue-500" : ""} ${draggingId === t.id ? "cursor-grabbing transition-none" : mode === "edit" ? "cursor-grab transition-all duration-150" : "transition-all duration-200"}`}
+                  className={`absolute relative flex flex-col items-center justify-center text-center border shadow-sm ${shapeClass} ${statusClass} ${selectedId === t.id ? "ring-2 ring-blue-500" : ""} ${untracked ? "ring-2 ring-orange-400" : ""} ${draggingId === t.id ? "cursor-grabbing transition-none" : mode === "edit" ? "cursor-grab transition-all duration-150" : "transition-all duration-200"}`}
                   style={{
                     left: `${t.posX ?? 0}%`,
                     top: `${t.posY ?? 0}%`,
@@ -368,6 +433,16 @@ export default function FloorPlanPage() {
                     transform: `rotate(${t.rotation ?? 0}deg)`,
                   }}
                 >
+                  {mode === "live" && pos && (
+                    <span className={`absolute -top-2 -right-2 rounded-full px-2 py-0.5 text-[9px] font-semibold border ${longCheck ? "bg-orange-100 text-orange-800 border-orange-300" : "bg-emerald-100 text-emerald-800 border-emerald-300"}`}>
+                      {formatMoney(pos.checkTotal)}
+                    </span>
+                  )}
+                  {mode === "live" && untracked && (
+                    <span className="absolute -top-2 -left-2 rounded-full px-1.5 py-0.5 text-[9px] font-semibold border bg-orange-100 text-orange-800 border-orange-300">
+                      ⚠
+                    </span>
+                  )}
                   <span className="text-[10px] sm:text-xs font-semibold leading-tight">{t.name}</span>
                   <span className="text-[10px] text-gray-500">{t.maxCapacity}-top</span>
                   {mode === "live" && res && (
@@ -500,6 +575,8 @@ export default function FloorPlanPage() {
               <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full border border-yellow-400 bg-yellow-50" />Arrived</div>
               <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full border border-green-500 bg-green-50" />Seated</div>
               <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full border border-orange-400 bg-orange-50" />Almost done</div>
+              <div className="flex items-center gap-2"><span className="inline-flex h-4 items-center rounded-full border border-emerald-300 bg-emerald-100 px-1 text-[10px] text-emerald-800">$</span>Open POS check</div>
+              <div className="flex items-center gap-2"><span className="inline-flex h-4 items-center rounded-full border border-orange-300 bg-orange-100 px-1 text-[10px] text-orange-800">⚠</span>POS check without reservation</div>
               <p className="text-xs text-gray-500 mt-3">Auto-refreshes every 10 seconds.</p>
             </div>
           )}
@@ -512,10 +589,30 @@ export default function FloorPlanPage() {
             {(() => {
               const entry = liveMap.get(detailsId);
               const res = entry?.reservation || null;
+              const pos = posStatusMap[detailsId];
+              const openMinutes = pos ? minutesSince(pos.openedAt) : null;
               if (!res) return (
                 <div>
                   <div className="text-lg font-bold mb-2">Table Details</div>
-                  <p className="text-sm text-gray-600 mb-4">No active reservation.</p>
+                  <p className="text-sm text-gray-600 mb-3">No active reservation.</p>
+                  {pos && (
+                    <div className="rounded-lg border border-orange-200 bg-orange-50 text-orange-800 text-sm p-3 mb-4">
+                      <div className="font-semibold">Untracked POS check detected</div>
+                      <div className="text-xs mt-1">
+                        Open check {formatMoney(pos.checkTotal)}
+                        {openMinutes !== null ? ` • ${openMinutes} min` : ""}
+                        {pos.serverName ? ` • ${pos.serverName}` : ""}
+                      </div>
+                    </div>
+                  )}
+                  {pos && (
+                    <button
+                      onClick={() => createWalkinFromPos(detailsId)}
+                      className="h-11 w-full rounded bg-orange-500 text-white text-sm mb-2 transition-all duration-200"
+                    >
+                      Create walk-in
+                    </button>
+                  )}
                   <button onClick={() => setDetailsId(null)} className="h-11 w-full rounded bg-gray-900 text-white text-sm">Close</button>
                 </div>
               );
@@ -523,6 +620,16 @@ export default function FloorPlanPage() {
                 <div>
                   <div className="text-lg font-bold mb-1">{res.guestName}</div>
                   <div className="text-sm text-gray-500 mb-4">Party of {res.partySize} · {res.time} · {res.code}</div>
+                  {pos && (
+                    <div className="text-xs text-gray-600 mb-3">
+                      POS: Open check {formatMoney(pos.checkTotal)}
+                      {openMinutes !== null ? ` (${openMinutes} min)` : ""}
+                      {pos.serverName ? ` • ${pos.serverName}` : ""}
+                    </div>
+                  )}
+                  {!pos && res.status === "seated" && (
+                    <div className="text-xs text-orange-700 mb-3">⚠ No POS check found</div>
+                  )}
                   <div className="flex flex-wrap gap-2 mb-4">
                     {(["approved", "confirmed"].includes(res.status)) && (
                       <button onClick={() => doAction(res.id, "arrive")} className="h-11 sm:h-10 px-4 sm:px-3 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 text-sm transition-all duration-200">Arrive</button>

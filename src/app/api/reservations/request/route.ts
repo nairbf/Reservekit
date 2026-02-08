@@ -20,11 +20,28 @@ export async function POST(req: NextRequest) {
 
   const duration = getDiningDuration(settings.diningDurations, partySize);
   const endTime = minutesToTime(timeToMinutes(time) + duration);
+  const deposit = getEffectiveDepositForRequest(settings, date, partySize);
   let code = generateCode();
   while (await prisma.reservation.findUnique({ where: { code } })) code = generateCode();
 
-  const reservation = await prisma.reservation.create({ data: { code, guestName, guestPhone, guestEmail: guestEmail || null, partySize, date, time, endTime, durationMin: duration, specialRequests: specialRequests || null, source: "widget", status: "pending" } });
-  const deposit = getEffectiveDepositForRequest(settings, date, partySize);
+  const reservation = await prisma.reservation.create({
+    data: {
+      code,
+      guestName,
+      guestPhone,
+      guestEmail: guestEmail || null,
+      partySize,
+      date,
+      time,
+      endTime,
+      durationMin: duration,
+      specialRequests: specialRequests || null,
+      source: "widget",
+      status: "pending",
+      requiresDeposit: deposit.required,
+      depositAmount: deposit.required ? deposit.amount : null,
+    },
+  });
   if (typeof loyaltyOptIn === "boolean") {
     saveLoyaltyConsent(guestPhone, loyaltyOptIn, "reservation_request").catch(console.error);
   }

@@ -52,3 +52,13 @@ export type NotificationLog = Prisma.NotificationLogModel
  * 
  */
 export type DayOverride = Prisma.DayOverrideModel
+/**
+ * Model ReservationPayment
+ * 
+ */
+export type ReservationPayment = Prisma.ReservationPaymentModel
+/**
+ * Model WaitlistEntry
+ * 
+ */
+export type WaitlistEntry = Prisma.WaitlistEntryModel

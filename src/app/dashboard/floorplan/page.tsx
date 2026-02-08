@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 interface TableItem {
   id: number;
@@ -91,6 +92,7 @@ function formatTime12(value: string): string {
 }
 
 export default function FloorPlanPage() {
+  const searchParams = useSearchParams();
   const [mode, setMode] = useState<"live" | "edit">("live");
   const [tables, setTables] = useState<TableItem[]>([]);
   const [statusData, setStatusData] = useState<StatusEntry[]>([]);
@@ -101,8 +103,9 @@ export default function FloorPlanPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [licenseOk, setLicenseOk] = useState<boolean | null>(null);
-  const [restaurantName, setRestaurantName] = useState("ReserveKit");
+  const [restaurantName, setRestaurantName] = useState("ReserveSit");
   const [draggingId, setDraggingId] = useState<number | null>(null);
+  const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "floorplan";
 
   const containerRef = useRef<HTMLDivElement>(null);
   const tablesRef = useRef<TableItem[]>([]);
@@ -121,7 +124,7 @@ export default function FloorPlanPage() {
     ])
       .then(([s, session]) => {
         const key = String(s.license_floorplan || "").toUpperCase();
-        const hasKey = /^RK-FLR-[A-Z0-9]{8}$/.test(key);
+        const hasKey = /^RS-FLR-[A-Z0-9]{8}$/.test(key);
         const isAdmin = session?.role === "admin";
         setLicenseOk(hasKey || isAdmin);
         if (s.restaurantName) setRestaurantName(s.restaurantName);
@@ -344,7 +347,7 @@ export default function FloorPlanPage() {
 
   if (licenseOk === null) {
     return (
-      <div className="p-4 sm:p-6">
+      <div className={`p-4 sm:p-6 ${showTourHighlight ? "rounded-2xl ring-2 ring-blue-300" : ""}`}>
         <div className="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full" />
       </div>
     );
@@ -352,7 +355,7 @@ export default function FloorPlanPage() {
 
   if (licenseOk === false) {
     return (
-      <div className="max-w-3xl">
+      <div className={`max-w-3xl ${showTourHighlight ? "rounded-2xl ring-2 ring-blue-300 p-2" : ""}`}>
         <h1 className="text-2xl font-bold mb-4">Floor Plan</h1>
         <div className="bg-white rounded-xl shadow p-6">
           <p className="text-gray-600 mb-4">Visual Floor Plan is a paid add-on.</p>
@@ -363,7 +366,7 @@ export default function FloorPlanPage() {
   }
 
   return (
-    <div>
+    <div className={showTourHighlight ? "rounded-2xl ring-2 ring-blue-300 p-2" : ""}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Floor Plan</h1>

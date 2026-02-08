@@ -2,12 +2,12 @@ import { prisma } from "./db";
 import { getSession } from "./auth";
 
 const PREFIXES: Record<string, string> = {
-  sms: "RK-SMS-",
-  floorplan: "RK-FLR-",
-  reports: "RK-RPT-",
-  guesthistory: "RK-GST-",
-  pos: "RK-POS-",
-  multilocation: "RK-MLT-",
+  sms: "RS-SMS-",
+  floorplan: "RS-FLR-",
+  reports: "RS-RPT-",
+  guesthistory: "RS-GST-",
+  pos: "RS-POS-",
+  multilocation: "RS-MLT-",
 };
 
 async function isAdminSession(): Promise<boolean> {

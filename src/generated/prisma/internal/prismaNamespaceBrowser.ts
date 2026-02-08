@@ -57,7 +57,9 @@ export const ModelName = {
   Guest: 'Guest',
   Setting: 'Setting',
   NotificationLog: 'NotificationLog',
-  DayOverride: 'DayOverride'
+  DayOverride: 'DayOverride',
+  ReservationPayment: 'ReservationPayment',
+  WaitlistEntry: 'WaitlistEntry'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -129,6 +131,9 @@ export const ReservationScalarFieldEnum = {
   seatedAt: 'seatedAt',
   completedAt: 'completedAt',
   cancelledAt: 'cancelledAt',
+  remindedAt: 'remindedAt',
+  requiresDeposit: 'requiresDeposit',
+  depositAmount: 'depositAmount',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -191,6 +196,45 @@ export const DayOverrideScalarFieldEnum = {
 } as const
 
 export type DayOverrideScalarFieldEnum = (typeof DayOverrideScalarFieldEnum)[keyof typeof DayOverrideScalarFieldEnum]
+
+
+export const ReservationPaymentScalarFieldEnum = {
+  id: 'id',
+  reservationId: 'reservationId',
+  type: 'type',
+  amount: 'amount',
+  currency: 'currency',
+  stripePaymentIntentId: 'stripePaymentIntentId',
+  stripeCustomerId: 'stripeCustomerId',
+  status: 'status',
+  capturedAt: 'capturedAt',
+  refundedAt: 'refundedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ReservationPaymentScalarFieldEnum = (typeof ReservationPaymentScalarFieldEnum)[keyof typeof ReservationPaymentScalarFieldEnum]
+
+
+export const WaitlistEntryScalarFieldEnum = {
+  id: 'id',
+  guestName: 'guestName',
+  guestPhone: 'guestPhone',
+  guestEmail: 'guestEmail',
+  partySize: 'partySize',
+  estimatedWait: 'estimatedWait',
+  status: 'status',
+  position: 'position',
+  quotedAt: 'quotedAt',
+  notifiedAt: 'notifiedAt',
+  seatedAt: 'seatedAt',
+  notes: 'notes',
+  guestId: 'guestId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type WaitlistEntryScalarFieldEnum = (typeof WaitlistEntryScalarFieldEnum)[keyof typeof WaitlistEntryScalarFieldEnum]
 
 
 export const SortOrder = {

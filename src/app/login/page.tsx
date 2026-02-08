@@ -24,7 +24,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-gray-100 px-4">
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="text-2xl font-bold">ReserveKit</div>
+          <div className="text-2xl font-bold">ReserveSit</div>
           <div className="text-sm text-gray-500">Staff Login</div>
         </div>
         {error && (

@@ -1,7 +1,7 @@
 (function () {
   var script = document.currentScript;
-  if (!script || !script.hasAttribute("data-reservekit")) {
-    script = document.querySelector("script[data-reservekit]");
+  if (!script || !script.hasAttribute("data-reservesit")) {
+    script = document.querySelector("script[data-reservesit]");
   }
   if (!script) return;
 
@@ -11,7 +11,7 @@
   var query = new URLSearchParams({ theme: theme, accent: accent }).toString();
 
   var host = document.createElement("div");
-  host.id = "reservekit-widget";
+  host.id = "reservesit-widget";
   host.style.width = "100%";
   host.style.maxWidth = "680px";
 
@@ -29,7 +29,7 @@
   powered.href = baseUrl;
   powered.target = "_blank";
   powered.rel = "noopener noreferrer";
-  powered.textContent = "Powered by ReserveKit";
+  powered.textContent = "Powered by ReserveSit";
   powered.style.display = "inline-block";
   powered.style.marginTop = "8px";
   powered.style.fontSize = "12px";
@@ -52,7 +52,7 @@
 
   window.addEventListener("message", function (event) {
     if (expectedOrigin !== "*" && event.origin !== expectedOrigin) return;
-    if (!event.data || event.data.type !== "reservekit-resize") return;
+    if (!event.data || event.data.type !== "reservesit-resize") return;
     if (typeof event.data.height !== "number") return;
 
     var nextHeight = Math.max(380, Math.ceil(event.data.height));

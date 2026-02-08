@@ -17,6 +17,7 @@ interface EmbedWidgetFrameProps {
   loyaltyOptInMessage: string;
   loyaltyOptInLabel: string;
   depositsEnabled: boolean;
+  depositType: "hold" | "deposit";
   depositAmount: number;
   depositMinParty: number;
   depositMessage: string;
@@ -37,6 +38,7 @@ export default function EmbedWidgetFrame({
   loyaltyOptInMessage,
   loyaltyOptInLabel,
   depositsEnabled,
+  depositType,
   depositAmount,
   depositMinParty,
   depositMessage,
@@ -50,7 +52,7 @@ export default function EmbedWidgetFrame({
         document.body.scrollHeight,
         rootRef.current?.scrollHeight || 0
       );
-      window.parent?.postMessage({ type: "reservekit-resize", height: measured }, "*");
+      window.parent?.postMessage({ type: "reservesit-resize", height: measured }, "*");
     };
 
     sendHeight();
@@ -86,6 +88,7 @@ export default function EmbedWidgetFrame({
         loyaltyOptInMessage={loyaltyOptInMessage}
         loyaltyOptInLabel={loyaltyOptInLabel}
         depositsEnabled={depositsEnabled}
+        depositType={depositType}
         depositAmount={depositAmount}
         depositMinParty={depositMinParty}
         depositMessage={depositMessage}

@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 
 interface Slot { time: string; available: boolean }
 interface AvailabilityDeposit {
@@ -7,6 +9,7 @@ interface AvailabilityDeposit {
   amount: number;
   minParty: number;
   message: string;
+  type?: "hold" | "deposit";
   source?: string;
   label?: string | null;
 }
@@ -33,6 +36,7 @@ interface ReserveWidgetClientProps {
   loyaltyOptInMessage?: string;
   loyaltyOptInLabel?: string;
   depositsEnabled?: boolean;
+  depositType?: "hold" | "deposit";
   depositAmount?: number;
   depositMinParty?: number;
   depositMessage?: string;
@@ -55,6 +59,78 @@ function normalizePhone(value: string): string | null {
   return digits;
 }
 
+function formatCents(cents: number): string {
+  return `$${(Math.max(0, Math.trunc(cents)) / 100).toFixed(2)}`;
+}
+
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
+
+function PaymentCardStep({
+  amountCents,
+  paymentType,
+  processing,
+  onProcessingChange,
+  onPaid,
+  onError,
+}: {
+  amountCents: number;
+  paymentType: "hold" | "deposit";
+  processing: boolean;
+  onProcessingChange: (next: boolean) => void;
+  onPaid: () => void;
+  onError: (message: string) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  async function confirmCard(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    onProcessingChange(true);
+    onError("");
+    try {
+      const result = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+      });
+      if (result.error) {
+        onError(result.error.message || "Payment confirmation failed.");
+        return;
+      }
+      const status = result.paymentIntent?.status;
+      if (status === "succeeded" || status === "requires_capture" || status === "processing") {
+        onPaid();
+      } else {
+        onError("Payment is still pending. Please try again.");
+      }
+    } finally {
+      onProcessingChange(false);
+    }
+  }
+
+  return (
+    <form onSubmit={confirmCard} className="space-y-3">
+      <div className="rounded-lg border border-gray-200 p-3">
+        <PaymentElement options={{ layout: "tabs" }} />
+      </div>
+      <button
+        type="submit"
+        disabled={processing || !stripe || !elements}
+        className="w-full h-11 rounded text-white font-medium transition-all duration-200 disabled:opacity-60"
+        style={{ backgroundColor: "#2563eb" }}
+      >
+        {processing
+          ? "Processing..."
+          : paymentType === "hold"
+            ? `Place Card Hold (${formatCents(amountCents)})`
+            : `Pay Deposit (${formatCents(amountCents)})`}
+      </button>
+    </form>
+  );
+}
+
 export default function ReserveWidgetClient({
   restaurantName,
   embedded = false,
@@ -71,11 +147,12 @@ export default function ReserveWidgetClient({
   loyaltyOptInMessage = "Join our loyalty list for offers and updates by SMS.",
   loyaltyOptInLabel = "Yes, opt me in for loyalty messages.",
   depositsEnabled = false,
+  depositType = "hold",
   depositAmount = 0,
   depositMinParty = 2,
   depositMessage = "A refundable deposit may be required to hold your table.",
 }: ReserveWidgetClientProps) {
-  const [step, setStep] = useState<"select" | "form" | "done">("select");
+  const [step, setStep] = useState<"select" | "form" | "payment" | "done">("select");
   const [date, setDate] = useState("");
   const [partySize, setPartySize] = useState(2);
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -88,6 +165,10 @@ export default function ReserveWidgetClient({
   const [confirmCode, setConfirmCode] = useState("");
   const [error, setError] = useState("");
   const [depositMeta, setDepositMeta] = useState<{ required: boolean; amount: number; message: string | null }>({ required: false, amount: 0, message: null });
+  const [paymentClientSecret, setPaymentClientSecret] = useState("");
+  const [paymentType, setPaymentType] = useState<"hold" | "deposit">(depositType);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
   const [loyaltyChecking, setLoyaltyChecking] = useState(false);
   const [loyaltyKnown, setLoyaltyKnown] = useState(false);
   const [loyaltyKnownOptIn, setLoyaltyKnownOptIn] = useState(false);
@@ -97,6 +178,7 @@ export default function ReserveWidgetClient({
     amount: depositAmount,
     minParty: depositMinParty,
     message: depositMessage,
+    type: depositType,
     source: "global",
     label: null,
   });
@@ -139,6 +221,7 @@ export default function ReserveWidgetClient({
         amount: Number(payload.deposit.amount || 0),
         minParty: Number(payload.deposit.minParty || Math.max(1, depositMinParty)),
         message: String(payload.deposit.message || depositMessage),
+        type: payload.deposit.type === "deposit" ? "deposit" : "hold",
         source: payload.deposit.source || "global",
         label: payload.deposit.label || null,
       });
@@ -148,12 +231,13 @@ export default function ReserveWidgetClient({
         amount: depositAmount,
         minParty: depositMinParty,
         message: depositMessage,
+        type: depositType,
         source: "global",
         label: null,
       });
     }
     setLoading(false);
-  }, [date, partySize, depositAmount, depositMessage, depositMinParty, depositsEnabled]);
+  }, [date, partySize, depositAmount, depositMessage, depositMinParty, depositsEnabled, depositType]);
 
   useEffect(() => {
     loadSlots();
@@ -226,6 +310,34 @@ export default function ReserveWidgetClient({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setPaymentError("");
+    setPaymentClientSecret("");
+    setPaymentProcessing(false);
+
+    let liveDeposit = availabilityDeposit;
+    try {
+      const depositConfigRes = await fetch(`/api/payments/deposit-config?date=${encodeURIComponent(date)}&partySize=${partySize}`);
+      if (depositConfigRes.ok) {
+        const cfg = await depositConfigRes.json();
+        liveDeposit = {
+          required: Boolean(cfg.required),
+          amount: Number(cfg.amount || 0),
+          minParty: Number(cfg.minPartySize || Math.max(1, depositMinParty)),
+          message: String(cfg.message || depositMessage),
+          type: cfg.type === "deposit" ? "deposit" : "hold",
+          source: cfg.source || "global",
+          label: cfg.label || null,
+        };
+      }
+    } catch {
+      // Keep the previously loaded deposit config.
+    }
+
+    if (liveDeposit.required && !stripePromise) {
+      setError("Card checkout is not configured right now. Please call the restaurant to book this request.");
+      return;
+    }
+
     const res = await fetch("/api/reservations/request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -243,11 +355,32 @@ export default function ReserveWidgetClient({
     if (res.ok) {
       const d = await res.json();
       setConfirmCode(d.code);
-      setDepositMeta({
-        required: Boolean(d.depositRequired),
-        amount: Number(d.depositAmount || 0),
-        message: d.depositMessage || null,
-      });
+      const required = Boolean(d.depositRequired ?? liveDeposit.required);
+      const amount = Number(d.depositAmount ?? liveDeposit.amount ?? 0);
+      const message = String(d.depositMessage || liveDeposit.message || "");
+      setDepositMeta({ required, amount, message });
+
+      if (required && d.id) {
+        const intentRes = await fetch("/api/payments/create-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reservationId: d.id,
+            amount,
+            type: liveDeposit.type || "hold",
+          }),
+        });
+        const intentData = await intentRes.json();
+        if (!intentRes.ok || !intentData.clientSecret) {
+          setError(intentData.error || "Unable to start deposit checkout. Please try again.");
+          return;
+        }
+        setPaymentClientSecret(String(intentData.clientSecret));
+        setPaymentType((liveDeposit.type === "deposit" ? "deposit" : "hold"));
+        setStep("payment");
+        return;
+      }
+
       setStep("done");
     } else {
       setError((await res.json()).error || "Something went wrong");
@@ -264,18 +397,61 @@ export default function ReserveWidgetClient({
           <p className={`${textMutedClass} mb-4`}>Party of {partySize}</p>
           {depositMeta.required && (
             <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              {depositMeta.message || depositMessage} {depositMeta.amount > 0 ? `Deposit amount: $${depositMeta.amount}.` : ""}
+              {depositMeta.message || depositMessage} {depositMeta.amount > 0 ? `Deposit amount: ${formatCents(depositMeta.amount)}.` : ""}
             </div>
           )}
           <p className={`text-sm ${textMutedClass} mb-2`}>Reference: <strong>{confirmCode}</strong></p>
           <p className={`text-sm ${textMutedClass}`}>{reserveConfirmationMessage}</p>
           <button
-            onClick={() => { setStep("select"); setSelectedTime(""); }}
+            onClick={() => {
+              setStep("select");
+              setSelectedTime("");
+              setPaymentClientSecret("");
+              setPaymentError("");
+              setPaymentProcessing(false);
+            }}
             className="mt-6 h-11 px-4 rounded-lg border text-sm transition-all duration-200"
             style={{ borderColor: primary, color: primary }}
           >
             Make another reservation
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "payment") {
+    return (
+      <div className={wrapperClass}>
+        <div className={embedded ? "space-y-4" : "max-w-md mx-auto p-6 space-y-4 transition-all duration-200"}>
+          <div>
+            <h2 className="text-xl font-bold mb-1">Confirm Card</h2>
+            <p className={`text-sm ${textMutedClass}`}>
+              {paymentType === "hold"
+                ? `A card hold of ${formatCents(depositMeta.amount)} is required and released after your visit.`
+                : `A deposit of ${formatCents(depositMeta.amount)} is required to confirm your reservation.`}
+            </p>
+          </div>
+          {depositMeta.message && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {depositMeta.message}
+            </div>
+          )}
+          {paymentError && <p className="text-sm text-red-600">{paymentError}</p>}
+          {!stripePromise || !paymentClientSecret ? (
+            <p className="text-sm text-red-600">Unable to initialize secure payment fields.</p>
+          ) : (
+            <Elements stripe={stripePromise} options={{ clientSecret: paymentClientSecret }}>
+              <PaymentCardStep
+                amountCents={depositMeta.amount}
+                paymentType={paymentType}
+                processing={paymentProcessing}
+                onProcessingChange={setPaymentProcessing}
+                onError={setPaymentError}
+                onPaid={() => setStep("done")}
+              />
+            </Elements>
+          )}
         </div>
       </div>
     );
@@ -356,7 +532,7 @@ export default function ReserveWidgetClient({
           {depositApplies && (
             <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               {availabilityDeposit.message || depositMessage}
-              {availabilityDeposit.amount > 0 ? ` Deposit amount: $${availabilityDeposit.amount}.` : ""}
+              {availabilityDeposit.amount > 0 ? ` Deposit amount: ${formatCents(availabilityDeposit.amount)}.` : ""}
             </div>
           )}
           {error && <p className="text-red-600 text-sm mb-3">{error}</p>}

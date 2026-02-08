@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PRODUCTS: Record<string, { name: string; price: number }> = {
-  core: { name: "ReserveKit Core", price: 29900 },
-  sms: { name: "SMS Add-On", price: 7900 },
-  floorplan: { name: "Visual Floor Plan", price: 9900 },
-  reports: { name: "Reporting Dashboard", price: 4900 },
-  guesthistory: { name: "Guest History", price: 4900 },
+  core: { name: "ReserveSit Core", price: 129900 },
+  sms: { name: "SMS Add-On", price: 14900 },
+  floorplan: { name: "Visual Floor Plan", price: 19900 },
+  reports: { name: "Reporting Dashboard", price: 12900 },
+  guesthistory: { name: "Guest History", price: 12900 },
 };
 
 export async function POST(req: NextRequest) {

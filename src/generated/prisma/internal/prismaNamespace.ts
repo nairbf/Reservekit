@@ -390,7 +390,9 @@ export const ModelName = {
   Guest: 'Guest',
   Setting: 'Setting',
   NotificationLog: 'NotificationLog',
-  DayOverride: 'DayOverride'
+  DayOverride: 'DayOverride',
+  ReservationPayment: 'ReservationPayment',
+  WaitlistEntry: 'WaitlistEntry'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -406,7 +408,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "restaurantTable" | "reservation" | "guest" | "setting" | "notificationLog" | "dayOverride"
+    modelProps: "user" | "restaurantTable" | "reservation" | "guest" | "setting" | "notificationLog" | "dayOverride" | "reservationPayment" | "waitlistEntry"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -928,6 +930,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    ReservationPayment: {
+      payload: Prisma.$ReservationPaymentPayload<ExtArgs>
+      fields: Prisma.ReservationPaymentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ReservationPaymentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ReservationPaymentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload>
+        }
+        findFirst: {
+          args: Prisma.ReservationPaymentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ReservationPaymentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload>
+        }
+        findMany: {
+          args: Prisma.ReservationPaymentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload>[]
+        }
+        create: {
+          args: Prisma.ReservationPaymentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload>
+        }
+        createMany: {
+          args: Prisma.ReservationPaymentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ReservationPaymentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload>[]
+        }
+        delete: {
+          args: Prisma.ReservationPaymentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload>
+        }
+        update: {
+          args: Prisma.ReservationPaymentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload>
+        }
+        deleteMany: {
+          args: Prisma.ReservationPaymentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ReservationPaymentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ReservationPaymentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload>[]
+        }
+        upsert: {
+          args: Prisma.ReservationPaymentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ReservationPaymentPayload>
+        }
+        aggregate: {
+          args: Prisma.ReservationPaymentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateReservationPayment>
+        }
+        groupBy: {
+          args: Prisma.ReservationPaymentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReservationPaymentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ReservationPaymentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ReservationPaymentCountAggregateOutputType> | number
+        }
+      }
+    }
+    WaitlistEntry: {
+      payload: Prisma.$WaitlistEntryPayload<ExtArgs>
+      fields: Prisma.WaitlistEntryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.WaitlistEntryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.WaitlistEntryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload>
+        }
+        findFirst: {
+          args: Prisma.WaitlistEntryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.WaitlistEntryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload>
+        }
+        findMany: {
+          args: Prisma.WaitlistEntryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload>[]
+        }
+        create: {
+          args: Prisma.WaitlistEntryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload>
+        }
+        createMany: {
+          args: Prisma.WaitlistEntryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.WaitlistEntryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload>[]
+        }
+        delete: {
+          args: Prisma.WaitlistEntryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload>
+        }
+        update: {
+          args: Prisma.WaitlistEntryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload>
+        }
+        deleteMany: {
+          args: Prisma.WaitlistEntryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.WaitlistEntryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.WaitlistEntryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload>[]
+        }
+        upsert: {
+          args: Prisma.WaitlistEntryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$WaitlistEntryPayload>
+        }
+        aggregate: {
+          args: Prisma.WaitlistEntryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateWaitlistEntry>
+        }
+        groupBy: {
+          args: Prisma.WaitlistEntryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WaitlistEntryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.WaitlistEntryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.WaitlistEntryCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1020,6 +1170,9 @@ export const ReservationScalarFieldEnum = {
   seatedAt: 'seatedAt',
   completedAt: 'completedAt',
   cancelledAt: 'cancelledAt',
+  remindedAt: 'remindedAt',
+  requiresDeposit: 'requiresDeposit',
+  depositAmount: 'depositAmount',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -1082,6 +1235,45 @@ export const DayOverrideScalarFieldEnum = {
 } as const
 
 export type DayOverrideScalarFieldEnum = (typeof DayOverrideScalarFieldEnum)[keyof typeof DayOverrideScalarFieldEnum]
+
+
+export const ReservationPaymentScalarFieldEnum = {
+  id: 'id',
+  reservationId: 'reservationId',
+  type: 'type',
+  amount: 'amount',
+  currency: 'currency',
+  stripePaymentIntentId: 'stripePaymentIntentId',
+  stripeCustomerId: 'stripeCustomerId',
+  status: 'status',
+  capturedAt: 'capturedAt',
+  refundedAt: 'refundedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ReservationPaymentScalarFieldEnum = (typeof ReservationPaymentScalarFieldEnum)[keyof typeof ReservationPaymentScalarFieldEnum]
+
+
+export const WaitlistEntryScalarFieldEnum = {
+  id: 'id',
+  guestName: 'guestName',
+  guestPhone: 'guestPhone',
+  guestEmail: 'guestEmail',
+  partySize: 'partySize',
+  estimatedWait: 'estimatedWait',
+  status: 'status',
+  position: 'position',
+  quotedAt: 'quotedAt',
+  notifiedAt: 'notifiedAt',
+  seatedAt: 'seatedAt',
+  notes: 'notes',
+  guestId: 'guestId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type WaitlistEntryScalarFieldEnum = (typeof WaitlistEntryScalarFieldEnum)[keyof typeof WaitlistEntryScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1242,6 +1434,8 @@ export type GlobalOmitConfig = {
   setting?: Prisma.SettingOmit
   notificationLog?: Prisma.NotificationLogOmit
   dayOverride?: Prisma.DayOverrideOmit
+  reservationPayment?: Prisma.ReservationPaymentOmit
+  waitlistEntry?: Prisma.WaitlistEntryOmit
 }
 
 /* Types for Logging */

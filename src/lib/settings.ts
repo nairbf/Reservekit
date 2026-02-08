@@ -30,6 +30,11 @@ export interface AppSettings {
   maxCoversPerSlot: number;
   maxPartySize: number;
   diningDurations: Record<string, number>;
+  depositEnabled: boolean;
+  depositType: "hold" | "deposit";
+  depositMinPartySize: number;
+  noshowChargeEnabled: boolean;
+  noshowChargeAmount: number;
   depositsEnabled: boolean;
   depositAmount: number;
   depositMinParty: number;
@@ -167,8 +172,12 @@ export async function getSettings(): Promise<AppSettings> {
   const closeTime = map.closeTime || "22:00";
   const maxCoversPerSlot = toInt(map.maxCoversPerSlot, 40);
   const depositMessage = map.depositMessage || "A refundable deposit may be required to hold your table.";
-  const depositAmount = Math.max(0, toFloat(map.depositAmount, 0));
-  const depositMinParty = Math.max(1, toInt(map.depositMinParty, 2));
+  const depositAmount = Math.max(0, toInt(map.depositAmount, 0));
+  const depositMinParty = Math.max(1, toInt(map.depositMinPartySize ?? map.depositMinParty, 2));
+  const depositEnabled = map.depositEnabled ? map.depositEnabled === "true" : map.depositsEnabled === "true";
+  const depositType = map.depositType === "deposit" ? "deposit" : "hold";
+  const noshowChargeEnabled = map.noshowChargeEnabled === "true";
+  const noshowChargeAmount = Math.max(0, toInt(map.noshowChargeAmount, depositAmount));
   const reserveRequestSamplesRaw = map.reserveRequestSamples || "Birthday celebration,Window seat,High chair";
   const reserveRequestSamples = reserveRequestSamplesRaw.split(",").map(s => s.trim()).filter(Boolean);
   const weeklyFallback = defaultWeeklySchedule(openTime, closeTime, maxCoversPerSlot);
@@ -183,7 +192,12 @@ export async function getSettings(): Promise<AppSettings> {
     maxCoversPerSlot,
     maxPartySize: Math.max(1, toInt(map.maxPartySize, 8)),
     diningDurations: parseJson<Record<string, number>>(map.diningDurations, {}),
-    depositsEnabled: map.depositsEnabled === "true",
+    depositEnabled,
+    depositType,
+    depositMinPartySize: depositMinParty,
+    noshowChargeEnabled,
+    noshowChargeAmount,
+    depositsEnabled: depositEnabled,
     depositAmount,
     depositMinParty,
     depositMessage,
@@ -251,9 +265,9 @@ export function getEffectiveScheduleForDate(
 }
 
 export function getEffectiveDepositForRequest(settings: AppSettings, date: string, partySize: number) {
-  let enabled = settings.depositsEnabled;
+  let enabled = settings.depositEnabled;
   let amount = Math.max(0, settings.depositAmount);
-  let minParty = Math.max(1, settings.depositMinParty);
+  let minParty = Math.max(1, settings.depositMinPartySize);
   let message = settings.depositMessage;
   let source: "global" | "special" = "global";
   let label: string | null = null;

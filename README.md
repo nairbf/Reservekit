@@ -1,13 +1,13 @@
-# ReserveKit — Complete Project
+# ReserveSit — Complete Project
 
-Everything in one zip. Delete your old reservekit folder and start fresh.
+Everything in one zip. Delete your old reservesit folder and start fresh.
 
 ## Setup (5 minutes)
 
 ### 1. Create Next.js project
 ```bash
-npx create-next-app@latest reservekit --typescript --tailwind --app --src-dir --no-eslint --no-turbopack --import-alias "@/*"
-cd reservekit
+npx create-next-app@latest reservesit --typescript --tailwind --app --src-dir --no-eslint --no-turbopack --import-alias "@/*"
+cd reservesit
 ```
 
 ### 2. Install dependencies
@@ -16,7 +16,7 @@ npm install @prisma/client@latest @prisma/adapter-better-sqlite3@latest better-s
 npm install -D prisma@latest @types/bcryptjs @types/jsonwebtoken @types/nodemailer @types/better-sqlite3 tsx dotenv
 ```
 
-### 3. Copy ALL files from this zip into your reservekit folder (overwrite everything)
+### 3. Copy ALL files from this zip into your reservesit folder (overwrite everything)
 
 ### 4. Generate + seed database
 ```bash
@@ -67,7 +67,7 @@ npm run dev
 - SQLite database (zero setup)
 
 **Add-ons:**
-- SMS (Twilio, license-key gated) — enter RK-SMS-TEST1234 in Settings
+- SMS (Twilio, license-key gated) — enter RS-SMS-TEST1234 in Settings
 - Schedule overrides (close dates, holiday hours)
 - Reporting dashboard
 - Settings UI (restaurant details, SMTP, SMS config)

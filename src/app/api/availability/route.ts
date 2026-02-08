@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
       required: deposit.required,
       amount: deposit.amount,
       minParty: deposit.minParty,
+      type: settings.depositType,
       message: deposit.message,
       source: deposit.source,
       label: deposit.label,

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface Reservation {
   id: number;
@@ -19,6 +20,12 @@ interface Reservation {
     totalVisits: number;
     vipStatus: string | null;
     allergyNotes: string | null;
+  } | null;
+  payment: {
+    id: number;
+    type: string;
+    amount: number;
+    status: string;
   } | null;
 }
 interface TableItem { id: number; name: string; maxCapacity: number }
@@ -76,6 +83,19 @@ function fmtDate(value: string): string {
   return date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
+function paymentStatusLabel(status: string, type: string): string {
+  if (status === "pending") return type === "hold" ? "held" : "pending";
+  if (status === "captured") return "charged";
+  if (status === "released") return "released";
+  if (status === "refunded") return "refunded";
+  if (status === "charged_noshow") return "no-show charged";
+  return status.replace(/_/g, " ");
+}
+
+function formatCents(cents: number): string {
+  return `$${(Math.max(0, Math.trunc(cents)) / 100).toFixed(2)}`;
+}
+
 function cleanSpecialRequests(value: string | null): string | null {
   return cleanText(value);
 }
@@ -94,10 +114,12 @@ function cleanText(value: string | null | undefined): string | null {
 }
 
 export default function InboxPage() {
+  const searchParams = useSearchParams();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<TableItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "inbox";
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -136,7 +158,7 @@ export default function InboxPage() {
   }
 
   return (
-    <div>
+    <div className={showTourHighlight ? "rounded-2xl ring-2 ring-blue-300 p-2" : ""}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Inbox</h1>
@@ -179,6 +201,11 @@ export default function InboxPage() {
                     )}
                     {r.guest?.allergyNotes && (
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Allergies</span>
+                    )}
+                    {r.payment && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        💳 {formatCents(r.payment.amount)} {r.payment.type} · {paymentStatusLabel(r.payment.status, r.payment.type)}
+                      </span>
                     )}
                   </div>
                 </div>

@@ -5,6 +5,12 @@ const PUBLIC_API_EXACT = new Set([
   "/api/availability",
   "/api/reservations/request",
   "/api/loyalty/consent",
+  "/api/payments/create-intent",
+  "/api/payments/deposit-config",
+  "/api/waitlist",
+  "/api/waitlist/estimate",
+  "/api/waitlist/status",
+  "/api/cron/reminders",
   "/api/checkout",
   "/api/health",
 ]);

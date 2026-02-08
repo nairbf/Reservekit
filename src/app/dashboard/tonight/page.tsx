@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface Reservation {
   id: number;
@@ -93,6 +94,7 @@ function escapeHtml(value: string): string {
 }
 
 export default function TonightPage() {
+  const searchParams = useSearchParams();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<TableItem[]>([]);
   const [posStatusMap, setPosStatusMap] = useState<Record<number, PosStatusEntry>>({});
@@ -102,6 +104,7 @@ export default function TonightPage() {
   const [loaded, setLoaded] = useState(false);
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(today);
+  const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "tonight";
 
   const load = useCallback(async () => {
     const [r, t] = await Promise.all([fetch(`/api/reservations?status=all&date=${selectedDate}`), fetch("/api/tables")]);
@@ -241,7 +244,7 @@ export default function TonightPage() {
   for (const r of reservations) { if (r.table && ["seated", "arrived"].includes(r.status)) tableStatus[r.table.id] = r; }
 
   return (
-    <div>
+    <div className={showTourHighlight ? "rounded-2xl ring-2 ring-blue-300 p-2" : ""}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold">Service Board — {formatDateLabel(selectedDate)}</h1>

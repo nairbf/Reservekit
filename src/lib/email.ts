@@ -9,7 +9,20 @@ async function getEmailConfig() {
   return m;
 }
 
-export async function sendEmail(p: { to: string; subject: string; body: string; reservationId?: number; messageType: string }) {
+interface EmailAttachment {
+  filename: string;
+  content: string | Buffer;
+  contentType?: string;
+}
+
+export async function sendEmail(p: {
+  to: string;
+  subject: string;
+  body: string;
+  reservationId?: number;
+  messageType: string;
+  attachments?: EmailAttachment[];
+}) {
   const c = await getEmailConfig();
   if (!c.smtpHost || !c.smtpUser) {
     console.log(`[EMAIL SKIP] No SMTP. Would send to ${p.to}: ${p.subject}`);
@@ -17,7 +30,13 @@ export async function sendEmail(p: { to: string; subject: string; body: string; 
   }
   try {
     const t = nodemailer.createTransport({ host: c.smtpHost, port: parseInt(c.smtpPort || "587"), secure: c.smtpPort === "465", auth: { user: c.smtpUser, pass: c.smtpPass } });
-    await t.sendMail({ from: `"${c.restaurantName || "Restaurant"}" <${c.smtpFrom || c.smtpUser}>`, to: p.to, subject: p.subject, text: p.body });
+    await t.sendMail({
+      from: `"${c.restaurantName || "Restaurant"}" <${c.smtpFrom || c.smtpUser}>`,
+      to: p.to,
+      subject: p.subject,
+      text: p.body,
+      attachments: p.attachments,
+    });
     await prisma.notificationLog.create({ data: { reservationId: p.reservationId, channel: "email", recipient: p.to, messageType: p.messageType, body: p.body, status: "sent" } });
   } catch (err) {
     console.error("[EMAIL ERROR]", err);

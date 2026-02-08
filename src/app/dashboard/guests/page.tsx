@@ -44,7 +44,7 @@ export default function GuestsPage() {
     ])
       .then(([s, session]) => {
         const key = String(s.license_guesthistory || "").toUpperCase();
-        const hasKey = /^RK-GST-[A-Z0-9]{8}$/.test(key);
+        const hasKey = /^RS-GST-[A-Z0-9]{8}$/.test(key);
         const isAdmin = session?.role === "admin";
         setLicenseOk(hasKey || isAdmin);
       })

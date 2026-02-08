@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const NAV = [
   { href: "/dashboard", label: "Inbox" },
   { href: "/dashboard/tonight", label: "Tonight" },
+  { href: "/dashboard/waitlist", label: "Waitlist" },
   { href: "/dashboard/tables", label: "Tables" },
   { href: "/dashboard/floorplan", label: "Floor Plan" },
   { href: "/dashboard/schedule", label: "Schedule" },
@@ -14,18 +15,27 @@ const NAV = [
   { href: "/dashboard/settings", label: "Settings" },
 ];
 
-export default function DashboardNav({ email }: { email: string }) {
+export default function DashboardNav({ email, canAccessAdmin }: { email: string; canAccessAdmin: boolean }) {
   const [open, setOpen] = useState(false);
-  const [restaurantName, setRestaurantName] = useState("ReserveKit");
+  const [restaurantName, setRestaurantName] = useState("ReserveSit");
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const nav = canAccessAdmin ? [...NAV, { href: "/dashboard/admin", label: "Admin" }] : NAV;
+  const inSetupPreview = searchParams.get("fromSetup") === "1";
 
   useEffect(() => {
     fetch("/api/settings")
       .then(r => r.json())
-      .then(s => { if (s.restaurantName) setRestaurantName(s.restaurantName); })
+      .then(s => {
+        if (s.restaurantName) setRestaurantName(s.restaurantName);
+        const setupDone = s.setupWizardCompleted === "true";
+        if (!canAccessAdmin && !setupDone && pathname !== "/dashboard/setup" && !inSetupPreview) {
+          router.replace("/dashboard/setup");
+        }
+      })
       .catch(() => {});
-  }, []);
+  }, [canAccessAdmin, inSetupPreview, pathname, router]);
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -54,7 +64,7 @@ export default function DashboardNav({ email }: { email: string }) {
         </div>
 
         <div className="hidden md:flex items-center gap-1">
-          {NAV.map(item => (
+          {nav.map(item => (
             <Link
               key={item.href}
               href={item.href}
@@ -80,7 +90,7 @@ export default function DashboardNav({ email }: { email: string }) {
               <button onClick={() => setOpen(false)} className="h-11 w-11 rounded-lg border border-gray-200">✕</button>
             </div>
             <div className="flex-1 space-y-1">
-              {NAV.map(item => (
+              {nav.map(item => (
                 <Link
                   key={item.href}
                   href={item.href}

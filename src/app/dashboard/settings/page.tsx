@@ -1,5 +1,6 @@
 "use client";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type SettingsTab = "restaurant" | "operations" | "communications" | "booking" | "integrations";
 
@@ -51,9 +52,9 @@ function TabButton({ tab, label, desc, activeTab, onSelect }: TabButtonProps) {
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ title, children, className = "" }: { title: string; children: ReactNode; className?: string }) {
   return (
-    <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+    <div className={`bg-white rounded-xl shadow p-4 sm:p-6 ${className}`}>
       <h2 className="font-bold text-lg mb-4">{title}</h2>
       {children}
     </div>
@@ -95,6 +96,7 @@ function formatSyncTime(value: string | null): string {
 }
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -108,6 +110,8 @@ export default function SettingsPage() {
   const [testingConnection, setTestingConnection] = useState(false);
   const [syncingSpotOn, setSyncingSpotOn] = useState(false);
   const [savingMapping, setSavingMapping] = useState(false);
+  const tour = searchParams.get("tour");
+  const showTourHighlight = searchParams.get("fromSetup") === "1" && (tour === "settings" || tour === "publish");
 
   useEffect(() => {
     Promise.all([
@@ -293,7 +297,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className={`max-w-5xl space-y-6 ${showTourHighlight ? "rounded-2xl ring-2 ring-blue-300 p-2" : ""}`}>
       <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold">Settings</h1>
@@ -358,7 +362,7 @@ export default function SettingsPage() {
           </Section>
 
           <Section title="SMS Add-On">
-            <Field label="License Key" value={settings.license_sms} onChange={v => set("license_sms", v)} placeholder="RK-SMS-XXXXXXXX" />
+            <Field label="License Key" value={settings.license_sms} onChange={v => set("license_sms", v)} placeholder="RS-SMS-XXXXXXXX" />
             <div className="grid sm:grid-cols-2 gap-4 mt-4">
               <Field label="Twilio Account SID" value={settings.twilioSid} onChange={v => set("twilioSid", v)} placeholder="AC..." />
               <Field label="Twilio Auth Token" value={settings.twilioToken} onChange={v => set("twilioToken", v)} type="password" />
@@ -373,23 +377,51 @@ export default function SettingsPage() {
 
       {activeTab === "booking" && (
         <div className="space-y-6">
-          <Section title="Reservation Request Controls">
+          <Section title="Deposits & No-Show Protection">
             <label className="flex items-center gap-2 text-sm font-medium mb-4">
               <input
                 type="checkbox"
-                checked={settings.depositsEnabled === "true"}
-                onChange={e => set("depositsEnabled", e.target.checked ? "true" : "false")}
+                checked={(settings.depositEnabled || settings.depositsEnabled) === "true"}
+                onChange={e => {
+                  const next = e.target.checked ? "true" : "false";
+                  set("depositEnabled", next);
+                  set("depositsEnabled", next);
+                }}
                 className="h-4 w-4"
               />
-              Enable default deposit policy
+              Enable deposits / card guarantees
             </label>
 
-            {settings.depositsEnabled === "true" && (
+            {(settings.depositEnabled || settings.depositsEnabled) === "true" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <Field label="Default Deposit Amount (USD)" value={settings.depositAmount || "0"} onChange={v => set("depositAmount", v)} type="number" />
-                <Field label="Default Apply at Party Size" value={settings.depositMinParty || "2"} onChange={v => set("depositMinParty", v)} type="number" />
+                <div>
+                  <label className="block text-sm font-medium mb-1">Deposit Type</label>
+                  <select
+                    value={settings.depositType || "hold"}
+                    onChange={e => set("depositType", e.target.value)}
+                    className="h-11 w-full border rounded px-3 text-sm"
+                  >
+                    <option value="hold">Card Hold (authorize only)</option>
+                    <option value="deposit">Deposit (charge now)</option>
+                  </select>
+                </div>
+                <Field
+                  label="Deposit Amount (cents)"
+                  value={settings.depositAmount || "0"}
+                  onChange={v => set("depositAmount", v)}
+                  type="number"
+                />
+                <Field
+                  label="Apply at Party Size >="
+                  value={settings.depositMinPartySize || settings.depositMinParty || "2"}
+                  onChange={v => {
+                    set("depositMinPartySize", v);
+                    set("depositMinParty", v);
+                  }}
+                  type="number"
+                />
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium mb-1">Default Deposit Message</label>
+                  <label className="block text-sm font-medium mb-1">Deposit Message</label>
                   <textarea
                     value={settings.depositMessage || ""}
                     onChange={e => set("depositMessage", e.target.value)}
@@ -400,6 +432,29 @@ export default function SettingsPage() {
               </div>
             )}
 
+            <label className="flex items-center gap-2 text-sm font-medium mb-3">
+              <input
+                type="checkbox"
+                checked={settings.noshowChargeEnabled === "true"}
+                onChange={e => set("noshowChargeEnabled", e.target.checked ? "true" : "false")}
+                className="h-4 w-4"
+              />
+              Charge no-shows automatically when a card is on file
+            </label>
+            {settings.noshowChargeEnabled === "true" && (
+              <Field
+                label="No-Show Charge Amount (cents)"
+                value={settings.noshowChargeAmount || settings.depositAmount || "0"}
+                onChange={v => set("noshowChargeAmount", v)}
+                type="number"
+              />
+            )}
+            <p className="text-xs text-gray-500 mt-3">
+              Example: 2500 cents = $25.00
+            </p>
+          </Section>
+
+          <Section title="Reservation Widget Messaging">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <Field label="Reserve Heading" value={settings.reserveHeading || ""} onChange={v => set("reserveHeading", v)} />
               <Field label="Reserve Subheading" value={settings.reserveSubheading || ""} onChange={v => set("reserveSubheading", v)} />
@@ -464,10 +519,10 @@ export default function SettingsPage() {
             <p className="text-xs text-gray-500 mt-3">Guests are prompted once per phone number and their choice is remembered.</p>
           </Section>
 
-          <Section title="Widget Embed Code">
+          <Section title="Widget Embed Code" className={tour === "publish" ? "ring-2 ring-blue-300" : ""}>
             <p className="text-sm text-gray-600 mb-2">Paste this on your restaurant website:</p>
             <div className="bg-gray-100 rounded-lg p-3 text-xs font-mono break-all select-all">
-              {`<script data-reservekit src="${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/widget.js"></script>`}
+              {`<script data-reservesit src="${typeof window !== "undefined" ? window.location.origin : "https://your-domain.com"}/widget.js"></script>`}
             </div>
           </Section>
         </div>
@@ -476,7 +531,7 @@ export default function SettingsPage() {
       {activeTab === "integrations" && (
         <Section title="SpotOn POS Integration">
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="POS License Key" value={settings.license_pos} onChange={v => set("license_pos", v)} placeholder="RK-POS-XXXXXXXX" />
+            <Field label="POS License Key" value={settings.license_pos} onChange={v => set("license_pos", v)} placeholder="RS-POS-XXXXXXXX" />
             <Field label="SpotOn API Key" value={settings.spotonApiKey} onChange={v => set("spotonApiKey", v)} placeholder="Your SpotOn API key" />
             <Field label="Location ID" value={settings.spotonLocationId} onChange={v => set("spotonLocationId", v)} placeholder="Location152" />
             <div>
@@ -562,7 +617,7 @@ export default function SettingsPage() {
                     onChange={e => setMappingRow(row.rowId, { reservekitTableId: e.target.value ? Number(e.target.value) : "" })}
                     className="h-11 border rounded px-3 text-sm"
                   >
-                    <option value="">ReserveKit Table</option>
+                    <option value="">ReserveSit Table</option>
                     {tables.map(t => (
                       <option key={t.id} value={t.id}>
                         {t.name}

@@ -62,6 +62,10 @@ model Reservation {
   seatedAt        DateTime?
   completedAt     DateTime?
   cancelledAt     DateTime?
+  remindedAt      DateTime?
+  requiresDeposit Boolean           @default(false)
+  depositAmount   Int?
+  payment         ReservationPayment?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   notifications   NotificationLog[]
@@ -85,6 +89,7 @@ model Guest {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   reservations   Reservation[]
+  waitlistEntries WaitlistEntry[]
 }
 
 model Setting {
@@ -112,4 +117,39 @@ model DayOverride {
   closeTime String?
   maxCovers Int?
   note      String?
+}
+
+model ReservationPayment {
+  id                    Int         @id @default(autoincrement())
+  reservationId         Int         @unique
+  reservation           Reservation @relation(fields: [reservationId], references: [id])
+  type                  String
+  amount                Int
+  currency              String      @default("usd")
+  stripePaymentIntentId String?
+  stripeCustomerId      String?
+  status                String      @default("pending")
+  capturedAt            DateTime?
+  refundedAt            DateTime?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+}
+
+model WaitlistEntry {
+  id            Int       @id @default(autoincrement())
+  guestName     String
+  guestPhone    String
+  guestEmail    String?
+  partySize     Int
+  estimatedWait Int?
+  status        String    @default("waiting")
+  position      Int       @default(0)
+  quotedAt      DateTime  @default(now())
+  notifiedAt    DateTime?
+  seatedAt      DateTime?
+  notes         String?
+  guestId       Int?
+  guest         Guest?    @relation(fields: [guestId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }

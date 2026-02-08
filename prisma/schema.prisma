@@ -90,6 +90,7 @@ model Guest {
   updatedAt      DateTime      @updatedAt
   reservations   Reservation[]
   waitlistEntries WaitlistEntry[]
+  eventTickets   EventTicket[]
 }
 
 model Setting {
@@ -152,4 +153,41 @@ model WaitlistEntry {
   guest         Guest?    @relation(fields: [guestId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+model Event {
+  id          Int          @id @default(autoincrement())
+  name        String
+  description String?
+  date        String
+  startTime   String
+  endTime     String?
+  ticketPrice Int
+  maxTickets  Int
+  soldTickets Int          @default(0)
+  isActive    Boolean      @default(true)
+  imageUrl    String?
+  slug        String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  tickets     EventTicket[]
+}
+
+model EventTicket {
+  id                    Int       @id @default(autoincrement())
+  eventId               Int
+  event                 Event     @relation(fields: [eventId], references: [id])
+  guestName             String
+  guestEmail            String
+  guestPhone            String?
+  quantity              Int       @default(1)
+  totalPaid             Int
+  stripePaymentIntentId String?
+  status                String    @default("confirmed")
+  code                  String    @unique
+  checkedInAt           DateTime?
+  guestId               Int?
+  guest                 Guest?    @relation(fields: [guestId], references: [id])
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 }

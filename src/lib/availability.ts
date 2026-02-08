@@ -12,7 +12,7 @@ export function minutesToTime(m: number): string {
 
 export interface Slot { time: string; available: boolean; reason?: string }
 
-export async function getAvailableSlots(date: string, partySize: number): Promise<Slot[]> {
+export async function getAvailableSlots(date: string, partySize: number, options?: { excludeReservationId?: number }): Promise<Slot[]> {
   const settings = await getSettings();
   const override = await prisma.dayOverride.findUnique({ where: { date } });
   const effective = getEffectiveScheduleForDate(settings, date, override);
@@ -30,7 +30,11 @@ export async function getAvailableSlots(date: string, partySize: number): Promis
   if (latestStartMin < openMin) return [];
 
   const existing = await prisma.reservation.findMany({
-    where: { date, status: { in: ["pending", "approved", "confirmed", "arrived", "seated"] } },
+    where: {
+      date,
+      status: { in: ["pending", "approved", "confirmed", "arrived", "seated"] },
+      ...(options?.excludeReservationId ? { id: { not: options.excludeReservationId } } : {}),
+    },
     select: { time: true, endTime: true, partySize: true },
   });
 

@@ -6,6 +6,7 @@ import { timeToMinutes, minutesToTime } from "@/lib/availability";
 import { notifyRequestReceived } from "@/lib/notifications";
 import { linkGuestToReservation } from "@/lib/guest";
 import { saveLoyaltyConsent } from "@/lib/loyalty";
+import { notifyStaffLargeParty, notifyStaffNewRequest } from "@/lib/staff-notifications";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -47,6 +48,8 @@ export async function POST(req: NextRequest) {
   }
   linkGuestToReservation(reservation.id).catch(console.error);
   notifyRequestReceived(reservation).catch(console.error);
+  notifyStaffNewRequest(reservation).catch(console.error);
+  notifyStaffLargeParty(reservation).catch(console.error);
   return NextResponse.json({
     id: reservation.id,
     code: reservation.code,

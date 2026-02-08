@@ -84,7 +84,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const charged = await chargeNoShow(updated.id);
         if (charged.ok) {
           const amount = charged.chargedAmount ?? Math.max(0, settings.noshowChargeAmount || updated.payment.amount || 0);
-          const msg = `You were marked as a no-show for your reservation on ${updated.date}. A charge of ${formatMoneyCents(amount)} has been applied to your card.`;
+          const appUrl = process.env.APP_URL || "http://localhost:3000";
+          const msg = `You were marked as a no-show for your reservation on ${updated.date}. A charge of ${formatMoneyCents(amount)} has been applied to your card.\nManage your reservation: ${appUrl}/reservation/manage`;
           if (updated.guestEmail) {
             await sendEmail({
               to: updated.guestEmail,

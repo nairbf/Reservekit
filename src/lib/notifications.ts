@@ -8,9 +8,10 @@ interface Res { id: number; code: string; guestName: string; guestPhone: string;
 
 function fmt(t: string) { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; }
 async function rname() { return (await prisma.setting.findUnique({ where: { key: "restaurantName" } }))?.value || "the restaurant"; }
+function manageLink() { const appUrl = process.env.APP_URL || "http://localhost:3000"; return `${appUrl}/reservation/manage`; }
 
 export async function notifyRequestReceived(r: Res) {
-  if (r.guestEmail) { const n = await rname(); await sendEmail({ to: r.guestEmail, subject: `Reservation request received — ${n}`, body: `Hi ${r.guestName},\n\nWe received your request:\nDate: ${r.date}\nTime: ${fmt(r.time)}\nParty: ${r.partySize}\nRef: ${r.code}\n\nWe'll confirm shortly.\n\n— ${n}`, reservationId: r.id, messageType: "request_received" }); }
+  if (r.guestEmail) { const n = await rname(); await sendEmail({ to: r.guestEmail, subject: `Reservation request received — ${n}`, body: `Hi ${r.guestName},\n\nWe received your request:\nDate: ${r.date}\nTime: ${fmt(r.time)}\nParty: ${r.partySize}\nRef: ${r.code}\n\nWe'll confirm shortly.\n\nManage your reservation: ${manageLink()}\n\n— ${n}`, reservationId: r.id, messageType: "request_received" }); }
   if (r.guestPhone) { const body = await smsT.smsRequestReceived(r); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "request_received" }); }
 }
 
@@ -35,7 +36,7 @@ export async function notifyApproved(r: Res) {
     await sendEmail({
       to: r.guestEmail,
       subject: `Reservation confirmed — ${n}`,
-      body: `Hi ${r.guestName},\n\nYour reservation is confirmed!\nDate: ${r.date}\nTime: ${fmt(r.time)}\nParty: ${r.partySize}\nRef: ${r.code}\n\nSee you there!\n\n— ${n}`,
+      body: `Hi ${r.guestName},\n\nYour reservation is confirmed!\nDate: ${r.date}\nTime: ${fmt(r.time)}\nParty: ${r.partySize}\nRef: ${r.code}\n\nSee you there!\n\nManage your reservation: ${manageLink()}\n\n— ${n}`,
       reservationId: r.id,
       messageType: "approved",
       attachments,
@@ -45,11 +46,11 @@ export async function notifyApproved(r: Res) {
 }
 
 export async function notifyDeclined(r: Res) {
-  if (r.guestEmail) { const n = await rname(); await sendEmail({ to: r.guestEmail, subject: `Reservation update — ${n}`, body: `Hi ${r.guestName},\n\nWe're unable to accommodate ${r.date} at ${fmt(r.time)}.\nPlease try another date or call us.\n\n— ${n}`, reservationId: r.id, messageType: "declined" }); }
+  if (r.guestEmail) { const n = await rname(); await sendEmail({ to: r.guestEmail, subject: `Reservation update — ${n}`, body: `Hi ${r.guestName},\n\nWe're unable to accommodate ${r.date} at ${fmt(r.time)}.\nPlease try another date or call us.\n\nManage your reservation: ${manageLink()}\n\n— ${n}`, reservationId: r.id, messageType: "declined" }); }
   if (r.guestPhone) { const body = await smsT.smsDeclined(r); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "declined" }); }
 }
 
 export async function notifyCancelled(r: Res) {
-  if (r.guestEmail) { const n = await rname(); await sendEmail({ to: r.guestEmail, subject: `Reservation cancelled — ${n}`, body: `Hi ${r.guestName},\n\nYour reservation for ${r.date} at ${fmt(r.time)} has been cancelled.\nRef: ${r.code}\n\n— ${n}`, reservationId: r.id, messageType: "cancelled" }); }
+  if (r.guestEmail) { const n = await rname(); await sendEmail({ to: r.guestEmail, subject: `Reservation cancelled — ${n}`, body: `Hi ${r.guestName},\n\nYour reservation for ${r.date} at ${fmt(r.time)} has been cancelled.\nRef: ${r.code}\n\nManage your reservation: ${manageLink()}\n\n— ${n}`, reservationId: r.id, messageType: "cancelled" }); }
   if (r.guestPhone) { const body = await smsT.smsCancelled(r); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "cancelled" }); }
 }

@@ -11,6 +11,7 @@ const NAV = [
   { href: "/dashboard/floorplan", label: "Floor Plan" },
   { href: "/dashboard/schedule", label: "Schedule" },
   { href: "/dashboard/reports", label: "Reports" },
+  { href: "/dashboard/events", label: "Events" },
   { href: "/dashboard/guests", label: "Guests" },
   { href: "/dashboard/settings", label: "Settings" },
 ];

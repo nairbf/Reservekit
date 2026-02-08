@@ -13,10 +13,14 @@ const PUBLIC_API_EXACT = new Set([
   "/api/cron/reminders",
   "/api/checkout",
   "/api/health",
+  "/api/reservations/lookup",
+  "/api/reservations/self-service",
+  "/api/events",
 ]);
 
 function isPublicApi(pathname: string): boolean {
   if (PUBLIC_API_EXACT.has(pathname)) return true;
+  if (pathname.startsWith("/api/events")) return true;
   if (pathname.startsWith("/api/webhooks/")) return true;
   return false;
 }

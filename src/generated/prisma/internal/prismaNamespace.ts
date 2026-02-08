@@ -392,7 +392,9 @@ export const ModelName = {
   NotificationLog: 'NotificationLog',
   DayOverride: 'DayOverride',
   ReservationPayment: 'ReservationPayment',
-  WaitlistEntry: 'WaitlistEntry'
+  WaitlistEntry: 'WaitlistEntry',
+  Event: 'Event',
+  EventTicket: 'EventTicket'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -408,7 +410,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "restaurantTable" | "reservation" | "guest" | "setting" | "notificationLog" | "dayOverride" | "reservationPayment" | "waitlistEntry"
+    modelProps: "user" | "restaurantTable" | "reservation" | "guest" | "setting" | "notificationLog" | "dayOverride" | "reservationPayment" | "waitlistEntry" | "event" | "eventTicket"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1078,6 +1080,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    Event: {
+      payload: Prisma.$EventPayload<ExtArgs>
+      fields: Prisma.EventFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EventFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EventFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload>
+        }
+        findFirst: {
+          args: Prisma.EventFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EventFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload>
+        }
+        findMany: {
+          args: Prisma.EventFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload>[]
+        }
+        create: {
+          args: Prisma.EventCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload>
+        }
+        createMany: {
+          args: Prisma.EventCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EventCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload>[]
+        }
+        delete: {
+          args: Prisma.EventDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload>
+        }
+        update: {
+          args: Prisma.EventUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload>
+        }
+        deleteMany: {
+          args: Prisma.EventDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EventUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EventUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload>[]
+        }
+        upsert: {
+          args: Prisma.EventUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventPayload>
+        }
+        aggregate: {
+          args: Prisma.EventAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEvent>
+        }
+        groupBy: {
+          args: Prisma.EventGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EventGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EventCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EventCountAggregateOutputType> | number
+        }
+      }
+    }
+    EventTicket: {
+      payload: Prisma.$EventTicketPayload<ExtArgs>
+      fields: Prisma.EventTicketFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EventTicketFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EventTicketFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload>
+        }
+        findFirst: {
+          args: Prisma.EventTicketFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EventTicketFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload>
+        }
+        findMany: {
+          args: Prisma.EventTicketFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload>[]
+        }
+        create: {
+          args: Prisma.EventTicketCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload>
+        }
+        createMany: {
+          args: Prisma.EventTicketCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EventTicketCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload>[]
+        }
+        delete: {
+          args: Prisma.EventTicketDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload>
+        }
+        update: {
+          args: Prisma.EventTicketUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload>
+        }
+        deleteMany: {
+          args: Prisma.EventTicketDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EventTicketUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EventTicketUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload>[]
+        }
+        upsert: {
+          args: Prisma.EventTicketUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EventTicketPayload>
+        }
+        aggregate: {
+          args: Prisma.EventTicketAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEventTicket>
+        }
+        groupBy: {
+          args: Prisma.EventTicketGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EventTicketGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EventTicketCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EventTicketCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1276,6 +1426,46 @@ export const WaitlistEntryScalarFieldEnum = {
 export type WaitlistEntryScalarFieldEnum = (typeof WaitlistEntryScalarFieldEnum)[keyof typeof WaitlistEntryScalarFieldEnum]
 
 
+export const EventScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  date: 'date',
+  startTime: 'startTime',
+  endTime: 'endTime',
+  ticketPrice: 'ticketPrice',
+  maxTickets: 'maxTickets',
+  soldTickets: 'soldTickets',
+  isActive: 'isActive',
+  imageUrl: 'imageUrl',
+  slug: 'slug',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EventScalarFieldEnum = (typeof EventScalarFieldEnum)[keyof typeof EventScalarFieldEnum]
+
+
+export const EventTicketScalarFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  guestName: 'guestName',
+  guestEmail: 'guestEmail',
+  guestPhone: 'guestPhone',
+  quantity: 'quantity',
+  totalPaid: 'totalPaid',
+  stripePaymentIntentId: 'stripePaymentIntentId',
+  status: 'status',
+  code: 'code',
+  checkedInAt: 'checkedInAt',
+  guestId: 'guestId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EventTicketScalarFieldEnum = (typeof EventTicketScalarFieldEnum)[keyof typeof EventTicketScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1436,6 +1626,8 @@ export type GlobalOmitConfig = {
   dayOverride?: Prisma.DayOverrideOmit
   reservationPayment?: Prisma.ReservationPaymentOmit
   waitlistEntry?: Prisma.WaitlistEntryOmit
+  event?: Prisma.EventOmit
+  eventTicket?: Prisma.EventTicketOmit
 }
 
 /* Types for Logging */

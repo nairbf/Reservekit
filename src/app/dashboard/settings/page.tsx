@@ -372,6 +372,32 @@ export default function SettingsPage() {
               <p className="text-xs text-gray-400 mt-2">Get credentials at twilio.com/console. You pay Twilio directly for SMS.</p>
             </div>
           </Section>
+
+          <Section title="Staff Notifications">
+            <label className="flex items-center gap-2 text-sm font-medium mb-3">
+              <input
+                type="checkbox"
+                checked={settings.staffNotificationsEnabled === "true"}
+                onChange={e => set("staffNotificationsEnabled", e.target.checked ? "true" : "false")}
+                className="h-4 w-4"
+              />
+              Enable manager alert emails
+            </label>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field
+                label="Notification Email"
+                value={settings.staffNotificationEmail || ""}
+                onChange={v => set("staffNotificationEmail", v)}
+                placeholder="manager@restaurant.com"
+              />
+              <Field
+                label="Large Party Threshold"
+                value={settings.largePartyThreshold || "6"}
+                onChange={v => set("largePartyThreshold", v)}
+                type="number"
+              />
+            </div>
+          </Section>
         </div>
       )}
 
@@ -530,6 +556,7 @@ export default function SettingsPage() {
 
       {activeTab === "integrations" && (
         <Section title="SpotOn POS Integration">
+          <Field label="Event Ticketing License Key" value={settings.license_events || ""} onChange={v => set("license_events", v)} placeholder="RS-EVT-XXXXXXXX" />
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="POS License Key" value={settings.license_pos} onChange={v => set("license_pos", v)} placeholder="RS-POS-XXXXXXXX" />
             <Field label="SpotOn API Key" value={settings.spotonApiKey} onChange={v => set("spotonApiKey", v)} placeholder="Your SpotOn API key" />

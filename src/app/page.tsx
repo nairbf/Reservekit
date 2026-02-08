@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 
-type AddOnId = "sms" | "floorplan" | "reports" | "guesthistory";
+type AddOnId = "sms" | "floorplan" | "reports" | "guesthistory" | "eventticketing";
 
 interface AddOn {
   id: AddOnId;
@@ -24,12 +24,13 @@ const ADD_ONS: AddOn[] = [
   { id: "floorplan", name: "Visual Floor Plan", price: 199, desc: "Drag-and-drop layout with live table state" },
   { id: "reports", name: "Reporting Dashboard", price: 129, desc: "Covers, no-show trends, and service performance" },
   { id: "guesthistory", name: "Guest History", price: 129, desc: "Repeat-guest timeline, notes, and loyalty context" },
+  { id: "eventticketing", name: "Event Ticketing", price: 69, desc: "Sell pre-paid tickets for dinners and special events" },
 ];
 
 const BUNDLES: Bundle[] = [
   { id: "core", name: "Core", items: ["core"], note: "Best for launch and owner-operator teams" },
   { id: "service", name: "Service Pro", items: ["core", "floorplan", "reports"], note: "Most popular for full-service dining rooms" },
-  { id: "full", name: "Full Suite", items: ["core", "sms", "floorplan", "reports", "guesthistory"], note: "Maximum control with every add-on included" },
+  { id: "full", name: "Full Suite", items: ["core", "sms", "floorplan", "reports", "guesthistory", "eventticketing"], note: "Maximum control with every add-on included" },
 ];
 
 function totalFor(items: Array<"core" | AddOnId>): number {
@@ -92,6 +93,7 @@ export default function LandingPage() {
               { t: "Hostess Dashboard", d: "Tablet-friendly workflows for requests, arrivals, and tables." },
               { t: "Email Built In", d: "Automatic status emails from your own SMTP credentials." },
               { t: "Walk-ins & Phone", d: "Capture in-person and call-in demand in seconds." },
+              { t: "Event Ticketing", d: "Run wine dinners, holiday seatings, and paid special events." },
               { t: "Smart Availability", d: "Capacity rules prevent overbooking during peak periods." },
               { t: "You Own It", d: "Self-host or have us host for $15/month with backups." },
             ].map(feature => (

@@ -6,6 +6,7 @@ const PRODUCTS: Record<string, { name: string; price: number }> = {
   floorplan: { name: "Visual Floor Plan", price: 19900 },
   reports: { name: "Reporting Dashboard", price: 12900 },
   guesthistory: { name: "Guest History", price: 12900 },
+  eventticketing: { name: "Event Ticketing", price: 6900 },
 };
 
 export async function POST(req: NextRequest) {

@@ -62,3 +62,13 @@ export type ReservationPayment = Prisma.ReservationPaymentModel
  * 
  */
 export type WaitlistEntry = Prisma.WaitlistEntryModel
+/**
+ * Model Event
+ * 
+ */
+export type Event = Prisma.EventModel
+/**
+ * Model EventTicket
+ * 
+ */
+export type EventTicket = Prisma.EventTicketModel

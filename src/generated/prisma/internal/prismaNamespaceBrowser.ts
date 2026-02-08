@@ -59,7 +59,9 @@ export const ModelName = {
   NotificationLog: 'NotificationLog',
   DayOverride: 'DayOverride',
   ReservationPayment: 'ReservationPayment',
-  WaitlistEntry: 'WaitlistEntry'
+  WaitlistEntry: 'WaitlistEntry',
+  Event: 'Event',
+  EventTicket: 'EventTicket'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -235,6 +237,46 @@ export const WaitlistEntryScalarFieldEnum = {
 } as const
 
 export type WaitlistEntryScalarFieldEnum = (typeof WaitlistEntryScalarFieldEnum)[keyof typeof WaitlistEntryScalarFieldEnum]
+
+
+export const EventScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  date: 'date',
+  startTime: 'startTime',
+  endTime: 'endTime',
+  ticketPrice: 'ticketPrice',
+  maxTickets: 'maxTickets',
+  soldTickets: 'soldTickets',
+  isActive: 'isActive',
+  imageUrl: 'imageUrl',
+  slug: 'slug',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EventScalarFieldEnum = (typeof EventScalarFieldEnum)[keyof typeof EventScalarFieldEnum]
+
+
+export const EventTicketScalarFieldEnum = {
+  id: 'id',
+  eventId: 'eventId',
+  guestName: 'guestName',
+  guestEmail: 'guestEmail',
+  guestPhone: 'guestPhone',
+  quantity: 'quantity',
+  totalPaid: 'totalPaid',
+  stripePaymentIntentId: 'stripePaymentIntentId',
+  status: 'status',
+  code: 'code',
+  checkedInAt: 'checkedInAt',
+  guestId: 'guestId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type EventTicketScalarFieldEnum = (typeof EventTicketScalarFieldEnum)[keyof typeof EventTicketScalarFieldEnum]
 
 
 export const SortOrder = {

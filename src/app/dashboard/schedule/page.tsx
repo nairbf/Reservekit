@@ -2,14 +2,57 @@
 import { useState, useEffect } from "react";
 
 interface Override { id: number; date: string; isClosed: boolean; openTime: string | null; closeTime: string | null; maxCovers: number | null; note: string | null }
+interface RequestSettingsForm {
+  depositsEnabled: boolean;
+  depositAmount: string;
+  depositMinParty: string;
+  depositMessage: string;
+  reserveHeading: string;
+  reserveSubheading: string;
+  reserveConfirmationMessage: string;
+  reserveRequestDisclaimer: string;
+  reserveRequestPlaceholder: string;
+  reserveRequestSamples: string;
+}
 
 export default function SchedulePage() {
   const [overrides, setOverrides] = useState<Override[]>([]);
   const [form, setForm] = useState({ date: "", isClosed: false, openTime: "", closeTime: "", maxCovers: "", note: "" });
+  const [requestSettings, setRequestSettings] = useState<RequestSettingsForm>({
+    depositsEnabled: false,
+    depositAmount: "0",
+    depositMinParty: "2",
+    depositMessage: "A refundable deposit may be required to hold your table.",
+    reserveHeading: "Reserve a Table",
+    reserveSubheading: "Choose your date, time, and party size.",
+    reserveConfirmationMessage: "We'll contact you shortly to confirm.",
+    reserveRequestDisclaimer: "Your request will be reviewed and confirmed shortly.",
+    reserveRequestPlaceholder: "e.g., Birthday dinner, window seat, stroller space",
+    reserveRequestSamples: "Birthday celebration,Window seat,High chair",
+  });
   const [loaded, setLoaded] = useState(false);
+  const [savingRequestSettings, setSavingRequestSettings] = useState(false);
+  const [requestSettingsSaved, setRequestSettingsSaved] = useState(false);
 
   useEffect(() => { load(); }, []);
-  async function load() { setOverrides(await (await fetch("/api/day-overrides")).json()); setLoaded(true); }
+  async function load() {
+    const [overrideRes, settingsRes] = await Promise.all([fetch("/api/day-overrides"), fetch("/api/settings")]);
+    const [overrideData, settings] = await Promise.all([overrideRes.json(), settingsRes.json()]);
+    setOverrides(overrideData);
+    setRequestSettings({
+      depositsEnabled: settings.depositsEnabled === "true",
+      depositAmount: settings.depositAmount || "0",
+      depositMinParty: settings.depositMinParty || "2",
+      depositMessage: settings.depositMessage || "A refundable deposit may be required to hold your table.",
+      reserveHeading: settings.reserveHeading || "Reserve a Table",
+      reserveSubheading: settings.reserveSubheading || "Choose your date, time, and party size.",
+      reserveConfirmationMessage: settings.reserveConfirmationMessage || "We'll contact you shortly to confirm.",
+      reserveRequestDisclaimer: settings.reserveRequestDisclaimer || "Your request will be reviewed and confirmed shortly.",
+      reserveRequestPlaceholder: settings.reserveRequestPlaceholder || "e.g., Birthday dinner, window seat, stroller space",
+      reserveRequestSamples: settings.reserveRequestSamples || "Birthday celebration,Window seat,High chair",
+    });
+    setLoaded(true);
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +73,31 @@ export default function SchedulePage() {
   }
 
   async function remove(id: number) { await fetch(`/api/day-overrides/${id}`, { method: "DELETE" }); load(); }
+  async function saveRequestSettings(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingRequestSettings(true);
+    await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        depositsEnabled: requestSettings.depositsEnabled,
+        depositAmount: requestSettings.depositAmount,
+        depositMinParty: requestSettings.depositMinParty,
+        depositMessage: requestSettings.depositMessage,
+        reserveHeading: requestSettings.reserveHeading,
+        reserveSubheading: requestSettings.reserveSubheading,
+        reserveConfirmationMessage: requestSettings.reserveConfirmationMessage,
+        reserveRequestDisclaimer: requestSettings.reserveRequestDisclaimer,
+        reserveRequestPlaceholder: requestSettings.reserveRequestPlaceholder,
+        reserveRequestSamples: requestSettings.reserveRequestSamples,
+      }),
+    });
+    setSavingRequestSettings(false);
+    setRequestSettingsSaved(true);
+    setTimeout(() => setRequestSettingsSaved(false), 2000);
+  }
+
+  const samplePreview = requestSettings.reserveRequestSamples.split(",").map(s => s.trim()).filter(Boolean);
 
   return (
     <div className="max-w-3xl">
@@ -75,6 +143,116 @@ export default function SchedulePage() {
         </div>
 
         <button type="submit" className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">Save Override</button>
+      </form>
+
+      <form onSubmit={saveRequestSettings} className="bg-white rounded-xl shadow p-4 sm:p-6 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-lg font-bold">Reservation Request Controls</h2>
+            <p className="text-sm text-gray-500">Customize deposit behavior and guest-facing request messaging.</p>
+          </div>
+          <button type="submit" className="h-11 px-4 rounded-lg bg-gray-900 text-white text-sm font-medium transition-all duration-200">
+            {savingRequestSettings ? "Saving..." : requestSettingsSaved ? "Saved" : "Save Request Settings"}
+          </button>
+        </div>
+
+        <div className="border rounded-lg p-4 mb-4">
+          <label className="flex items-center gap-2 text-sm font-medium mb-3">
+            <input
+              type="checkbox"
+              checked={requestSettings.depositsEnabled}
+              onChange={e => setRequestSettings(s => ({ ...s, depositsEnabled: e.target.checked }))}
+              className="h-4 w-4"
+            />
+            Require deposit for eligible reservation requests
+          </label>
+          {requestSettings.depositsEnabled && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="text-sm font-medium">Deposit Amount (USD)
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={requestSettings.depositAmount}
+                  onChange={e => setRequestSettings(s => ({ ...s, depositAmount: e.target.value }))}
+                  className="mt-1 h-11 w-full border rounded px-3"
+                />
+              </label>
+              <label className="text-sm font-medium">Apply at Party Size
+                <input
+                  type="number"
+                  min="1"
+                  value={requestSettings.depositMinParty}
+                  onChange={e => setRequestSettings(s => ({ ...s, depositMinParty: e.target.value }))}
+                  className="mt-1 h-11 w-full border rounded px-3"
+                />
+              </label>
+              <label className="text-sm font-medium sm:col-span-2">Deposit Message
+                <textarea
+                  value={requestSettings.depositMessage}
+                  onChange={e => setRequestSettings(s => ({ ...s, depositMessage: e.target.value }))}
+                  className="mt-1 w-full border rounded px-3 py-2"
+                  rows={2}
+                />
+              </label>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <label className="text-sm font-medium">Reserve Heading
+            <input
+              value={requestSettings.reserveHeading}
+              onChange={e => setRequestSettings(s => ({ ...s, reserveHeading: e.target.value }))}
+              className="mt-1 h-11 w-full border rounded px-3"
+            />
+          </label>
+          <label className="text-sm font-medium">Reserve Subheading
+            <input
+              value={requestSettings.reserveSubheading}
+              onChange={e => setRequestSettings(s => ({ ...s, reserveSubheading: e.target.value }))}
+              className="mt-1 h-11 w-full border rounded px-3"
+            />
+          </label>
+          <label className="text-sm font-medium sm:col-span-2">Confirmation Message
+            <input
+              value={requestSettings.reserveConfirmationMessage}
+              onChange={e => setRequestSettings(s => ({ ...s, reserveConfirmationMessage: e.target.value }))}
+              className="mt-1 h-11 w-full border rounded px-3"
+            />
+          </label>
+          <label className="text-sm font-medium sm:col-span-2">Request Form Helper Text
+            <input
+              value={requestSettings.reserveRequestDisclaimer}
+              onChange={e => setRequestSettings(s => ({ ...s, reserveRequestDisclaimer: e.target.value }))}
+              className="mt-1 h-11 w-full border rounded px-3"
+            />
+          </label>
+          <label className="text-sm font-medium sm:col-span-2">Special Request Placeholder
+            <input
+              value={requestSettings.reserveRequestPlaceholder}
+              onChange={e => setRequestSettings(s => ({ ...s, reserveRequestPlaceholder: e.target.value }))}
+              className="mt-1 h-11 w-full border rounded px-3"
+            />
+          </label>
+          <label className="text-sm font-medium sm:col-span-2">Special Request Quick Samples (comma-separated)
+            <input
+              value={requestSettings.reserveRequestSamples}
+              onChange={e => setRequestSettings(s => ({ ...s, reserveRequestSamples: e.target.value }))}
+              className="mt-1 h-11 w-full border rounded px-3"
+              placeholder="Birthday celebration,Window seat,High chair"
+            />
+          </label>
+        </div>
+
+        <div className="rounded-lg bg-gray-50 border p-3">
+          <p className="text-xs font-medium text-gray-500 mb-2">Sample button preview</p>
+          <div className="flex flex-wrap gap-2">
+            {samplePreview.length > 0 ? samplePreview.map(sample => (
+              <span key={sample} className="px-2 py-1 text-xs rounded-full bg-white border text-gray-600">{sample}</span>
+            )) : <span className="text-xs text-gray-400">No samples configured.</span>}
+          </div>
+        </div>
       </form>
 
       {!loaded ? (

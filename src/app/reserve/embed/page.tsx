@@ -11,5 +11,21 @@ export default async function ReserveEmbedPage({
   const theme = params.theme === "dark" ? "dark" : "light";
   const accent = params.accent;
 
-  return <EmbedWidgetFrame restaurantName={settings.restaurantName} theme={theme} accent={accent} />;
+  return (
+    <EmbedWidgetFrame
+      restaurantName={settings.restaurantName}
+      theme={theme}
+      accent={accent}
+      reserveHeading={settings.reserveHeading}
+      reserveSubheading={settings.reserveSubheading}
+      reserveConfirmationMessage={settings.reserveConfirmationMessage}
+      reserveRequestDisclaimer={settings.reserveRequestDisclaimer}
+      reserveRequestPlaceholder={settings.reserveRequestPlaceholder}
+      reserveRequestSamples={settings.reserveRequestSamples}
+      depositsEnabled={settings.depositsEnabled}
+      depositAmount={settings.depositAmount}
+      depositMinParty={settings.depositMinParty}
+      depositMessage={settings.depositMessage}
+    />
+  );
 }

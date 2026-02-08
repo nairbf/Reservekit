@@ -61,54 +61,94 @@ export default function FloorPlanPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detailsId, setDetailsId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [licenseOk, setLicenseOk] = useState<boolean | null>(null);
   const [restaurantName, setRestaurantName] = useState("ReserveKit");
+  const [draggingId, setDraggingId] = useState<number | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const tablesRef = useRef<TableItem[]>([]);
-  const dragRef = useRef<{ id: number; offsetX: number; offsetY: number } | null>(null);
+  const dragRef = useRef<{ id: number; offsetX: number; offsetY: number; startX: number; startY: number } | null>(null);
+  const pendingPosRef = useRef<{ id: number; posX: number; posY: number } | null>(null);
+  const rafRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
+  const initialLoadedRef = useRef(false);
 
   useEffect(() => { tablesRef.current = tables; }, [tables]);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then(r => r.json())
-      .then(s => {
+    Promise.all([
+      fetch("/api/settings").then(r => r.json()),
+      fetch("/api/auth/me").then(r => (r.ok ? r.json() : null)).catch(() => null),
+    ])
+      .then(([s, session]) => {
         const key = String(s.license_floorplan || "").toUpperCase();
-        setLicenseOk(/^RK-FLR-[A-Z0-9]{8}$/.test(key));
+        const hasKey = /^RK-FLR-[A-Z0-9]{8}$/.test(key);
+        const isAdmin = session?.role === "admin";
+        setLicenseOk(hasKey || isAdmin);
         if (s.restaurantName) setRestaurantName(s.restaurantName);
       })
       .catch(() => setLicenseOk(false));
   }, []);
 
-  async function loadTables() {
-    setLoading(true);
-    const res = await fetch("/api/tables");
-    const data = await res.json();
-    setTables((data as TableItem[]).map(normalizeTable));
-    setLoading(false);
+  function applyPendingPosition() {
+    const next = pendingPosRef.current;
+    if (!next) return;
+    setTables(prev => prev.map(t => (t.id === next.id ? { ...t, posX: next.posX, posY: next.posY } : t)));
+    pendingPosRef.current = null;
   }
 
-  async function loadStatus() {
-    setLoading(true);
-    const res = await fetch("/api/floorplan/status");
-    const data = await res.json();
-    const entries = data as StatusEntry[];
-    setStatusData(entries);
-    setTables(entries.map(e => normalizeTable(e.table)));
-    setLoading(false);
+  function queueDragPosition(next: { id: number; posX: number; posY: number }) {
+    pendingPosRef.current = next;
+    if (rafRef.current !== null) return;
+    rafRef.current = window.requestAnimationFrame(() => {
+      applyPendingPosition();
+      rafRef.current = null;
+    });
+  }
+
+  async function loadTables(silent = false) {
+    if (!initialLoadedRef.current || !silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const res = await fetch("/api/tables");
+      const data = await res.json();
+      setTables((data as TableItem[]).map(normalizeTable));
+      initialLoadedRef.current = true;
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }
+
+  async function loadStatus(silent = false) {
+    if (!initialLoadedRef.current || !silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const res = await fetch("/api/floorplan/status");
+      const data = await res.json();
+      const entries = data as StatusEntry[];
+      setStatusData(entries);
+      setTables(entries.map(e => normalizeTable(e.table)));
+      initialLoadedRef.current = true;
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }
 
   useEffect(() => {
     if (licenseOk === false) return;
-    if (mode === "edit") loadTables();
-    else loadStatus();
+    setSelectedId(null);
+    setDetailsId(null);
+    if (mode === "edit") loadTables(false);
+    else loadStatus(false);
   }, [mode, licenseOk]);
 
   useEffect(() => {
     if (licenseOk === false || mode !== "live") return;
-    const i = setInterval(loadStatus, 10000);
+    const i = setInterval(() => loadStatus(true), 10000);
     return () => clearInterval(i);
   }, [mode, licenseOk]);
 
@@ -116,23 +156,34 @@ export default function FloorPlanPage() {
     function onMove(e: PointerEvent) {
       if (!dragRef.current || !containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
-      const { id, offsetX, offsetY } = dragRef.current;
+      const { id, offsetX, offsetY, startX, startY } = dragRef.current;
       const table = tablesRef.current.find(t => t.id === id);
       if (!table) return;
+      const moved = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) > 3;
+      if (moved) suppressClickRef.current = true;
       const width = table.width ?? 8;
       const height = table.height ?? 8;
       const rawX = ((e.clientX - rect.left - offsetX) / rect.width) * 100;
       const rawY = ((e.clientY - rect.top - offsetY) / rect.height) * 100;
       const posX = Math.min(Math.max(rawX, 0), 100 - width);
       const posY = Math.min(Math.max(rawY, 0), 100 - height);
-      setTables(prev => prev.map(t => (t.id === id ? { ...t, posX, posY } : t)));
+      queueDragPosition({ id, posX, posY });
     }
-    function onUp() { dragRef.current = null; }
+    function onUp() {
+      applyPendingPosition();
+      dragRef.current = null;
+      setDraggingId(null);
+      window.setTimeout(() => { suppressClickRef.current = false; }, 0);
+    }
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      if (rafRef.current !== null) {
+        window.cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
   }, []);
 
@@ -157,29 +208,54 @@ export default function FloorPlanPage() {
 
   async function addTable() {
     setSaving(true);
-    const name = `T${tables.length + 1}`;
-    const res = await fetch("/api/tables", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, minCapacity: 2, maxCapacity: 4, section: "", sortOrder: tables.length + 1 }),
-    });
-    const created = await res.json();
-    const width = 8;
-    const height = 8;
-    await fetch(`/api/tables/${created.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ posX: (100 - width) / 2, posY: (100 - height) / 2, width, height, shape: "round", rotation: 0 }),
-    });
-    await loadTables();
-    setSaving(false);
+    try {
+      const nextSort = tables.length + 1;
+      const name = `T${nextSort}`;
+      const createRes = await fetch("/api/tables", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, minCapacity: 2, maxCapacity: 4, section: "", sortOrder: nextSort }),
+      });
+      if (!createRes.ok) throw new Error("Failed to create table");
+
+      const created = (await createRes.json()) as Partial<TableItem> & { id: number; name: string };
+      const width = 8;
+      const height = 8;
+      const patch = { posX: (100 - width) / 2, posY: (100 - height) / 2, width, height, shape: "round", rotation: 0 };
+
+      const updateRes = await fetch(`/api/tables/${created.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (!updateRes.ok) throw new Error("Failed to initialize table position");
+
+      const localTable = normalizeTable({
+        id: created.id,
+        name: created.name,
+        section: created.section ?? null,
+        minCapacity: created.minCapacity ?? 1,
+        maxCapacity: created.maxCapacity ?? 4,
+        isActive: created.isActive ?? true,
+        sortOrder: created.sortOrder ?? nextSort,
+        ...patch,
+      });
+
+      setTables(prev => [...prev, localTable]);
+      setSelectedId(localTable.id);
+    } catch (err) {
+      console.error("[FLOORPLAN ADD TABLE]", err);
+      await loadTables(true);
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function removeTable(id: number) {
     if (!confirm("Delete this table?")) return;
     await fetch(`/api/tables/${id}`, { method: "DELETE" });
     setSelectedId(null);
-    loadTables();
+    loadTables(true);
   }
 
   async function doAction(resId: number, action: string, tableId?: number) {
@@ -188,7 +264,7 @@ export default function FloorPlanPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, ...(tableId ? { tableId } : {}) }),
     });
-    loadStatus();
+    loadStatus(true);
     setDetailsId(null);
   }
 
@@ -223,6 +299,7 @@ export default function FloorPlanPage() {
           <p className="text-sm text-gray-500">{restaurantName} live seating view</p>
         </div>
         <div className="flex items-center gap-2">
+          {refreshing && <span className="text-xs text-gray-500">Refreshing...</span>}
           <button
             onClick={() => setMode(mode === "live" ? "edit" : "live")}
             className="h-11 px-4 rounded-lg border text-sm font-medium bg-white hover:bg-gray-50 transition-all duration-200"
@@ -245,7 +322,7 @@ export default function FloorPlanPage() {
             onClick={() => setSelectedId(null)}
             className="relative w-full aspect-[3/2] border-2 border-dashed border-gray-200 rounded-xl bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.06)_1px,transparent_0)] [background-size:18px_18px] overflow-hidden touch-none"
           >
-            {loading && (
+            {loading && !initialLoadedRef.current && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/70">
                 <div className="animate-spin h-6 w-6 border-2 border-blue-600 border-t-transparent rounded-full" />
               </div>
@@ -263,19 +340,26 @@ export default function FloorPlanPage() {
                     if (mode !== "edit") return;
                     e.preventDefault();
                     e.stopPropagation();
+                    (e.currentTarget as HTMLButtonElement).setPointerCapture(e.pointerId);
                     setSelectedId(t.id);
+                    setDraggingId(t.id);
+                    suppressClickRef.current = false;
                     const rect = containerRef.current?.getBoundingClientRect();
                     if (!rect) return;
                     const posX = (t.posX ?? 0) / 100 * rect.width;
                     const posY = (t.posY ?? 0) / 100 * rect.height;
-                    dragRef.current = { id: t.id, offsetX: e.clientX - rect.left - posX, offsetY: e.clientY - rect.top - posY };
+                    dragRef.current = { id: t.id, offsetX: e.clientX - rect.left - posX, offsetY: e.clientY - rect.top - posY, startX: e.clientX, startY: e.clientY };
                   }}
                   onClick={e => {
                     e.stopPropagation();
+                    if (suppressClickRef.current) {
+                      e.preventDefault();
+                      return;
+                    }
                     if (mode === "edit") setSelectedId(t.id);
                     else setDetailsId(t.id);
                   }}
-                  className={`absolute flex flex-col items-center justify-center text-center border shadow-sm ${shapeClass} ${statusClass} ${selectedId === t.id ? "ring-2 ring-blue-500" : ""} transition-all duration-200`}
+                  className={`absolute flex flex-col items-center justify-center text-center border shadow-sm ${shapeClass} ${statusClass} ${selectedId === t.id ? "ring-2 ring-blue-500" : ""} ${draggingId === t.id ? "cursor-grabbing transition-none" : mode === "edit" ? "cursor-grab transition-all duration-150" : "transition-all duration-200"}`}
                   style={{
                     left: `${t.posX ?? 0}%`,
                     top: `${t.posY ?? 0}%`,
@@ -303,6 +387,58 @@ export default function FloorPlanPage() {
               <p className="text-sm text-gray-500">Select a table to edit shape, size, or rotation.</p>
             ) : (
               <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3">
+                  <label className="text-sm">Table Name
+                    <input
+                      type="text"
+                      value={selected.name}
+                      onChange={e => setTables(prev => prev.map(t => t.id === selected.id ? { ...t, name: e.target.value } : t))}
+                      onBlur={e => {
+                        const nextName = e.target.value.trim() || `T${selected.id}`;
+                        setTables(prev => prev.map(t => t.id === selected.id ? { ...t, name: nextName } : t));
+                        updateTable(selected.id, { name: nextName });
+                      }}
+                      className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="text-sm">Min Capacity
+                    <input
+                      type="number"
+                      min={1}
+                      max={selected.maxCapacity ?? 20}
+                      value={selected.minCapacity}
+                      onChange={e => setTables(prev => prev.map(t => t.id === selected.id ? { ...t, minCapacity: Number(e.target.value) } : t))}
+                      onBlur={e => {
+                        const raw = Number(e.target.value);
+                        const nextMin = Math.max(1, Math.min(raw || 1, selected.maxCapacity ?? 20));
+                        setTables(prev => prev.map(t => t.id === selected.id ? { ...t, minCapacity: nextMin } : t));
+                        updateTable(selected.id, { minCapacity: nextMin });
+                      }}
+                      className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-sm">Max Capacity
+                    <input
+                      type="number"
+                      min={selected.minCapacity || 1}
+                      max={20}
+                      value={selected.maxCapacity}
+                      onChange={e => setTables(prev => prev.map(t => t.id === selected.id ? { ...t, maxCapacity: Number(e.target.value) } : t))}
+                      onBlur={e => {
+                        const raw = Number(e.target.value);
+                        const floor = selected.minCapacity || 1;
+                        const nextMax = Math.max(floor, Math.min(raw || floor, 20));
+                        setTables(prev => prev.map(t => t.id === selected.id ? { ...t, maxCapacity: nextMax } : t));
+                        updateTable(selected.id, { maxCapacity: nextMax });
+                      }}
+                      className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+
                 <div>
                   <div className="text-sm font-medium mb-2">Shape</div>
                   <div className="grid grid-cols-2 gap-2">

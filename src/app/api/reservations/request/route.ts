@@ -23,7 +23,16 @@ export async function POST(req: NextRequest) {
   while (await prisma.reservation.findUnique({ where: { code } })) code = generateCode();
 
   const reservation = await prisma.reservation.create({ data: { code, guestName, guestPhone, guestEmail: guestEmail || null, partySize, date, time, endTime, durationMin: duration, specialRequests: specialRequests || null, source: "widget", status: "pending" } });
+  const depositRequired = settings.depositsEnabled && settings.depositAmount > 0 && partySize >= Math.max(1, settings.depositMinParty);
   linkGuestToReservation(reservation.id).catch(console.error);
   notifyRequestReceived(reservation).catch(console.error);
-  return NextResponse.json({ id: reservation.id, code: reservation.code, status: "pending", message: "Your reservation request has been received." }, { status: 201 });
+  return NextResponse.json({
+    id: reservation.id,
+    code: reservation.code,
+    status: "pending",
+    message: "Your reservation request has been received.",
+    depositRequired,
+    depositAmount: depositRequired ? settings.depositAmount : 0,
+    depositMessage: depositRequired ? settings.depositMessage : null,
+  }, { status: 201 });
 }

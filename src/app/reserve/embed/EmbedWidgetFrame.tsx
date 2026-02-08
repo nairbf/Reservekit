@@ -6,9 +6,33 @@ interface EmbedWidgetFrameProps {
   restaurantName: string;
   theme: "light" | "dark";
   accent?: string;
+  reserveHeading: string;
+  reserveSubheading: string;
+  reserveConfirmationMessage: string;
+  reserveRequestDisclaimer: string;
+  reserveRequestPlaceholder: string;
+  reserveRequestSamples: string[];
+  depositsEnabled: boolean;
+  depositAmount: number;
+  depositMinParty: number;
+  depositMessage: string;
 }
 
-export default function EmbedWidgetFrame({ restaurantName, theme, accent }: EmbedWidgetFrameProps) {
+export default function EmbedWidgetFrame({
+  restaurantName,
+  theme,
+  accent,
+  reserveHeading,
+  reserveSubheading,
+  reserveConfirmationMessage,
+  reserveRequestDisclaimer,
+  reserveRequestPlaceholder,
+  reserveRequestSamples,
+  depositsEnabled,
+  depositAmount,
+  depositMinParty,
+  depositMessage,
+}: EmbedWidgetFrameProps) {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,7 +62,22 @@ export default function EmbedWidgetFrame({ restaurantName, theme, accent }: Embe
 
   return (
     <div ref={rootRef} className="bg-transparent p-0 m-0">
-      <ReserveWidgetClient restaurantName={restaurantName} embedded theme={theme} accent={accent} />
+      <ReserveWidgetClient
+        restaurantName={restaurantName}
+        embedded
+        theme={theme}
+        accent={accent}
+        reserveHeading={reserveHeading}
+        reserveSubheading={reserveSubheading}
+        reserveConfirmationMessage={reserveConfirmationMessage}
+        reserveRequestDisclaimer={reserveRequestDisclaimer}
+        reserveRequestPlaceholder={reserveRequestPlaceholder}
+        reserveRequestSamples={reserveRequestSamples}
+        depositsEnabled={depositsEnabled}
+        depositAmount={depositAmount}
+        depositMinParty={depositMinParty}
+        depositMessage={depositMessage}
+      />
     </div>
   );
 }

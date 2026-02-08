@@ -41,11 +41,15 @@ export default function GuestDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then(r => r.json())
-      .then(s => {
+    Promise.all([
+      fetch("/api/settings").then(r => r.json()),
+      fetch("/api/auth/me").then(r => (r.ok ? r.json() : null)).catch(() => null),
+    ])
+      .then(([s, session]) => {
         const key = String(s.license_guesthistory || "").toUpperCase();
-        setLicenseOk(/^RK-GST-[A-Z0-9]{8}$/.test(key));
+        const hasKey = /^RK-GST-[A-Z0-9]{8}$/.test(key);
+        const isAdmin = session?.role === "admin";
+        setLicenseOk(hasKey || isAdmin);
       })
       .catch(() => setLicenseOk(false));
   }, []);

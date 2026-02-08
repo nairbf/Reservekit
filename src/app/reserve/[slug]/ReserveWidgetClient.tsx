@@ -7,6 +7,16 @@ interface ReserveWidgetClientProps {
   embedded?: boolean;
   theme?: "light" | "dark";
   accent?: string;
+  reserveHeading?: string;
+  reserveSubheading?: string;
+  reserveConfirmationMessage?: string;
+  reserveRequestDisclaimer?: string;
+  reserveRequestPlaceholder?: string;
+  reserveRequestSamples?: string[];
+  depositsEnabled?: boolean;
+  depositAmount?: number;
+  depositMinParty?: number;
+  depositMessage?: string;
 }
 
 function fmt(t: string) {
@@ -24,6 +34,16 @@ export default function ReserveWidgetClient({
   embedded = false,
   theme = "light",
   accent,
+  reserveHeading = "Reserve a Table",
+  reserveSubheading = "Choose your date, time, and party size.",
+  reserveConfirmationMessage = "We'll contact you shortly to confirm.",
+  reserveRequestDisclaimer = "Your request will be reviewed and confirmed shortly.",
+  reserveRequestPlaceholder = "e.g., Birthday dinner, window seat, stroller space",
+  reserveRequestSamples = ["Birthday celebration", "Window seat", "High chair"],
+  depositsEnabled = false,
+  depositAmount = 0,
+  depositMinParty = 2,
+  depositMessage = "A refundable deposit may be required to hold your table.",
 }: ReserveWidgetClientProps) {
   const [step, setStep] = useState<"select" | "form" | "done">("select");
   const [date, setDate] = useState("");
@@ -37,6 +57,7 @@ export default function ReserveWidgetClient({
   const [notes, setNotes] = useState("");
   const [confirmCode, setConfirmCode] = useState("");
   const [error, setError] = useState("");
+  const [depositMeta, setDepositMeta] = useState<{ required: boolean; amount: number; message: string | null }>({ required: false, amount: 0, message: null });
 
   const isDark = theme === "dark";
   const primary = getAccent(accent);
@@ -76,6 +97,18 @@ export default function ReserveWidgetClient({
     loadSlots();
   }, [loadSlots]);
 
+  const depositApplies = depositsEnabled && depositAmount > 0 && partySize >= Math.max(1, depositMinParty);
+
+  function applySample(sample: string) {
+    const trimmed = sample.trim();
+    if (!trimmed) return;
+    setNotes(prev => {
+      if (!prev.trim()) return trimmed;
+      if (prev.toLowerCase().includes(trimmed.toLowerCase())) return prev;
+      return `${prev.replace(/\s+$/, "")}; ${trimmed}`;
+    });
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -95,6 +128,11 @@ export default function ReserveWidgetClient({
     if (res.ok) {
       const d = await res.json();
       setConfirmCode(d.code);
+      setDepositMeta({
+        required: Boolean(d.depositRequired),
+        amount: Number(d.depositAmount || 0),
+        message: d.depositMessage || null,
+      });
       setStep("done");
     } else {
       setError((await res.json()).error || "Something went wrong");
@@ -109,8 +147,13 @@ export default function ReserveWidgetClient({
           <h2 className="text-2xl font-bold mb-2">Request Received!</h2>
           <p className={`${textMutedClass} mb-1`}>{date} at {fmt(selectedTime)}</p>
           <p className={`${textMutedClass} mb-4`}>Party of {partySize}</p>
+          {depositMeta.required && (
+            <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {depositMeta.message || depositMessage} {depositMeta.amount > 0 ? `Deposit amount: $${depositMeta.amount}.` : ""}
+            </div>
+          )}
           <p className={`text-sm ${textMutedClass} mb-2`}>Reference: <strong>{confirmCode}</strong></p>
-          <p className={`text-sm ${textMutedClass}`}>We&apos;ll contact you shortly to confirm.</p>
+          <p className={`text-sm ${textMutedClass}`}>{reserveConfirmationMessage}</p>
           <button
             onClick={() => { setStep("select"); setSelectedTime(""); }}
             className="mt-6 h-11 px-4 rounded-lg border text-sm transition-all duration-200"
@@ -128,7 +171,8 @@ export default function ReserveWidgetClient({
       {!embedded && (
         <div className="text-center mb-4">
           <div className={`text-sm ${textMutedClass}`}>{restaurantName}</div>
-          <h1 className="text-xl font-bold">Reserve a Table</h1>
+          <h1 className="text-xl font-bold">{reserveHeading}</h1>
+          <p className={`text-xs mt-1 ${textSoftClass}`}>{reserveSubheading}</p>
         </div>
       )}
 
@@ -194,13 +238,35 @@ export default function ReserveWidgetClient({
       {step === "form" && selectedTime && (
         <form onSubmit={submit} className={`border-t pt-4 mt-4 transition-all duration-200 ${borderClass}`}>
           <p className="text-sm font-medium mb-3">{fmt(selectedTime)} · Party of {partySize} · {date}</p>
+          {depositApplies && (
+            <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {depositMessage} Deposit amount: ${depositAmount}.
+            </div>
+          )}
           {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
           <input placeholder="Your name *" value={name} onChange={e => setName(e.target.value)} className={`${inputClass} mb-3`} required />
           <input placeholder="Phone number *" type="tel" value={phone} onChange={e => setPhone(e.target.value)} className={`${inputClass} mb-3`} required />
           <input placeholder="Email (optional)" type="email" value={email} onChange={e => setEmail(e.target.value)} className={`${inputClass} mb-3`} />
-          <textarea placeholder="Special requests (optional)" value={notes} onChange={e => setNotes(e.target.value)} className={textareaClass} rows={2} />
+          <textarea placeholder={reserveRequestPlaceholder} value={notes} onChange={e => setNotes(e.target.value)} className={textareaClass} rows={2} />
+          {reserveRequestSamples.length > 0 && (
+            <div className="mb-3">
+              <p className={`text-xs mb-2 ${textSoftClass}`}>Quick request samples:</p>
+              <div className="flex flex-wrap gap-2">
+                {reserveRequestSamples.map(sample => (
+                  <button
+                    key={sample}
+                    type="button"
+                    onClick={() => applySample(sample)}
+                    className={`px-2 py-1 text-xs rounded-full border transition-all duration-200 ${isDark ? "border-zinc-700 bg-zinc-900 text-zinc-200" : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}
+                  >
+                    {sample}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <button type="submit" className="w-full h-11 text-white rounded font-medium transition-all duration-200" style={{ backgroundColor: primary }}>Request Reservation</button>
-          <p className={`text-xs mt-2 text-center ${textSoftClass}`}>Your request will be reviewed and confirmed shortly.</p>
+          <p className={`text-xs mt-2 text-center ${textSoftClass}`}>{reserveRequestDisclaimer}</p>
         </form>
       )}
     </div>

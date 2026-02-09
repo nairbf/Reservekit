@@ -10,6 +10,7 @@ const PREFIXES: Record<string, string> = {
   multilocation: "RS-MLT-",
   events: "RS-EVT-",
   eventticketing: "RS-EVT-",
+  expressdining: "RS-XDN-",
 };
 
 async function isAdminSession(): Promise<boolean> {

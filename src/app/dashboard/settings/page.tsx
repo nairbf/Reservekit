@@ -480,6 +480,68 @@ export default function SettingsPage() {
             </p>
           </Section>
 
+          <Section title="Express Dining">
+            <Field
+              label="Express Dining License Key"
+              value={settings.license_expressdining || ""}
+              onChange={v => set("license_expressdining", v)}
+              placeholder="RS-XDN-XXXXXXXX"
+            />
+            <div className="mt-4">
+              <label className="flex items-center gap-2 text-sm font-medium mb-4">
+                <input
+                  type="checkbox"
+                  checked={settings.expressDiningEnabled === "true"}
+                  onChange={e => set("expressDiningEnabled", e.target.checked ? "true" : "false")}
+                  className="h-4 w-4"
+                />
+                Enable Express Dining pre-orders
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Mode</label>
+                <select
+                  value={settings.expressDiningMode || "prices"}
+                  onChange={e => set("expressDiningMode", e.target.value)}
+                  className="h-11 w-full border rounded px-3 text-sm"
+                >
+                  <option value="prices">Show prices</option>
+                  <option value="browse">Browse only</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Payment</label>
+                <select
+                  value={settings.expressDiningPayment || "optional"}
+                  onChange={e => set("expressDiningPayment", e.target.value)}
+                  className="h-11 w-full border rounded px-3 text-sm"
+                >
+                  <option value="precharge">Pre-charge required</option>
+                  <option value="optional">Optional (guest chooses)</option>
+                  <option value="none">No payment (preferences only)</option>
+                </select>
+              </div>
+              <Field
+                label="Cutoff Hours"
+                value={settings.expressDiningCutoffHours || "2"}
+                onChange={v => set("expressDiningCutoffHours", v)}
+                type="number"
+              />
+              <div className="sm:col-span-2">
+                <label className="block text-sm font-medium mb-1">Guest Message</label>
+                <textarea
+                  value={settings.expressDiningMessage || ""}
+                  onChange={e => set("expressDiningMessage", e.target.value)}
+                  rows={2}
+                  className="w-full border rounded px-3 py-2 text-sm"
+                  placeholder="Pre-select your meal and skip the wait! Your order will be ready when you arrive."
+                />
+              </div>
+            </div>
+          </Section>
+
           <Section title="Reservation Widget Messaging">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <Field label="Reserve Heading" value={settings.reserveHeading || ""} onChange={v => set("reserveHeading", v)} />

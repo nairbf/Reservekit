@@ -3,12 +3,22 @@ import { sendSms } from "./sms";
 import * as smsT from "./sms-templates";
 import { prisma } from "./db";
 import { generateICS } from "./calendar";
+import { getSettings } from "./settings";
+import { isModuleActive } from "./license";
 
 interface Res { id: number; code: string; guestName: string; guestPhone: string; guestEmail: string | null; partySize: number; date: string; time: string; durationMin?: number; originalTime?: string | null }
 
 function fmt(t: string) { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; }
 async function rname() { return (await prisma.setting.findUnique({ where: { key: "restaurantName" } }))?.value || "the restaurant"; }
 function manageLink() { const appUrl = process.env.APP_URL || "http://localhost:3000"; return `${appUrl}/reservation/manage`; }
+function preorderLink(code: string) { const appUrl = process.env.APP_URL || "http://localhost:3000"; return `${appUrl}/preorder/${code}`; }
+
+async function expressDiningEmailLine(code: string) {
+  const settings = await getSettings();
+  const licensed = await isModuleActive("expressdining");
+  if (!licensed || !settings.expressDiningEnabled) return "";
+  return `\nSkip the wait - pre-order your meal: ${preorderLink(code)}`;
+}
 
 export async function notifyRequestReceived(r: Res) {
   if (r.guestEmail) { const n = await rname(); await sendEmail({ to: r.guestEmail, subject: `Reservation request received — ${n}`, body: `Hi ${r.guestName},\n\nWe received your request:\nDate: ${r.date}\nTime: ${fmt(r.time)}\nParty: ${r.partySize}\nRef: ${r.code}\n\nWe'll confirm shortly.\n\nManage your reservation: ${manageLink()}\n\n— ${n}`, reservationId: r.id, messageType: "request_received" }); }
@@ -18,6 +28,7 @@ export async function notifyRequestReceived(r: Res) {
 export async function notifyApproved(r: Res) {
   if (r.guestEmail) {
     const n = await rname();
+    const expressLine = await expressDiningEmailLine(r.code);
     let attachments: Array<{ filename: string; content: string; contentType: string }> = [];
     try {
       const ics = await generateICS({
@@ -36,7 +47,7 @@ export async function notifyApproved(r: Res) {
     await sendEmail({
       to: r.guestEmail,
       subject: `Reservation confirmed — ${n}`,
-      body: `Hi ${r.guestName},\n\nYour reservation is confirmed!\nDate: ${r.date}\nTime: ${fmt(r.time)}\nParty: ${r.partySize}\nRef: ${r.code}\n\nSee you there!\n\nManage your reservation: ${manageLink()}\n\n— ${n}`,
+      body: `Hi ${r.guestName},\n\nYour reservation is confirmed!\nDate: ${r.date}\nTime: ${fmt(r.time)}\nParty: ${r.partySize}\nRef: ${r.code}\n\nSee you there!\n\nManage your reservation: ${manageLink()}${expressLine}\n\n— ${n}`,
       reservationId: r.id,
       messageType: "approved",
       attachments,

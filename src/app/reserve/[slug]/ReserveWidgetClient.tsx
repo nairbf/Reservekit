@@ -40,6 +40,8 @@ interface ReserveWidgetClientProps {
   depositAmount?: number;
   depositMinParty?: number;
   depositMessage?: string;
+  expressDiningEnabled?: boolean;
+  expressDiningMessage?: string;
 }
 
 function fmt(t: string) {
@@ -151,6 +153,8 @@ export default function ReserveWidgetClient({
   depositAmount = 0,
   depositMinParty = 2,
   depositMessage = "A refundable deposit may be required to hold your table.",
+  expressDiningEnabled = false,
+  expressDiningMessage = "Pre-select your meal and skip the wait! Your order will be ready when you arrive.",
 }: ReserveWidgetClientProps) {
   const [step, setStep] = useState<"select" | "form" | "payment" | "done">("select");
   const [date, setDate] = useState("");
@@ -182,6 +186,7 @@ export default function ReserveWidgetClient({
     source: "global",
     label: null,
   });
+  const [dismissExpressPrompt, setDismissExpressPrompt] = useState(false);
 
   const isDark = theme === "dark";
   const primary = getAccent(accent);
@@ -402,6 +407,27 @@ export default function ReserveWidgetClient({
           )}
           <p className={`text-sm ${textMutedClass} mb-2`}>Reference: <strong>{confirmCode}</strong></p>
           <p className={`text-sm ${textMutedClass}`}>{reserveConfirmationMessage}</p>
+          {expressDiningEnabled && confirmCode && !dismissExpressPrompt && (
+            <div className="mt-4 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-900 p-3 text-left">
+              <p className="font-semibold text-sm">🍽 Want your food ready when you arrive?</p>
+              <p className="text-xs mt-1">{expressDiningMessage}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <a
+                  href={`/preorder/${encodeURIComponent(confirmCode)}`}
+                  className="h-10 px-3 rounded bg-emerald-600 text-white text-xs font-medium inline-flex items-center"
+                >
+                  Browse Menu & Pre-Order
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setDismissExpressPrompt(true)}
+                  className="h-10 px-3 rounded border border-emerald-300 text-emerald-800 text-xs font-medium"
+                >
+                  Maybe later
+                </button>
+              </div>
+            </div>
+          )}
           <button
             onClick={() => {
               setStep("select");
@@ -409,6 +435,7 @@ export default function ReserveWidgetClient({
               setPaymentClientSecret("");
               setPaymentError("");
               setPaymentProcessing(false);
+              setDismissExpressPrompt(false);
             }}
             className="mt-6 h-11 px-4 rounded-lg border text-sm transition-all duration-200"
             style={{ borderColor: primary, color: primary }}

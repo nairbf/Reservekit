@@ -27,6 +27,12 @@ interface Reservation {
     amount: number;
     status: string;
   } | null;
+  preOrder: {
+    id: number;
+    status: string;
+    isPaid: boolean;
+    subtotal: number;
+  } | null;
 }
 interface TableItem { id: number; name: string; maxCapacity: number }
 
@@ -205,6 +211,11 @@ export default function InboxPage() {
                     {r.payment && (
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
                         💳 {formatCents(r.payment.amount)} {r.payment.type} · {paymentStatusLabel(r.payment.status, r.payment.type)}
+                      </span>
+                    )}
+                    {r.preOrder && (
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-800">
+                        🍽 Pre-ordered{r.preOrder.isPaid ? " (Paid ✓)" : ""} · {formatCents(r.preOrder.subtotal)}
                       </span>
                     )}
                   </div>

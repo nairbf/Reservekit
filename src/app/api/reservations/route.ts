@@ -12,7 +12,19 @@ export async function GET(req: NextRequest) {
   if (date) where.date = date;
   const reservations = await prisma.reservation.findMany({
     where,
-    include: { table: true, guest: true, payment: true },
+    include: {
+      table: true,
+      guest: true,
+      payment: true,
+      preOrder: {
+        include: {
+          items: {
+            include: { menuItem: true },
+            orderBy: [{ guestLabel: "asc" }, { id: "asc" }],
+          },
+        },
+      },
+    },
     orderBy: [{ date: "asc" }, { time: "asc" }],
   });
   return NextResponse.json(reservations);

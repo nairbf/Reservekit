@@ -72,3 +72,23 @@ export type Event = Prisma.EventModel
  * 
  */
 export type EventTicket = Prisma.EventTicketModel
+/**
+ * Model MenuCategory
+ * 
+ */
+export type MenuCategory = Prisma.MenuCategoryModel
+/**
+ * Model MenuItem
+ * 
+ */
+export type MenuItem = Prisma.MenuItemModel
+/**
+ * Model PreOrder
+ * 
+ */
+export type PreOrder = Prisma.PreOrderModel
+/**
+ * Model PreOrderItem
+ * 
+ */
+export type PreOrderItem = Prisma.PreOrderItemModel

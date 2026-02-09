@@ -394,7 +394,11 @@ export const ModelName = {
   ReservationPayment: 'ReservationPayment',
   WaitlistEntry: 'WaitlistEntry',
   Event: 'Event',
-  EventTicket: 'EventTicket'
+  EventTicket: 'EventTicket',
+  MenuCategory: 'MenuCategory',
+  MenuItem: 'MenuItem',
+  PreOrder: 'PreOrder',
+  PreOrderItem: 'PreOrderItem'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -410,7 +414,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "restaurantTable" | "reservation" | "guest" | "setting" | "notificationLog" | "dayOverride" | "reservationPayment" | "waitlistEntry" | "event" | "eventTicket"
+    modelProps: "user" | "restaurantTable" | "reservation" | "guest" | "setting" | "notificationLog" | "dayOverride" | "reservationPayment" | "waitlistEntry" | "event" | "eventTicket" | "menuCategory" | "menuItem" | "preOrder" | "preOrderItem"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1228,6 +1232,302 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    MenuCategory: {
+      payload: Prisma.$MenuCategoryPayload<ExtArgs>
+      fields: Prisma.MenuCategoryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.MenuCategoryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.MenuCategoryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload>
+        }
+        findFirst: {
+          args: Prisma.MenuCategoryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.MenuCategoryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload>
+        }
+        findMany: {
+          args: Prisma.MenuCategoryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload>[]
+        }
+        create: {
+          args: Prisma.MenuCategoryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload>
+        }
+        createMany: {
+          args: Prisma.MenuCategoryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.MenuCategoryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload>[]
+        }
+        delete: {
+          args: Prisma.MenuCategoryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload>
+        }
+        update: {
+          args: Prisma.MenuCategoryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload>
+        }
+        deleteMany: {
+          args: Prisma.MenuCategoryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.MenuCategoryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.MenuCategoryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload>[]
+        }
+        upsert: {
+          args: Prisma.MenuCategoryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuCategoryPayload>
+        }
+        aggregate: {
+          args: Prisma.MenuCategoryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateMenuCategory>
+        }
+        groupBy: {
+          args: Prisma.MenuCategoryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MenuCategoryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.MenuCategoryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MenuCategoryCountAggregateOutputType> | number
+        }
+      }
+    }
+    MenuItem: {
+      payload: Prisma.$MenuItemPayload<ExtArgs>
+      fields: Prisma.MenuItemFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.MenuItemFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.MenuItemFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload>
+        }
+        findFirst: {
+          args: Prisma.MenuItemFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.MenuItemFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload>
+        }
+        findMany: {
+          args: Prisma.MenuItemFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload>[]
+        }
+        create: {
+          args: Prisma.MenuItemCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload>
+        }
+        createMany: {
+          args: Prisma.MenuItemCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.MenuItemCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload>[]
+        }
+        delete: {
+          args: Prisma.MenuItemDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload>
+        }
+        update: {
+          args: Prisma.MenuItemUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload>
+        }
+        deleteMany: {
+          args: Prisma.MenuItemDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.MenuItemUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.MenuItemUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload>[]
+        }
+        upsert: {
+          args: Prisma.MenuItemUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MenuItemPayload>
+        }
+        aggregate: {
+          args: Prisma.MenuItemAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateMenuItem>
+        }
+        groupBy: {
+          args: Prisma.MenuItemGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MenuItemGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.MenuItemCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MenuItemCountAggregateOutputType> | number
+        }
+      }
+    }
+    PreOrder: {
+      payload: Prisma.$PreOrderPayload<ExtArgs>
+      fields: Prisma.PreOrderFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PreOrderFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PreOrderFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload>
+        }
+        findFirst: {
+          args: Prisma.PreOrderFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PreOrderFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload>
+        }
+        findMany: {
+          args: Prisma.PreOrderFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload>[]
+        }
+        create: {
+          args: Prisma.PreOrderCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload>
+        }
+        createMany: {
+          args: Prisma.PreOrderCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PreOrderCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload>[]
+        }
+        delete: {
+          args: Prisma.PreOrderDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload>
+        }
+        update: {
+          args: Prisma.PreOrderUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload>
+        }
+        deleteMany: {
+          args: Prisma.PreOrderDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PreOrderUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PreOrderUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload>[]
+        }
+        upsert: {
+          args: Prisma.PreOrderUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderPayload>
+        }
+        aggregate: {
+          args: Prisma.PreOrderAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePreOrder>
+        }
+        groupBy: {
+          args: Prisma.PreOrderGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreOrderGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PreOrderCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreOrderCountAggregateOutputType> | number
+        }
+      }
+    }
+    PreOrderItem: {
+      payload: Prisma.$PreOrderItemPayload<ExtArgs>
+      fields: Prisma.PreOrderItemFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PreOrderItemFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PreOrderItemFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload>
+        }
+        findFirst: {
+          args: Prisma.PreOrderItemFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PreOrderItemFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload>
+        }
+        findMany: {
+          args: Prisma.PreOrderItemFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload>[]
+        }
+        create: {
+          args: Prisma.PreOrderItemCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload>
+        }
+        createMany: {
+          args: Prisma.PreOrderItemCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PreOrderItemCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload>[]
+        }
+        delete: {
+          args: Prisma.PreOrderItemDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload>
+        }
+        update: {
+          args: Prisma.PreOrderItemUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload>
+        }
+        deleteMany: {
+          args: Prisma.PreOrderItemDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PreOrderItemUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PreOrderItemUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload>[]
+        }
+        upsert: {
+          args: Prisma.PreOrderItemUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PreOrderItemPayload>
+        }
+        aggregate: {
+          args: Prisma.PreOrderItemAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePreOrderItem>
+        }
+        groupBy: {
+          args: Prisma.PreOrderItemGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreOrderItemGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PreOrderItemCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PreOrderItemCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1466,6 +1766,66 @@ export const EventTicketScalarFieldEnum = {
 export type EventTicketScalarFieldEnum = (typeof EventTicketScalarFieldEnum)[keyof typeof EventTicketScalarFieldEnum]
 
 
+export const MenuCategoryScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MenuCategoryScalarFieldEnum = (typeof MenuCategoryScalarFieldEnum)[keyof typeof MenuCategoryScalarFieldEnum]
+
+
+export const MenuItemScalarFieldEnum = {
+  id: 'id',
+  categoryId: 'categoryId',
+  name: 'name',
+  description: 'description',
+  price: 'price',
+  isAvailable: 'isAvailable',
+  dietaryTags: 'dietaryTags',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MenuItemScalarFieldEnum = (typeof MenuItemScalarFieldEnum)[keyof typeof MenuItemScalarFieldEnum]
+
+
+export const PreOrderScalarFieldEnum = {
+  id: 'id',
+  reservationId: 'reservationId',
+  status: 'status',
+  specialNotes: 'specialNotes',
+  subtotal: 'subtotal',
+  isPaid: 'isPaid',
+  stripePaymentIntentId: 'stripePaymentIntentId',
+  paidAmount: 'paidAmount',
+  paidAt: 'paidAt',
+  refundedAt: 'refundedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreOrderScalarFieldEnum = (typeof PreOrderScalarFieldEnum)[keyof typeof PreOrderScalarFieldEnum]
+
+
+export const PreOrderItemScalarFieldEnum = {
+  id: 'id',
+  preOrderId: 'preOrderId',
+  menuItemId: 'menuItemId',
+  guestLabel: 'guestLabel',
+  quantity: 'quantity',
+  specialInstructions: 'specialInstructions',
+  price: 'price',
+  createdAt: 'createdAt'
+} as const
+
+export type PreOrderItemScalarFieldEnum = (typeof PreOrderItemScalarFieldEnum)[keyof typeof PreOrderItemScalarFieldEnum]
+
+
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1628,6 +1988,10 @@ export type GlobalOmitConfig = {
   waitlistEntry?: Prisma.WaitlistEntryOmit
   event?: Prisma.EventOmit
   eventTicket?: Prisma.EventTicketOmit
+  menuCategory?: Prisma.MenuCategoryOmit
+  menuItem?: Prisma.MenuItemOmit
+  preOrder?: Prisma.PreOrderOmit
+  preOrderItem?: Prisma.PreOrderItemOmit
 }
 
 /* Types for Logging */

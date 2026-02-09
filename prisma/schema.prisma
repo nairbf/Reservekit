@@ -66,6 +66,7 @@ model Reservation {
   requiresDeposit Boolean           @default(false)
   depositAmount   Int?
   payment         ReservationPayment?
+  preOrder        PreOrder?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   notifications   NotificationLog[]
@@ -190,4 +191,59 @@ model EventTicket {
   guest                 Guest?    @relation(fields: [guestId], references: [id])
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+}
+
+model MenuCategory {
+  id        Int        @id @default(autoincrement())
+  name      String
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     MenuItem[]
+}
+
+model MenuItem {
+  id            Int           @id @default(autoincrement())
+  categoryId    Int
+  category      MenuCategory  @relation(fields: [categoryId], references: [id])
+  name          String
+  description   String?
+  price         Int
+  isAvailable   Boolean       @default(true)
+  dietaryTags   String?
+  sortOrder     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  preOrderItems PreOrderItem[]
+}
+
+model PreOrder {
+  id                    Int            @id @default(autoincrement())
+  reservationId         Int            @unique
+  reservation           Reservation    @relation(fields: [reservationId], references: [id])
+  status                String         @default("submitted")
+  specialNotes          String?
+  subtotal              Int            @default(0)
+  isPaid                Boolean        @default(false)
+  stripePaymentIntentId String?
+  paidAmount            Int?
+  paidAt                DateTime?
+  refundedAt            DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  items                 PreOrderItem[]
+}
+
+model PreOrderItem {
+  id                  Int       @id @default(autoincrement())
+  preOrderId          Int
+  preOrder            PreOrder  @relation(fields: [preOrderId], references: [id])
+  menuItemId          Int
+  menuItem            MenuItem  @relation(fields: [menuItemId], references: [id])
+  guestLabel          String
+  quantity            Int       @default(1)
+  specialInstructions String?
+  price               Int
+  createdAt           DateTime  @default(now())
 }

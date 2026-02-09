@@ -18,6 +18,23 @@ interface Reservation {
     vipStatus: string | null;
     allergyNotes: string | null;
   } | null;
+  preOrder: {
+    id: number;
+    status: string;
+    specialNotes: string | null;
+    subtotal: number;
+    isPaid: boolean;
+    items: Array<{
+      id: number;
+      guestLabel: string;
+      quantity: number;
+      specialInstructions: string | null;
+      menuItem: {
+        id: number;
+        name: string;
+      };
+    }>;
+  } | null;
 }
 interface TableItem { id: number; name: string; maxCapacity: number }
 interface UpcomingResponse {
@@ -101,6 +118,7 @@ export default function TonightPage() {
   const [upcoming, setUpcoming] = useState<Reservation[]>([]);
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [loadingUpcoming, setLoadingUpcoming] = useState(false);
+  const [expandedPreOrders, setExpandedPreOrders] = useState<Record<number, boolean>>({});
   const [loaded, setLoaded] = useState(false);
   const today = new Date().toISOString().split("T")[0];
   const [selectedDate, setSelectedDate] = useState(today);
@@ -159,6 +177,15 @@ export default function TonightPage() {
   async function doAction(id: number, action: string, extra?: Record<string, unknown>) {
     await fetch(`/api/reservations/${id}/action`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });
     Promise.all([load(), loadUpcoming()]);
+  }
+
+  async function confirmPreOrder(preOrderId: number) {
+    await fetch("/api/preorder/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preOrderId }),
+    });
+    load();
   }
 
   async function addWalkin() {
@@ -332,6 +359,14 @@ export default function TonightPage() {
                       {(r.guest?.totalVisits ?? 0) > 1 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest?.totalVisits ?? 0)} visit</span>}
                       {r.guest?.vipStatus === "vip" && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>}
                       {r.guest?.allergyNotes && <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Allergies</span>}
+                      {r.preOrder && (
+                        <button
+                          onClick={() => setExpandedPreOrders(prev => ({ ...prev, [r.id]: !prev[r.id] }))}
+                          className="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 hover:bg-violet-200 transition-all duration-200"
+                        >
+                          🍽 Pre-ordered{r.preOrder.isPaid ? " (Paid ✓)" : ""}
+                        </button>
+                      )}
                     </div>
                     {r.table && posStatusMap[r.table.id] && (
                       <div className="text-xs text-emerald-700 mt-1">
@@ -340,6 +375,43 @@ export default function TonightPage() {
                     )}
                     {r.table && r.status === "seated" && !posStatusMap[r.table.id] && (
                       <div className="text-xs text-orange-700 mt-1">⚠ No POS check found</div>
+                    )}
+                    {r.preOrder && expandedPreOrders[r.id] && (
+                      <div className="mt-2 rounded-lg border border-violet-200 bg-violet-50 p-2 text-xs text-violet-900">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                          <span className="font-semibold">
+                            Pre-order {r.preOrder.isPaid ? `(Paid $${(r.preOrder.subtotal / 100).toFixed(2)})` : "(Unpaid)"}
+                          </span>
+                          {r.preOrder.status !== "confirmed_by_staff" && (
+                            <button
+                              onClick={() => confirmPreOrder(r.preOrder!.id)}
+                              className="h-8 px-2 rounded border border-violet-300 text-violet-800 bg-white"
+                            >
+                              Confirm
+                            </button>
+                          )}
+                        </div>
+                        {Object.entries(
+                          (r.preOrder.items || []).reduce<Record<string, Array<typeof r.preOrder.items[number]>>>((acc, item) => {
+                            if (!acc[item.guestLabel]) acc[item.guestLabel] = [];
+                            acc[item.guestLabel].push(item);
+                            return acc;
+                          }, {}),
+                        ).map(([guestLabel, guestItems]) => (
+                          <div key={guestLabel} className="mb-1">
+                            <div className="font-medium">{guestLabel}</div>
+                            <ul className="list-disc pl-4">
+                              {guestItems.map(item => (
+                                <li key={item.id}>
+                                  {item.quantity}x {item.menuItem.name}
+                                  {item.specialInstructions ? ` (${item.specialInstructions})` : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                        {r.preOrder.specialNotes && <div className="mt-1"><span className="font-medium">Notes:</span> {r.preOrder.specialNotes}</div>}
+                      </div>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-2">

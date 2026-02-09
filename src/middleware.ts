@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 const PUBLIC_API_EXACT = new Set([
   "/api/auth/login",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
   "/api/availability",
+  "/api/menu/categories",
   "/api/reservations/request",
   "/api/loyalty/consent",
   "/api/payments/create-intent",
@@ -16,11 +19,13 @@ const PUBLIC_API_EXACT = new Set([
   "/api/reservations/lookup",
   "/api/reservations/self-service",
   "/api/events",
+  "/api/preorder",
 ]);
 
 function isPublicApi(pathname: string): boolean {
   if (PUBLIC_API_EXACT.has(pathname)) return true;
   if (pathname.startsWith("/api/events")) return true;
+  if (pathname.startsWith("/api/preorder/") && pathname !== "/api/preorder/confirm") return true;
   if (pathname.startsWith("/api/webhooks/")) return true;
   return false;
 }

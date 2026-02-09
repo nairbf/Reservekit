@@ -45,6 +45,31 @@ export function createToken(user: { id: number; email: string; role: string }) {
   return jwt.sign({ userId: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
 }
 
+export function createPasswordResetToken(user: { id: number; email: string; passwordHash: string }) {
+  return jwt.sign(
+    {
+      userId: user.id,
+      email: user.email,
+      // Ties the token to the current password hash, so old links stop working after a reset.
+      pwdSig: user.passwordHash.slice(-16),
+      tokenType: "password_reset",
+    },
+    JWT_SECRET,
+    { expiresIn: "1h" },
+  );
+}
+
+export function verifyPasswordResetToken(token: string) {
+  const payload = jwt.verify(token, JWT_SECRET) as {
+    userId: number;
+    email: string;
+    pwdSig: string;
+    tokenType?: string;
+  };
+  if (payload.tokenType !== "password_reset") throw new Error("Invalid token");
+  return payload;
+}
+
 export async function getSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;

@@ -220,6 +220,9 @@ export default function LandingPage() {
                     ["Monthly fee", "$0-$15", "$249-$449", "$249-$899"],
                     ["Per-cover fee", "Never", "$0.25-$1.00", "None"],
                     ["Year 1 (core only)", "$1,799-$1,979", "$3,500+", "$2,988+"],
+                    ["Year 2 (core only)", "$0-$180", "$3,500+", "$2,988+"],
+                    ["2-Year total (core only)", "$1,799-$2,159", "$7,000+", "$5,976+"],
+                    ["Extra paid after 2 years", "-", "$4,841+ more", "$3,817+ more"],
                     ["Year 1 (full suite)", "$2,734-$2,914", "$3,500+ plus cover fees", "$2,988+"],
                     ["Own your data", "Yes", "No", "No"],
                     ["Self-hostable", "Yes", "No", "No"],
@@ -229,6 +232,72 @@ export default function LandingPage() {
                       {values.map((cell, index) => (
                         <td key={index} className={`p-4 text-center ${index === 0 ? "font-medium text-blue-600" : "text-gray-600"}`}>{cell}</td>
                       ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="mt-6 bg-white rounded-xl shadow p-5">
+            <h3 className="text-lg font-bold">Break-even timeline (Core + hosted)</h3>
+            <p className="text-sm text-gray-600 mt-1">How fast ReserveSit recoups its one-time cost versus monthly subscriptions.</p>
+            <div className="space-y-4 mt-4">
+              {[
+                { label: "vs OpenTable ($249/mo)", months: 8, tone: "bg-orange-500" },
+                { label: "vs OpenTable ($449/mo)", months: 5, tone: "bg-orange-600" },
+                { label: "vs Resy ($249/mo)", months: 8, tone: "bg-gray-600" },
+                { label: "vs Resy ($899/mo)", months: 3, tone: "bg-gray-700" },
+              ].map(entry => (
+                <div key={entry.label}>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="font-medium">{entry.label}</span>
+                    <span className="text-blue-700 font-semibold">{entry.months} months</span>
+                  </div>
+                  <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className={`h-3 rounded-full ${entry.tone}`}
+                      style={{ width: `${Math.round((entry.months / 12) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-sm text-blue-700 font-medium mt-4">Every scenario above breaks even inside year one.</p>
+          </div>
+
+          <div className="mt-6 bg-white rounded-xl shadow overflow-hidden">
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-lg font-bold">Feature comparison</h3>
+              <p className="text-sm text-gray-600 mt-1">See what your team can run in ReserveSit compared to subscription alternatives.</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[720px]">
+                <thead>
+                  <tr className="bg-gray-50 border-b">
+                    <th className="text-left p-4 font-semibold">Feature</th>
+                    <th className="p-4 text-center font-bold text-blue-700">ReserveSit</th>
+                    <th className="p-4 text-center font-semibold text-gray-700">OpenTable</th>
+                    <th className="p-4 text-center font-semibold text-gray-700">Resy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ["Embeddable booking widget", "Included", "Included", "Included"],
+                    ["Manual request approvals", "Included", "Limited", "Limited"],
+                    ["Waitlist management", "Included", "Tier dependent", "Tier dependent"],
+                    ["Visual floor plan", "Available add-on", "Tier dependent", "Tier dependent"],
+                    ["Guest history + notes", "Available add-on", "Tier dependent", "Tier dependent"],
+                    ["Deposits and no-show protection", "Included", "Tier dependent", "Tier dependent"],
+                    ["Event ticketing", "Available add-on", "Limited", "Limited"],
+                    ["POS table-status sync", "Available add-on", "Varies", "Varies"],
+                    ["Data ownership and self-host option", "Yes", "No", "No"],
+                  ].map(([feature, ours, ot, resy]) => (
+                    <tr key={feature} className="border-b last:border-0">
+                      <td className="p-4 font-medium text-gray-900">{feature}</td>
+                      <td className="p-4 text-center font-semibold text-blue-700">{ours}</td>
+                      <td className="p-4 text-center text-gray-600">{ot}</td>
+                      <td className="p-4 text-center text-gray-600">{resy}</td>
                     </tr>
                   ))}
                 </tbody>

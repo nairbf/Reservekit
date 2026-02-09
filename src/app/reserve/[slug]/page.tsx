@@ -21,6 +21,8 @@ export default async function ReserveWidget() {
       depositAmount={settings.depositAmount}
       depositMinParty={settings.depositMinParty}
       depositMessage={settings.depositMessage}
+      expressDiningEnabled={settings.expressDiningEnabled}
+      expressDiningMessage={settings.expressDiningMessage}
     />
   );
 }

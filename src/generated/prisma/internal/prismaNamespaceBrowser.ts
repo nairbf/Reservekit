@@ -61,7 +61,11 @@ export const ModelName = {
   ReservationPayment: 'ReservationPayment',
   WaitlistEntry: 'WaitlistEntry',
   Event: 'Event',
-  EventTicket: 'EventTicket'
+  EventTicket: 'EventTicket',
+  MenuCategory: 'MenuCategory',
+  MenuItem: 'MenuItem',
+  PreOrder: 'PreOrder',
+  PreOrderItem: 'PreOrderItem'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -277,6 +281,66 @@ export const EventTicketScalarFieldEnum = {
 } as const
 
 export type EventTicketScalarFieldEnum = (typeof EventTicketScalarFieldEnum)[keyof typeof EventTicketScalarFieldEnum]
+
+
+export const MenuCategoryScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  sortOrder: 'sortOrder',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MenuCategoryScalarFieldEnum = (typeof MenuCategoryScalarFieldEnum)[keyof typeof MenuCategoryScalarFieldEnum]
+
+
+export const MenuItemScalarFieldEnum = {
+  id: 'id',
+  categoryId: 'categoryId',
+  name: 'name',
+  description: 'description',
+  price: 'price',
+  isAvailable: 'isAvailable',
+  dietaryTags: 'dietaryTags',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MenuItemScalarFieldEnum = (typeof MenuItemScalarFieldEnum)[keyof typeof MenuItemScalarFieldEnum]
+
+
+export const PreOrderScalarFieldEnum = {
+  id: 'id',
+  reservationId: 'reservationId',
+  status: 'status',
+  specialNotes: 'specialNotes',
+  subtotal: 'subtotal',
+  isPaid: 'isPaid',
+  stripePaymentIntentId: 'stripePaymentIntentId',
+  paidAmount: 'paidAmount',
+  paidAt: 'paidAt',
+  refundedAt: 'refundedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PreOrderScalarFieldEnum = (typeof PreOrderScalarFieldEnum)[keyof typeof PreOrderScalarFieldEnum]
+
+
+export const PreOrderItemScalarFieldEnum = {
+  id: 'id',
+  preOrderId: 'preOrderId',
+  menuItemId: 'menuItemId',
+  guestLabel: 'guestLabel',
+  quantity: 'quantity',
+  specialInstructions: 'specialInstructions',
+  price: 'price',
+  createdAt: 'createdAt'
+} as const
+
+export type PreOrderItemScalarFieldEnum = (typeof PreOrderItemScalarFieldEnum)[keyof typeof PreOrderItemScalarFieldEnum]
 
 
 export const SortOrder = {

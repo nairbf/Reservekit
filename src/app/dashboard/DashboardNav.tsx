@@ -6,12 +6,14 @@ import { useEffect, useState } from "react";
 const NAV = [
   { href: "/dashboard", label: "Inbox" },
   { href: "/dashboard/tonight", label: "Tonight" },
+  { href: "/dashboard/kitchen", label: "Kitchen" },
   { href: "/dashboard/waitlist", label: "Waitlist" },
   { href: "/dashboard/tables", label: "Tables" },
   { href: "/dashboard/floorplan", label: "Floor Plan" },
   { href: "/dashboard/schedule", label: "Schedule" },
   { href: "/dashboard/reports", label: "Reports" },
   { href: "/dashboard/events", label: "Events" },
+  { href: "/dashboard/menu", label: "Menu" },
   { href: "/dashboard/guests", label: "Guests" },
   { href: "/dashboard/settings", label: "Settings" },
 ];

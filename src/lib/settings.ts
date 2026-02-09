@@ -51,6 +51,11 @@ export interface AppSettings {
   loyaltyOptInLabel: string;
   weeklySchedule: WeeklyScheduleConfig;
   specialDepositRules: Record<string, SpecialDepositRule>;
+  expressDiningEnabled: boolean;
+  expressDiningMode: "prices" | "browse";
+  expressDiningPayment: "precharge" | "optional" | "none";
+  expressDiningCutoffHours: number;
+  expressDiningMessage: string;
 }
 
 const WEEKDAY_KEYS: WeekdayKey[] = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
@@ -217,6 +222,18 @@ export async function getSettings(): Promise<AppSettings> {
       minParty: depositMinParty,
       message: depositMessage,
     }),
+    expressDiningEnabled: map.expressDiningEnabled === "true",
+    expressDiningMode: map.expressDiningMode === "browse" ? "browse" : "prices",
+    expressDiningPayment:
+      map.expressDiningPayment === "precharge"
+        ? "precharge"
+        : map.expressDiningPayment === "none"
+          ? "none"
+          : "optional",
+    expressDiningCutoffHours: Math.max(0, toInt(map.expressDiningCutoffHours, 2)),
+    expressDiningMessage:
+      map.expressDiningMessage ||
+      "Pre-select your meal and skip the wait! Your order will be ready when you arrive.",
   };
 }
 

@@ -65,10 +65,13 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const name = String(body?.name || "").trim();
   if (!name) return NextResponse.json({ error: "Category name is required" }, { status: 400 });
+  const typeRaw = String(body?.type || "starter").toLowerCase();
+  const type = typeRaw === "drink" ? "drink" : "starter";
 
   const created = await prisma.menuCategory.create({
     data: {
       name,
+      type,
       sortOrder: Number.isFinite(Number(body?.sortOrder)) ? Math.trunc(Number(body.sortOrder)) : 0,
       isActive: body?.isActive !== false,
     },

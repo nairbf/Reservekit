@@ -286,6 +286,7 @@ export type EventTicketScalarFieldEnum = (typeof EventTicketScalarFieldEnum)[key
 export const MenuCategoryScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  type: 'type',
   sortOrder: 'sortOrder',
   isActive: 'isActive',
   createdAt: 'createdAt',

@@ -17,6 +17,12 @@ interface IncomingGuest {
   }>;
 }
 
+interface IncomingFlatItem {
+  menuItemId?: number;
+  quantity?: number;
+  specialInstructions?: string;
+}
+
 function normalizeGuestLabel(value: string | undefined, fallback: string): string {
   const trimmed = String(value || "").trim();
   return trimmed || fallback;
@@ -34,6 +40,7 @@ export async function POST(req: NextRequest) {
   const specialNotes = body?.specialNotes ? String(body.specialNotes) : null;
   const payNow = Boolean(body?.payNow);
   const guests = (Array.isArray(body?.guests) ? body.guests : []) as IncomingGuest[];
+  const flatItems = (Array.isArray(body?.items) ? body.items : []) as IncomingFlatItem[];
 
   if (!reservationCode || phone.length < 4) {
     return NextResponse.json({ error: "reservationCode and phone are required." }, { status: 400 });
@@ -52,14 +59,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Pre-ordering is closed for this reservation." }, { status: 400 });
   }
 
-  const allRequested = guests.flatMap((guest, idx) =>
-    (Array.isArray(guest.items) ? guest.items : []).map(item => ({
-      guestLabel: normalizeGuestLabel(guest.label, `Guest ${idx + 1}`),
-      menuItemId: Math.trunc(Number(item.menuItemId || 0)),
-      quantity: Math.max(1, Math.trunc(Number(item.quantity || 1))),
-      specialInstructions: item.specialInstructions ? String(item.specialInstructions) : null,
-    })),
-  );
+  const allRequested = flatItems.length > 0
+    ? flatItems.map(item => ({
+        guestLabel: "Table",
+        menuItemId: Math.trunc(Number(item.menuItemId || 0)),
+        quantity: Math.max(1, Math.trunc(Number(item.quantity || 1))),
+        specialInstructions: item.specialInstructions ? String(item.specialInstructions) : null,
+      }))
+    : guests.flatMap((guest, idx) =>
+        (Array.isArray(guest.items) ? guest.items : []).map(item => ({
+          guestLabel: normalizeGuestLabel(guest.label, `Guest ${idx + 1}`),
+          menuItemId: Math.trunc(Number(item.menuItemId || 0)),
+          quantity: Math.max(1, Math.trunc(Number(item.quantity || 1))),
+          specialInstructions: item.specialInstructions ? String(item.specialInstructions) : null,
+        })),
+      );
 
   if (allRequested.length === 0) {
     return NextResponse.json({ error: "Please select at least one menu item." }, { status: 400 });
@@ -67,7 +81,11 @@ export async function POST(req: NextRequest) {
 
   const menuItemIds = Array.from(new Set(allRequested.map(item => item.menuItemId).filter(id => id > 0)));
   const menuItems = await prisma.menuItem.findMany({
-    where: { id: { in: menuItemIds }, isAvailable: true, category: { isActive: true } },
+    where: {
+      id: { in: menuItemIds },
+      isAvailable: true,
+      category: { isActive: true, type: { in: ["starter", "drink"] } },
+    },
   });
   const menuMap = new Map(menuItems.map(item => [item.id, item]));
   if (menuMap.size !== menuItemIds.length) {

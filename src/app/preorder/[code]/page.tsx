@@ -16,6 +16,7 @@ interface MenuItem {
 interface MenuCategory {
   id: number;
   name: string;
+  type?: string;
   items: MenuItem[];
 }
 
@@ -36,7 +37,11 @@ interface PreOrderItem {
   quantity: number;
   specialInstructions: string | null;
   price: number;
-  menuItem?: MenuItem;
+  menuItem?: {
+    id: number;
+    name: string;
+    category?: { type?: string | null } | null;
+  };
 }
 
 interface PreOrderRecord {
@@ -60,10 +65,10 @@ interface OrderLine {
   key: string;
   menuItemId: number;
   itemName: string;
-  guestLabel: string;
   quantity: number;
   specialInstructions: string;
   price: number;
+  section: "starter" | "drink";
 }
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
@@ -91,26 +96,15 @@ function tags(value: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
-function buildGuestsPayload(lines: OrderLine[], guestLabels: string[]) {
-  return guestLabels.map(label => ({
-    label,
-    items: lines
-      .filter(line => line.guestLabel === label)
-      .map(line => ({
-        menuItemId: line.menuItemId,
-        quantity: line.quantity,
-        specialInstructions: line.specialInstructions || undefined,
-      })),
-  }));
+function categorySection(type?: string | null): "starter" | "drink" {
+  return String(type || "starter").toLowerCase() === "drink" ? "drink" : "starter";
 }
 
 function PaymentStep({
-  clientSecret,
   subtotal,
   onConfirmed,
   onBack,
 }: {
-  clientSecret: string;
   subtotal: number;
   onConfirmed: () => Promise<void>;
   onBack: () => void;
@@ -189,9 +183,6 @@ export default function PreOrderPage() {
   const [existing, setExisting] = useState<PreOrderRecord | null>(null);
 
   const [categories, setCategories] = useState<MenuCategory[]>([]);
-  const [openCategoryIds, setOpenCategoryIds] = useState<number[]>([]);
-  const [guestLabels, setGuestLabels] = useState<string[]>([]);
-  const [activeGuestIndex, setActiveGuestIndex] = useState(0);
   const [lines, setLines] = useState<OrderLine[]>([]);
   const [specialNotes, setSpecialNotes] = useState("");
   const [payNow, setPayNow] = useState(false);
@@ -205,6 +196,15 @@ export default function PreOrderPage() {
     [lines],
   );
 
+  const starterCategories = useMemo(
+    () => categories.filter(category => categorySection(category.type) === "starter"),
+    [categories],
+  );
+  const drinkCategories = useMemo(
+    () => categories.filter(category => categorySection(category.type) === "drink"),
+    [categories],
+  );
+
   useEffect(() => {
     if (!config) return;
     if (config.payment === "precharge") setPayNow(true);
@@ -216,42 +216,51 @@ export default function PreOrderPage() {
     setError("");
     setSuccessMessage("");
     try {
-      const res = await fetch(`/api/preorder?code=${encodeURIComponent(code)}&phone=${encodeURIComponent(phone)}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "We couldn't verify that reservation.");
+      const lookupRes = await fetch(`/api/preorder?code=${encodeURIComponent(code)}&phone=${encodeURIComponent(phone)}`);
+      const lookupData = await lookupRes.json();
+      if (!lookupRes.ok) {
+        setError(lookupData.error || "We couldn't verify that reservation.");
         return;
       }
 
       const menuRes = await fetch("/api/menu/categories?public=true");
       const menuData = await menuRes.json();
-      setCategories(Array.isArray(menuData) ? menuData : []);
-      setOpenCategoryIds(Array.isArray(menuData) ? menuData.map((c: MenuCategory) => c.id) : []);
+      if (!menuRes.ok) {
+        setError(menuData.error || "Menu is unavailable right now.");
+        return;
+      }
 
-      setReservation(data.reservation);
-      setConfig(data.config);
-      setCutoffOpen(Boolean(data.cutoffOpen));
-      setExisting(data.preOrder || null);
-      setCurrentPreOrderId(data.preOrder?.id || null);
-      setSpecialNotes(String(data.preOrder?.specialNotes || ""));
+      const list = Array.isArray(menuData)
+        ? (menuData as MenuCategory[])
+            .filter(category => ["starter", "drink"].includes(String(category.type || "starter").toLowerCase()))
+            .filter(category => Array.isArray(category.items) && category.items.length > 0)
+        : [];
+
+      setCategories(list);
+      setReservation(lookupData.reservation);
+      setConfig(lookupData.config);
+      setCutoffOpen(Boolean(lookupData.cutoffOpen));
+      setExisting(lookupData.preOrder || null);
+      setCurrentPreOrderId(lookupData.preOrder?.id || null);
+      setSpecialNotes(String(lookupData.preOrder?.specialNotes || ""));
       setVerified(true);
       setStep("editor");
 
-      const baseLabels = Array.from({ length: Math.max(1, Number(data.reservation?.partySize || 1)) }, (_, i) => `Guest ${i + 1}`);
-      const existingLabels = Array.from(
-        new Set((data.preOrder?.items || []).map((item: PreOrderItem) => item.guestLabel).filter(Boolean)),
-      ) as string[];
-      const mergedLabels = existingLabels.length > 0 ? existingLabels : baseLabels;
-      setGuestLabels(mergedLabels);
+      const sectionMap = new Map<number, "starter" | "drink">();
+      for (const category of list) {
+        for (const item of category.items) {
+          sectionMap.set(item.id, categorySection(category.type));
+        }
+      }
 
-      const existingLines = (data.preOrder?.items || []).map((item: PreOrderItem, index: number) => ({
+      const existingLines = (lookupData.preOrder?.items || []).map((item: PreOrderItem, index: number) => ({
         key: `existing-${item.id || index}`,
         menuItemId: item.menuItemId,
         itemName: item.menuItem?.name || `Item ${item.menuItemId}`,
-        guestLabel: item.guestLabel,
-        quantity: item.quantity,
+        quantity: Math.max(1, Number(item.quantity || 1)),
         specialInstructions: item.specialInstructions || "",
-        price: item.price,
+        price: Number(item.price || 0),
+        section: sectionMap.get(item.menuItemId) || categorySection(item.menuItem?.category?.type),
       }));
       setLines(existingLines);
     } finally {
@@ -259,20 +268,25 @@ export default function PreOrderPage() {
     }
   }
 
-  function addItem(menuItem: MenuItem) {
-    const guestLabel = guestLabels[activeGuestIndex] || "Guest 1";
-    setLines(prev => [
-      ...prev,
-      {
-        key: `${guestLabel}-${menuItem.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        menuItemId: menuItem.id,
-        itemName: menuItem.name,
-        guestLabel,
-        quantity: 1,
-        specialInstructions: "",
-        price: Number(menuItem.price || 0),
-      },
-    ]);
+  function addItem(menuItem: MenuItem, section: "starter" | "drink") {
+    setLines(prev => {
+      const existingIndex = prev.findIndex(line => line.menuItemId === menuItem.id && line.specialInstructions.trim() === "");
+      if (existingIndex >= 0) {
+        return prev.map((line, idx) => (idx === existingIndex ? { ...line, quantity: line.quantity + 1 } : line));
+      }
+      return [
+        ...prev,
+        {
+          key: `${menuItem.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          menuItemId: menuItem.id,
+          itemName: menuItem.name,
+          quantity: 1,
+          specialInstructions: "",
+          price: Number(menuItem.price || 0),
+          section,
+        },
+      ];
+    });
   }
 
   function removeLine(key: string) {
@@ -281,13 +295,6 @@ export default function PreOrderPage() {
 
   function updateLine(key: string, patch: Partial<OrderLine>) {
     setLines(prev => prev.map(line => (line.key === key ? { ...line, ...patch } : line)));
-  }
-
-  function renameGuest(index: number, name: string) {
-    const clean = name.trim() || `Guest ${index + 1}`;
-    const previous = guestLabels[index] || `Guest ${index + 1}`;
-    setGuestLabels(prev => prev.map((label, i) => (i === index ? clean : label)));
-    setLines(prev => prev.map(line => (line.guestLabel === previous ? { ...line, guestLabel: clean } : line)));
   }
 
   async function submitPreOrder() {
@@ -305,12 +312,22 @@ export default function PreOrderPage() {
     setError("");
     setSuccessMessage("");
     try {
+      const effectivePayNow = config.payment === "precharge"
+        ? true
+        : config.payment === "optional"
+          ? payNow
+          : false;
+
       const payload = {
         reservationCode: reservation.code,
         phone,
         specialNotes,
-        guests: buildGuestsPayload(lines, guestLabels),
-        payNow,
+        items: lines.map(line => ({
+          menuItemId: line.menuItemId,
+          quantity: line.quantity,
+          specialInstructions: line.specialInstructions || undefined,
+        })),
+        payNow: effectivePayNow,
       };
 
       const endpoint = existing ? `/api/preorder/${existing.id}` : "/api/preorder";
@@ -327,7 +344,7 @@ export default function PreOrderPage() {
         return;
       }
 
-      const preOrder = data.preOrder || data;
+      const preOrder = (data.preOrder || data) as PreOrderRecord;
       setExisting(preOrder);
       setCurrentPreOrderId(preOrder.id);
 
@@ -339,7 +356,7 @@ export default function PreOrderPage() {
       }
 
       setStep("done");
-      setSuccessMessage("Pre-order submitted successfully.");
+      setSuccessMessage("Starters & drinks submitted successfully.");
     } finally {
       setLoading(false);
     }
@@ -361,9 +378,9 @@ export default function PreOrderPage() {
       setError(data.error || "Could not finalize payment.");
       return;
     }
-    setExisting(data.preOrder || data);
+    setExisting((data.preOrder || data) as PreOrderRecord);
     setStep("done");
-    setSuccessMessage("Pre-order submitted and paid.");
+    setSuccessMessage("Starters & drinks submitted and paid.");
   }
 
   async function cancelPreOrder() {
@@ -382,7 +399,7 @@ export default function PreOrderPage() {
         setError(data.error || "Could not cancel pre-order.");
         return;
       }
-      setExisting(data.preOrder || null);
+      setExisting((data.preOrder || null) as PreOrderRecord | null);
       setLines([]);
       setStep("done");
       setSuccessMessage("Pre-order cancelled.");
@@ -391,20 +408,20 @@ export default function PreOrderPage() {
     }
   }
 
-  const grouped = useMemo(() => {
-    const map: Record<string, OrderLine[]> = {};
-    for (const line of lines) {
-      if (!map[line.guestLabel]) map[line.guestLabel] = [];
-      map[line.guestLabel].push(line);
-    }
-    return map;
-  }, [lines]);
+  const starterLines = useMemo(
+    () => lines.filter(line => line.section === "starter"),
+    [lines],
+  );
+  const drinkLines = useMemo(
+    () => lines.filter(line => line.section === "drink"),
+    [lines],
+  );
 
   if (!verified) {
     return (
       <div className="min-h-screen bg-gray-50 px-4 py-10">
         <div className="max-w-xl mx-auto bg-white rounded-xl shadow p-6">
-          <h1 className="text-2xl font-bold">Pre-Order Your Meal</h1>
+          <h1 className="text-2xl font-bold">Pre-Order Starters & Drinks</h1>
           <p className="text-sm text-gray-600 mt-2">
             Enter your phone number to access reservation {code}.
           </p>
@@ -443,7 +460,6 @@ export default function PreOrderPage() {
           ) : (
             <Elements stripe={stripePromise} options={{ clientSecret }}>
               <PaymentStep
-                clientSecret={clientSecret}
                 subtotal={subtotal}
                 onConfirmed={markPaidAndFinish}
                 onBack={() => setStep("editor")}
@@ -481,95 +497,113 @@ export default function PreOrderPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_320px] gap-4">
+      <div className="max-w-6xl mx-auto grid lg:grid-cols-[1fr_340px] gap-4">
         <section className="space-y-4">
           <div className="bg-white rounded-xl shadow p-4 sm:p-6">
             <h1 className="text-2xl font-bold">Express Dining</h1>
             <p className="text-sm text-gray-600 mt-1">{config.message}</p>
             <div className="mt-3 text-sm text-gray-700">
-              {reservation.guestName} · {reservation.partySize} guests · {reservation.date} at {formatTime12(reservation.time)}
+              {reservation.guestName} · Party of {reservation.partySize} · {reservation.date} at {formatTime12(reservation.time)}
             </div>
             {!cutoffOpen && (
               <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
                 Pre-ordering is closed for this reservation. You can order at the restaurant.
               </div>
             )}
-            {existing && (
+            {existing && existing.status !== "cancelled" && (
               <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
                 Existing pre-order found. You can edit or cancel it before cutoff.
               </div>
             )}
           </div>
 
-          <div className="bg-white rounded-xl shadow p-4 sm:p-6">
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              {guestLabels.map((label, idx) => (
-                <button
-                  key={`${label}-${idx}`}
-                  type="button"
-                  onClick={() => setActiveGuestIndex(idx)}
-                  className={`h-10 px-3 rounded-lg border text-sm ${activeGuestIndex === idx ? "bg-blue-600 text-white border-blue-600" : "bg-white border-gray-200 text-gray-700"}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="grid sm:grid-cols-2 gap-3 mb-4">
-              {guestLabels.map((label, idx) => (
-                <input
-                  key={`rename-${idx}`}
-                  value={label}
-                  onChange={e => renameGuest(idx, e.target.value)}
-                  className="h-10 border rounded px-3 text-sm"
-                />
-              ))}
-            </div>
-
-            <div className="space-y-3">
-              {categories.map(category => {
-                const open = openCategoryIds.includes(category.id);
-                return (
-                  <div key={category.id} className="border rounded-lg">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setOpenCategoryIds(prev =>
-                          prev.includes(category.id) ? prev.filter(id => id !== category.id) : [...prev, category.id],
-                        )
-                      }
-                      className="w-full px-3 py-2 text-left font-semibold bg-gray-50"
-                    >
-                      {category.name}
-                    </button>
-                    {open && (
-                      <div className="p-3 grid sm:grid-cols-2 gap-3">
+          <div className="bg-white rounded-xl shadow p-4 sm:p-6 space-y-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-base">🍽</span>
+                <h2 className="text-lg font-bold">Starters</h2>
+              </div>
+              {starterCategories.length === 0 ? (
+                <p className="text-sm text-gray-500">No starter items available.</p>
+              ) : (
+                <div className="space-y-3">
+                  {starterCategories.map(category => (
+                    <div key={`starter-${category.id}`} className="rounded-lg border border-gray-200 p-3">
+                      <h3 className="text-sm font-semibold mb-2">{category.name}</h3>
+                      <div className="grid sm:grid-cols-2 gap-2">
                         {category.items.map(item => (
-                          <div key={item.id} className="border rounded-lg p-3">
-                            <div className="font-medium">{item.name}</div>
-                            {item.description && <div className="text-xs text-gray-500 mt-1">{item.description}</div>}
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {tags(item.dietaryTags).map(tag => (
-                                <span key={tag} className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{tag}</span>
-                              ))}
-                            </div>
+                          <div key={item.id} className="rounded-lg border border-gray-100 p-2">
+                            <p className="text-sm font-medium">{item.name}</p>
+                            {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                            {tags(item.dietaryTags).length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {tags(item.dietaryTags).map(tag => (
+                                  <span key={`${item.id}-${tag}`} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{tag}</span>
+                                ))}
+                              </div>
+                            )}
                             {config.mode === "prices" && typeof item.price === "number" && (
-                              <div className="text-sm font-semibold mt-2">{formatCents(item.price)}</div>
+                              <p className="text-xs font-semibold mt-1">{formatCents(item.price)}</p>
                             )}
                             <button
                               type="button"
+                              onClick={() => addItem(item, "starter")}
                               disabled={!cutoffOpen}
-                              onClick={() => addItem(item)}
-                              className="mt-2 h-10 px-3 rounded bg-blue-600 text-white text-sm font-medium disabled:opacity-50"
+                              className="mt-2 h-9 px-3 rounded bg-blue-600 text-white text-xs font-medium disabled:opacity-50"
                             >
                               + Add
                             </button>
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-base">🥂</span>
+                <h2 className="text-lg font-bold">Drinks</h2>
+              </div>
+              {drinkCategories.length === 0 ? (
+                <p className="text-sm text-gray-500">No drink items available.</p>
+              ) : (
+                <div className="space-y-3">
+                  {drinkCategories.map(category => (
+                    <div key={`drink-${category.id}`} className="rounded-lg border border-gray-200 p-3">
+                      <h3 className="text-sm font-semibold mb-2">{category.name}</h3>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {category.items.map(item => (
+                          <div key={item.id} className="rounded-lg border border-gray-100 p-2">
+                            <p className="text-sm font-medium">{item.name}</p>
+                            {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                            {tags(item.dietaryTags).length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {tags(item.dietaryTags).map(tag => (
+                                  <span key={`${item.id}-${tag}`} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{tag}</span>
+                                ))}
+                              </div>
+                            )}
+                            {config.mode === "prices" && typeof item.price === "number" && (
+                              <p className="text-xs font-semibold mt-1">{formatCents(item.price)}</p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => addItem(item, "drink")}
+                              disabled={!cutoffOpen}
+                              className="mt-2 h-9 px-3 rounded bg-blue-600 text-white text-xs font-medium disabled:opacity-50"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -577,18 +611,21 @@ export default function PreOrderPage() {
         <aside className="space-y-4">
           <div className="bg-white rounded-xl shadow p-4">
             <h2 className="font-bold">Order summary</h2>
-            <div className="mt-3 space-y-3 max-h-[420px] overflow-auto">
-              {guestLabels.map(label => (
-                <div key={label}>
-                  <div className="text-sm font-semibold mb-1">{label}</div>
+            {lines.length === 0 ? (
+              <p className="text-sm text-gray-500 mt-3">No items added yet.</p>
+            ) : (
+              <div className="mt-3 space-y-3 max-h-[420px] overflow-auto">
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 mb-1">STARTERS</div>
                   <div className="space-y-2">
-                    {(grouped[label] || []).map(line => (
+                    {starterLines.length === 0 && <p className="text-xs text-gray-400">None</p>}
+                    {starterLines.map(line => (
                       <div key={line.key} className="rounded border p-2">
                         <div className="flex items-center justify-between gap-2 text-sm">
                           <span>{line.quantity}x {line.itemName}</span>
                           <button type="button" onClick={() => removeLine(line.key)} className="text-red-600 text-xs">Remove</button>
                         </div>
-                        <div className="mt-1 grid grid-cols-2 gap-2">
+                        <div className="mt-1 grid grid-cols-[88px_1fr] gap-2">
                           <input
                             type="number"
                             min={1}
@@ -607,17 +644,51 @@ export default function PreOrderPage() {
                     ))}
                   </div>
                 </div>
-              ))}
-              {lines.length === 0 && <p className="text-sm text-gray-500">No items added yet.</p>}
-            </div>
+
+                <div>
+                  <div className="text-xs font-semibold text-gray-500 mb-1">DRINKS</div>
+                  <div className="space-y-2">
+                    {drinkLines.length === 0 && <p className="text-xs text-gray-400">None</p>}
+                    {drinkLines.map(line => (
+                      <div key={line.key} className="rounded border p-2">
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <span>{line.quantity}x {line.itemName}</span>
+                          <button type="button" onClick={() => removeLine(line.key)} className="text-red-600 text-xs">Remove</button>
+                        </div>
+                        <div className="mt-1 grid grid-cols-[88px_1fr] gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={line.quantity}
+                            onChange={e => updateLine(line.key, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                            className="h-8 border rounded px-2 text-xs"
+                          />
+                          <input
+                            value={line.specialInstructions}
+                            onChange={e => updateLine(line.key, { specialInstructions: e.target.value })}
+                            placeholder="Instructions"
+                            className="h-8 border rounded px-2 text-xs"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <textarea
               value={specialNotes}
               onChange={e => setSpecialNotes(e.target.value)}
-              placeholder="Table notes (anniversary, in a rush, etc.)"
+              placeholder="Any requests for the kitchen?"
               rows={2}
               className="w-full mt-3 border rounded px-3 py-2 text-sm"
             />
-            <div className="mt-3 text-sm font-semibold">Subtotal: {formatCents(subtotal)}</div>
+
+            {config.mode === "prices" && (
+              <div className="mt-3 text-sm font-semibold">Subtotal: {formatCents(subtotal)}</div>
+            )}
+
             {config.payment === "optional" && (
               <label className="flex items-center gap-2 text-sm mt-2">
                 <input type="checkbox" checked={payNow} onChange={e => setPayNow(e.target.checked)} className="h-4 w-4" />
@@ -629,6 +700,7 @@ export default function PreOrderPage() {
                 Payment is required to confirm your pre-order.
               </div>
             )}
+
             <button
               type="button"
               disabled={loading || !cutoffOpen}
@@ -637,6 +709,7 @@ export default function PreOrderPage() {
             >
               {loading ? "Saving..." : existing ? "Update Pre-Order" : "Submit Pre-Order"}
             </button>
+
             {existing && cutoffOpen && (
               <button
                 type="button"
@@ -646,6 +719,7 @@ export default function PreOrderPage() {
                 Cancel Pre-Order
               </button>
             )}
+
             {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
           </div>
         </aside>
@@ -653,4 +727,3 @@ export default function PreOrderPage() {
     </div>
   );
 }
-

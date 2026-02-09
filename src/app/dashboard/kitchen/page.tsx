@@ -6,6 +6,10 @@ interface MenuItem {
   id: number;
   name: string;
   dietaryTags: string | null;
+  category?: {
+    id: number;
+    type: string;
+  } | null;
 }
 
 interface PreOrderItem {
@@ -121,14 +125,23 @@ export default function KitchenPage() {
   const times = useMemo(() => Object.keys(groupedByTime).sort(), [groupedByTime]);
 
   const aggregate = useMemo(() => {
-    const counts = new Map<string, number>();
+    const starterCounts = new Map<string, number>();
+    const drinkCounts = new Map<string, number>();
     for (const reservation of reservations) {
       for (const item of reservation.preOrder?.items || []) {
         const key = item.menuItem.name;
-        counts.set(key, (counts.get(key) || 0) + item.quantity);
+        const type = String(item.menuItem.category?.type || "starter");
+        if (type === "drink") {
+          drinkCounts.set(key, (drinkCounts.get(key) || 0) + item.quantity);
+        } else {
+          starterCounts.set(key, (starterCounts.get(key) || 0) + item.quantity);
+        }
       }
     }
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    return {
+      starters: Array.from(starterCounts.entries()).sort((a, b) => b[1] - a[1]),
+      drinks: Array.from(drinkCounts.entries()).sort((a, b) => b[1] - a[1]),
+    };
   }, [reservations]);
 
   if (loading) {
@@ -190,15 +203,32 @@ export default function KitchenPage() {
 
       <div className="bg-white rounded-xl shadow p-4">
         <h2 className="font-semibold mb-2">Bulk prep summary</h2>
-        {aggregate.length === 0 ? (
+        {aggregate.starters.length === 0 && aggregate.drinks.length === 0 ? (
           <p className="text-sm text-gray-500">No pre-orders for this window.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {aggregate.slice(0, 24).map(([name, count]) => (
-              <span key={name} className="text-xs px-2 py-1 rounded-full border bg-gray-50">
-                {count}x {name}
-              </span>
-            ))}
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-xs font-semibold text-gray-600 mb-1">STARTERS</h3>
+              <div className="flex flex-wrap gap-2">
+                {aggregate.starters.length === 0 && <span className="text-xs text-gray-500">None</span>}
+                {aggregate.starters.slice(0, 24).map(([name, count]) => (
+                  <span key={`s-${name}`} className="text-xs px-2 py-1 rounded-full border bg-gray-50">
+                    {count}x {name}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-xs font-semibold text-gray-600 mb-1">DRINKS</h3>
+              <div className="flex flex-wrap gap-2">
+                {aggregate.drinks.length === 0 && <span className="text-xs text-gray-500">None</span>}
+                {aggregate.drinks.slice(0, 24).map(([name, count]) => (
+                  <span key={`d-${name}`} className="text-xs px-2 py-1 rounded-full border bg-gray-50">
+                    {count}x {name}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -210,6 +240,8 @@ export default function KitchenPage() {
             <div className="space-y-3">
               {groupedByTime[time].map(reservation => {
                 const preOrder = reservation.preOrder!;
+                const starterItems = preOrder.items.filter(item => String(item.menuItem.category?.type || "starter") !== "drink");
+                const drinkItems = preOrder.items.filter(item => String(item.menuItem.category?.type || "starter") === "drink");
                 const byGuest = preOrder.items.reduce<Record<string, PreOrderItem[]>>((acc, item) => {
                   if (!acc[item.guestLabel]) acc[item.guestLabel] = [];
                   acc[item.guestLabel].push(item);
@@ -229,11 +261,13 @@ export default function KitchenPage() {
                     </div>
 
                     <div className="space-y-2 text-sm">
-                      {Object.entries(byGuest).map(([guestLabel, items]) => (
-                        <div key={guestLabel}>
-                          <div className="font-medium">{guestLabel}:</div>
+                      <div>
+                        <div className="font-semibold">STARTERS:</div>
+                        {starterItems.length === 0 ? (
+                          <div className="text-gray-500 text-xs">None</div>
+                        ) : (
                           <ul className="list-disc pl-5">
-                            {items.map(item => (
+                            {starterItems.map(item => (
                               <li key={item.id}>
                                 {item.quantity}x {item.menuItem.name}
                                 {item.specialInstructions ? ` (${item.specialInstructions})` : ""}
@@ -241,8 +275,42 @@ export default function KitchenPage() {
                               </li>
                             ))}
                           </ul>
-                        </div>
-                      ))}
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-semibold">DRINKS:</div>
+                        {drinkItems.length === 0 ? (
+                          <div className="text-gray-500 text-xs">None</div>
+                        ) : (
+                          <ul className="list-disc pl-5">
+                            {drinkItems.map(item => (
+                              <li key={item.id}>
+                                {item.quantity}x {item.menuItem.name}
+                                {item.specialInstructions ? ` (${item.specialInstructions})` : ""}
+                                {String(item.menuItem.dietaryTags || "").includes("N") ? " ⚠" : ""}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                      {Object.keys(byGuest).length > 1 && (
+                        <details>
+                          <summary className="cursor-pointer text-xs text-gray-600">Per guest breakdown</summary>
+                          {Object.entries(byGuest).map(([guestLabel, items]) => (
+                            <div key={guestLabel}>
+                              <div className="font-medium">{guestLabel}:</div>
+                              <ul className="list-disc pl-5">
+                                {items.map(item => (
+                                  <li key={`guest-${item.id}`}>
+                                    {item.quantity}x {item.menuItem.name}
+                                    {item.specialInstructions ? ` (${item.specialInstructions})` : ""}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </details>
+                      )}
                     </div>
 
                     {preOrder.specialNotes && (

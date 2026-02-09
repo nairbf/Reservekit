@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+type CategoryType = "starter" | "drink";
+
 interface MenuItem {
   id: number;
   categoryId: number;
@@ -16,6 +18,7 @@ interface MenuItem {
 interface MenuCategory {
   id: number;
   name: string;
+  type: CategoryType;
   sortOrder: number;
   isActive: boolean;
   items: MenuItem[];
@@ -44,6 +47,7 @@ export default function MenuPage() {
   const [message, setMessage] = useState("");
 
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryType, setNewCategoryType] = useState<CategoryType>("starter");
   const [newItemByCategory, setNewItemByCategory] = useState<Record<number, {
     name: string;
     description: string;
@@ -94,12 +98,25 @@ export default function MenuPage() {
       .filter(category => category.name.toLowerCase().includes(q) || category.items.length > 0);
   }, [categories, search]);
 
+  const starterCategories = useMemo(
+    () => filtered.filter(category => category.type !== "drink"),
+    [filtered],
+  );
+  const drinkCategories = useMemo(
+    () => filtered.filter(category => category.type === "drink"),
+    [filtered],
+  );
+
   async function createCategory() {
     if (!newCategoryName.trim()) return;
     const res = await fetch("/api/menu/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newCategoryName.trim(), sortOrder: categories.length + 1 }),
+      body: JSON.stringify({
+        name: newCategoryName.trim(),
+        type: newCategoryType,
+        sortOrder: categories.length + 1,
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -107,6 +124,7 @@ export default function MenuPage() {
       return;
     }
     setNewCategoryName("");
+    setNewCategoryType("starter");
     setMessage("Category created.");
     await load();
   }
@@ -245,6 +263,154 @@ export default function MenuPage() {
     await load();
   }
 
+  function renderCategoryCard(category: MenuCategory) {
+    const newItem = getNewItemState(category.id);
+    return (
+      <div key={category.id} className="bg-white rounded-xl shadow">
+        <div className="p-4 border-b flex flex-wrap justify-between items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => shiftSort("category", category.id, category.sortOrder, "up")}
+              className="h-8 w-8 rounded border border-gray-200 text-xs"
+            >
+              ↑
+            </button>
+            <button
+              onClick={() => shiftSort("category", category.id, category.sortOrder, "down")}
+              className="h-8 w-8 rounded border border-gray-200 text-xs"
+            >
+              ↓
+            </button>
+            <input
+              value={category.name}
+              onChange={e => setCategories(prev => prev.map(c => (c.id === category.id ? { ...c, name: e.target.value } : c)))}
+              onBlur={e => saveCategory(category, { name: e.target.value })}
+              className="h-10 border rounded px-3 font-semibold"
+            />
+            <select
+              value={category.type || "starter"}
+              onChange={e => saveCategory(category, { type: e.target.value === "drink" ? "drink" : "starter" })}
+              className="h-10 border rounded px-2 text-sm"
+            >
+              <option value="starter">Starter</option>
+              <option value="drink">Drink</option>
+            </select>
+            <span className="text-xs text-gray-500">Sort: {category.sortOrder}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={category.isActive}
+                onChange={e => saveCategory(category, { isActive: e.target.checked })}
+                className="h-4 w-4"
+              />
+              Active
+            </label>
+            <button
+              onClick={() => deleteCategory(category)}
+              className="h-10 px-3 rounded border border-red-200 text-red-700 text-sm"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-3">
+          {category.items.length === 0 && <p className="text-sm text-gray-500">No items yet.</p>}
+          {category.items.map(item => (
+            <div key={item.id} className="rounded-lg border p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <div className="font-medium">{item.name}</div>
+                  {item.description && <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>}
+                  <div className="text-sm mt-1">{formatCents(item.price)}</div>
+                  {item.dietaryTags && <div className="text-xs text-gray-500 mt-1">Tags: {item.dietaryTags}</div>}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="text-xs flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={item.isAvailable}
+                      onChange={e => toggleAvailability(item, e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    {item.isAvailable ? "Available" : "86'd"}
+                  </label>
+                  <button
+                    onClick={() => shiftSort("item", item.id, item.sortOrder, "up", { categoryId: item.categoryId })}
+                    className="h-8 w-8 rounded border border-gray-200 text-xs"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    onClick={() => shiftSort("item", item.id, item.sortOrder, "down", { categoryId: item.categoryId })}
+                    className="h-8 w-8 rounded border border-gray-200 text-xs"
+                  >
+                    ↓
+                  </button>
+                  <button onClick={() => editItem(item)} className="h-9 px-3 rounded border border-gray-200 text-xs">Edit</button>
+                  <button onClick={() => deleteItem(item)} className="h-9 px-3 rounded border border-red-200 text-red-700 text-xs">Delete</button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-4 border-t bg-gray-50 grid sm:grid-cols-2 lg:grid-cols-6 gap-2">
+          <input
+            value={newItem.name}
+            onChange={e => setNewItemState(category.id, { name: e.target.value })}
+            placeholder="Item name"
+            className="h-10 border rounded px-3"
+          />
+          <input
+            value={newItem.description}
+            onChange={e => setNewItemState(category.id, { description: e.target.value })}
+            placeholder="Description"
+            className="h-10 border rounded px-3"
+          />
+          <input
+            value={newItem.price}
+            onChange={e => setNewItemState(category.id, { price: e.target.value })}
+            placeholder="Price (USD)"
+            className="h-10 border rounded px-3"
+          />
+          <input
+            value={newItem.sortOrder}
+            onChange={e => setNewItemState(category.id, { sortOrder: e.target.value })}
+            placeholder="Sort"
+            className="h-10 border rounded px-3"
+          />
+          <div className="lg:col-span-2 flex flex-wrap items-center gap-2">
+            {TAG_OPTIONS.map(tag => (
+              <label key={tag} className="text-xs inline-flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={newItem.dietaryTags.includes(tag)}
+                  onChange={e => {
+                    const next = e.target.checked
+                      ? [...newItem.dietaryTags, tag]
+                      : newItem.dietaryTags.filter(v => v !== tag);
+                    setNewItemState(category.id, { dietaryTags: next });
+                  }}
+                  className="h-4 w-4"
+                />
+                {tag}
+              </label>
+            ))}
+          </div>
+          <button
+            onClick={() => createItem(category.id)}
+            className="h-10 px-3 rounded bg-blue-600 text-white text-sm font-medium sm:col-span-2 lg:col-span-6"
+          >
+            Add Item
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center gap-3 text-gray-500">
@@ -271,7 +437,7 @@ export default function MenuPage() {
       <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold">Menu Manager</h1>
-          <p className="text-sm text-gray-500">Build categories and items for guest pre-orders.</p>
+          <p className="text-sm text-gray-500">Build categories and items for starters & drinks pre-ordering.</p>
         </div>
         <input
           value={search}
@@ -288,163 +454,48 @@ export default function MenuPage() {
       )}
 
       <div className="bg-white rounded-xl shadow p-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="grid sm:grid-cols-[1fr_180px_auto] gap-2">
           <input
             value={newCategoryName}
             onChange={e => setNewCategoryName(e.target.value)}
             placeholder="New category name"
-            className="h-11 border rounded px-3 flex-1 min-w-[220px]"
+            className="h-11 border rounded px-3"
           />
+          <select
+            value={newCategoryType}
+            onChange={e => setNewCategoryType((e.target.value === "drink" ? "drink" : "starter"))}
+            className="h-11 border rounded px-3"
+          >
+            <option value="starter">Starter section</option>
+            <option value="drink">Drink section</option>
+          </select>
           <button onClick={createCategory} className="h-11 px-4 rounded bg-blue-600 text-white text-sm font-medium">Add Category</button>
         </div>
       </div>
 
-      <div className="space-y-4">
-        {filtered.map(category => {
-          const newItem = getNewItemState(category.id);
-          return (
-            <div key={category.id} className="bg-white rounded-xl shadow">
-              <div className="p-4 border-b flex flex-wrap justify-between items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => shiftSort("category", category.id, category.sortOrder, "up")}
-                    className="h-8 w-8 rounded border border-gray-200 text-xs"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    onClick={() => shiftSort("category", category.id, category.sortOrder, "down")}
-                    className="h-8 w-8 rounded border border-gray-200 text-xs"
-                  >
-                    ↓
-                  </button>
-                  <input
-                    value={category.name}
-                    onChange={e => setCategories(prev => prev.map(c => (c.id === category.id ? { ...c, name: e.target.value } : c)))}
-                    onBlur={e => saveCategory(category, { name: e.target.value })}
-                    className="h-10 border rounded px-3 font-semibold"
-                  />
-                  <span className="text-xs text-gray-500">Sort: {category.sortOrder}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-xs flex items-center gap-1">
-                    <input
-                      type="checkbox"
-                      checked={category.isActive}
-                      onChange={e => saveCategory(category, { isActive: e.target.checked })}
-                      className="h-4 w-4"
-                    />
-                    Active
-                  </label>
-                  <button
-                    onClick={() => deleteCategory(category)}
-                    className="h-10 px-3 rounded border border-red-200 text-red-700 text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4 space-y-3">
-                {category.items.length === 0 && <p className="text-sm text-gray-500">No items yet.</p>}
-                {category.items.map(item => (
-                  <div key={item.id} className="rounded-lg border p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div>
-                        <div className="font-medium">{item.name}</div>
-                        {item.description && <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>}
-                        <div className="text-sm mt-1">{formatCents(item.price)}</div>
-                        {item.dietaryTags && <div className="text-xs text-gray-500 mt-1">Tags: {item.dietaryTags}</div>}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <label className="text-xs flex items-center gap-1">
-                          <input
-                            type="checkbox"
-                            checked={item.isAvailable}
-                            onChange={e => toggleAvailability(item, e.target.checked)}
-                            className="h-4 w-4"
-                          />
-                          {item.isAvailable ? "Available" : "86'd"}
-                        </label>
-                        <button
-                          onClick={() => shiftSort("item", item.id, item.sortOrder, "up", { categoryId: item.categoryId })}
-                          className="h-8 w-8 rounded border border-gray-200 text-xs"
-                        >
-                          ↑
-                        </button>
-                        <button
-                          onClick={() => shiftSort("item", item.id, item.sortOrder, "down", { categoryId: item.categoryId })}
-                          className="h-8 w-8 rounded border border-gray-200 text-xs"
-                        >
-                          ↓
-                        </button>
-                        <button onClick={() => editItem(item)} className="h-9 px-3 rounded border border-gray-200 text-xs">Edit</button>
-                        <button onClick={() => deleteItem(item)} className="h-9 px-3 rounded border border-red-200 text-red-700 text-xs">Delete</button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-4 border-t bg-gray-50 grid sm:grid-cols-2 lg:grid-cols-6 gap-2">
-                <input
-                  value={newItem.name}
-                  onChange={e => setNewItemState(category.id, { name: e.target.value })}
-                  placeholder="Item name"
-                  className="h-10 border rounded px-3"
-                />
-                <input
-                  value={newItem.description}
-                  onChange={e => setNewItemState(category.id, { description: e.target.value })}
-                  placeholder="Description"
-                  className="h-10 border rounded px-3"
-                />
-                <input
-                  value={newItem.price}
-                  onChange={e => setNewItemState(category.id, { price: e.target.value })}
-                  placeholder="Price (USD)"
-                  className="h-10 border rounded px-3"
-                />
-                <input
-                  value={newItem.sortOrder}
-                  onChange={e => setNewItemState(category.id, { sortOrder: e.target.value })}
-                  placeholder="Sort"
-                  className="h-10 border rounded px-3"
-                />
-                <div className="lg:col-span-2 flex flex-wrap items-center gap-2">
-                  {TAG_OPTIONS.map(tag => (
-                    <label key={tag} className="text-xs inline-flex items-center gap-1">
-                      <input
-                        type="checkbox"
-                        checked={newItem.dietaryTags.includes(tag)}
-                        onChange={e => {
-                          const next = e.target.checked
-                            ? [...newItem.dietaryTags, tag]
-                            : newItem.dietaryTags.filter(v => v !== tag);
-                          setNewItemState(category.id, { dietaryTags: next });
-                        }}
-                        className="h-4 w-4"
-                      />
-                      {tag}
-                    </label>
-                  ))}
-                </div>
-                <button
-                  onClick={() => createItem(category.id)}
-                  className="h-10 px-3 rounded bg-blue-600 text-white text-sm font-medium sm:col-span-2 lg:col-span-6"
-                >
-                  Add Item
-                </button>
-              </div>
-            </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <div className="bg-white rounded-xl shadow p-8 text-center text-gray-500">
-            No categories found.
-          </div>
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🍽</span>
+          <h2 className="text-lg font-bold">Starters & Appetizers</h2>
+        </div>
+        {starterCategories.length === 0 ? (
+          <div className="bg-white rounded-xl shadow p-6 text-sm text-gray-500">No starter categories yet.</div>
+        ) : (
+          starterCategories.map(renderCategoryCard)
         )}
-      </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🥂</span>
+          <h2 className="text-lg font-bold">Drinks & Cocktails</h2>
+        </div>
+        {drinkCategories.length === 0 ? (
+          <div className="bg-white rounded-xl shadow p-6 text-sm text-gray-500">No drink categories yet.</div>
+        ) : (
+          drinkCategories.map(renderCategoryCard)
+        )}
+      </section>
 
       {message && (
         <div className="text-sm text-gray-700 bg-white rounded-lg border px-3 py-2">{message}</div>

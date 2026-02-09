@@ -17,6 +17,12 @@ interface IncomingGuest {
   }>;
 }
 
+interface IncomingFlatItem {
+  menuItemId?: number;
+  quantity?: number;
+  specialInstructions?: string;
+}
+
 function parseId(raw: string): number | null {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return null;
@@ -153,27 +159,39 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const guests = (Array.isArray(body?.guests) ? body.guests : []) as IncomingGuest[];
+  const flatItems = (Array.isArray(body?.items) ? body.items : []) as IncomingFlatItem[];
   const specialNotes = body?.specialNotes ? String(body.specialNotes) : null;
   const payNow = Boolean(body?.payNow);
-  if (guests.length === 0) {
+  if (guests.length === 0 && flatItems.length === 0) {
     return NextResponse.json({ error: "Please include guest items when updating a pre-order." }, { status: 400 });
   }
 
-  const requested = guests.flatMap((guest, idx) =>
-    (Array.isArray(guest.items) ? guest.items : []).map(item => ({
-      guestLabel: normalizeGuestLabel(guest.label, `Guest ${idx + 1}`),
-      menuItemId: Math.trunc(Number(item.menuItemId || 0)),
-      quantity: Math.max(1, Math.trunc(Number(item.quantity || 1))),
-      specialInstructions: item.specialInstructions ? String(item.specialInstructions) : null,
-    })),
-  );
+  const requested = flatItems.length > 0
+    ? flatItems.map(item => ({
+        guestLabel: "Table",
+        menuItemId: Math.trunc(Number(item.menuItemId || 0)),
+        quantity: Math.max(1, Math.trunc(Number(item.quantity || 1))),
+        specialInstructions: item.specialInstructions ? String(item.specialInstructions) : null,
+      }))
+    : guests.flatMap((guest, idx) =>
+        (Array.isArray(guest.items) ? guest.items : []).map(item => ({
+          guestLabel: normalizeGuestLabel(guest.label, `Guest ${idx + 1}`),
+          menuItemId: Math.trunc(Number(item.menuItemId || 0)),
+          quantity: Math.max(1, Math.trunc(Number(item.quantity || 1))),
+          specialInstructions: item.specialInstructions ? String(item.specialInstructions) : null,
+        })),
+      );
   if (requested.length === 0) {
     return NextResponse.json({ error: "Please select at least one menu item." }, { status: 400 });
   }
 
   const menuItemIds = Array.from(new Set(requested.map(item => item.menuItemId).filter(idVal => idVal > 0)));
   const menuItems = await prisma.menuItem.findMany({
-    where: { id: { in: menuItemIds }, isAvailable: true, category: { isActive: true } },
+    where: {
+      id: { in: menuItemIds },
+      isAvailable: true,
+      category: { isActive: true, type: { in: ["starter", "drink"] } },
+    },
   });
   const menuMap = new Map(menuItems.map(item => [item.id, item]));
   if (menuMap.size !== menuItemIds.length) {
@@ -345,4 +363,3 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   return NextResponse.json({ ok: true, preOrder: updated });
 }
-

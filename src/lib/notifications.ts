@@ -4,7 +4,6 @@ import * as smsT from "./sms-templates";
 import { prisma } from "./db";
 import { generateICS } from "./calendar";
 import { getSettings } from "./settings";
-import { isModuleActive } from "./license";
 
 interface Res { id: number; code: string; guestName: string; guestPhone: string; guestEmail: string | null; partySize: number; date: string; time: string; durationMin?: number; originalTime?: string | null }
 
@@ -13,11 +12,14 @@ async function rname() { return (await prisma.setting.findUnique({ where: { key:
 function manageLink() { const appUrl = process.env.APP_URL || "http://localhost:3000"; return `${appUrl}/reservation/manage`; }
 function preorderLink(code: string) { const appUrl = process.env.APP_URL || "http://localhost:3000"; return `${appUrl}/preorder/${code}`; }
 
-async function expressDiningEmailLine(code: string) {
+async function expressDiningEmailLine(reservationId: number, code: string) {
   const settings = await getSettings();
-  const licensed = await isModuleActive("expressdining");
-  if (!licensed || !settings.expressDiningEnabled) return "";
-  return `\nSkip the wait - pre-order your meal: ${preorderLink(code)}`;
+  if (!settings.expressDiningEnabled) return "";
+  const preOrder = await prisma.preOrder.findUnique({ where: { reservationId } });
+  if (preOrder && preOrder.status !== "cancelled") {
+    return "\nYour starters & drinks are confirmed! We'll have them ready when you arrive.";
+  }
+  return `\nPre-order your starters & drinks: ${preorderLink(code)}`;
 }
 
 export async function notifyRequestReceived(r: Res) {
@@ -28,7 +30,7 @@ export async function notifyRequestReceived(r: Res) {
 export async function notifyApproved(r: Res) {
   if (r.guestEmail) {
     const n = await rname();
-    const expressLine = await expressDiningEmailLine(r.code);
+    const expressLine = await expressDiningEmailLine(r.id, r.code);
     let attachments: Array<{ filename: string; content: string; contentType: string }> = [];
     try {
       const ics = await generateICS({

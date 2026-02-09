@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
@@ -18,6 +18,58 @@ interface LoyaltyLookupResponse {
   enabled: boolean;
   known: boolean;
   optedIn: boolean;
+}
+
+interface ExpressMenuItem {
+  id: number;
+  name: string;
+  description: string | null;
+  price?: number;
+  dietaryTags: string | null;
+}
+
+interface ExpressMenuCategory {
+  id: number;
+  name: string;
+  type?: string;
+  items: ExpressMenuItem[];
+}
+
+interface ExpressConfig {
+  mode: "prices" | "browse";
+  payment: "precharge" | "optional" | "none";
+  cutoffHours: number;
+  message: string;
+}
+
+interface ExpressLine {
+  key: string;
+  menuItemId: number;
+  itemName: string;
+  quantity: number;
+  specialInstructions: string;
+  price: number;
+  section: "starter" | "drink";
+}
+
+interface PreOrderRecord {
+  id: number;
+  status: string;
+  specialNotes: string | null;
+  subtotal: number;
+  isPaid: boolean;
+  items: Array<{
+    id: number;
+    menuItemId: number;
+    quantity: number;
+    specialInstructions: string | null;
+    price: number;
+    menuItem?: {
+      id: number;
+      name: string;
+      category?: { type?: string | null } | null;
+    };
+  }>;
 }
 
 interface ReserveWidgetClientProps {
@@ -63,6 +115,17 @@ function normalizePhone(value: string): string | null {
 
 function formatCents(cents: number): string {
   return `$${(Math.max(0, Math.trunc(cents)) / 100).toFixed(2)}`;
+}
+
+function tagList(value: string | null | undefined): string[] {
+  return String(value || "")
+    .split(",")
+    .map(tag => tag.trim())
+    .filter(Boolean);
+}
+
+function categorySection(type?: string | null): "starter" | "drink" {
+  return String(type || "starter").toLowerCase() === "drink" ? "drink" : "starter";
 }
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
@@ -133,6 +196,63 @@ function PaymentCardStep({
   );
 }
 
+function ExpressPaymentStep({
+  subtotal,
+  processing,
+  onProcessingChange,
+  onPaid,
+  onError,
+}: {
+  subtotal: number;
+  processing: boolean;
+  onProcessingChange: (value: boolean) => void;
+  onPaid: () => Promise<void>;
+  onError: (message: string) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  async function confirmCard(e: React.FormEvent) {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    onProcessingChange(true);
+    onError("");
+    try {
+      const result = await stripe.confirmPayment({
+        elements,
+        redirect: "if_required",
+      });
+      if (result.error) {
+        onError(result.error.message || "Payment confirmation failed.");
+        return;
+      }
+      const status = result.paymentIntent?.status;
+      if (status !== "succeeded" && status !== "requires_capture" && status !== "processing") {
+        onError("Payment is still pending. Please try again.");
+        return;
+      }
+      await onPaid();
+    } finally {
+      onProcessingChange(false);
+    }
+  }
+
+  return (
+    <form onSubmit={confirmCard} className="space-y-3">
+      <div className="rounded-lg border border-gray-200 p-3">
+        <PaymentElement options={{ layout: "tabs" }} />
+      </div>
+      <button
+        type="submit"
+        disabled={processing || !stripe || !elements}
+        className="w-full h-11 rounded bg-emerald-600 text-white font-medium transition-all duration-200 disabled:opacity-60"
+      >
+        {processing ? "Processing..." : `Pay ${formatCents(subtotal)} and Submit`}
+      </button>
+    </form>
+  );
+}
+
 export default function ReserveWidgetClient({
   restaurantName,
   embedded = false,
@@ -186,7 +306,21 @@ export default function ReserveWidgetClient({
     source: "global",
     label: null,
   });
+
   const [dismissExpressPrompt, setDismissExpressPrompt] = useState(false);
+  const [expressInitialized, setExpressInitialized] = useState(false);
+  const [expressStage, setExpressStage] = useState<"idle" | "prompt" | "editor" | "payment" | "done">("idle");
+  const [expressLoading, setExpressLoading] = useState(false);
+  const [expressError, setExpressError] = useState("");
+  const [expressPaymentError, setExpressPaymentError] = useState("");
+  const [expressConfig, setExpressConfig] = useState<ExpressConfig | null>(null);
+  const [expressCategories, setExpressCategories] = useState<ExpressMenuCategory[]>([]);
+  const [expressLines, setExpressLines] = useState<ExpressLine[]>([]);
+  const [expressNotes, setExpressNotes] = useState("");
+  const [expressPayNow, setExpressPayNow] = useState(false);
+  const [expressClientSecret, setExpressClientSecret] = useState("");
+  const [expressPreOrderId, setExpressPreOrderId] = useState<number | null>(null);
+  const [expressSubmitted, setExpressSubmitted] = useState<PreOrderRecord | null>(null);
 
   const isDark = theme === "dark";
   const primary = getAccent(accent);
@@ -206,6 +340,19 @@ export default function ReserveWidgetClient({
   const textareaClass = isDark
     ? "w-full border border-zinc-700 rounded px-3 py-2 mb-4 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500"
     : "w-full border rounded px-3 py-2 mb-4";
+
+  const expressStarterCategories = useMemo(
+    () => expressCategories.filter(category => categorySection(category.type) === "starter"),
+    [expressCategories],
+  );
+  const expressDrinkCategories = useMemo(
+    () => expressCategories.filter(category => categorySection(category.type) === "drink"),
+    [expressCategories],
+  );
+  const expressSubtotal = useMemo(
+    () => expressLines.reduce((sum, line) => sum + line.price * line.quantity, 0),
+    [expressLines],
+  );
 
   useEffect(() => {
     const d = new Date();
@@ -299,6 +446,96 @@ export default function ReserveWidgetClient({
     };
   }, [phone, loyaltyOptInEnabled]);
 
+  useEffect(() => {
+    if (step !== "done") {
+      setExpressInitialized(false);
+      setExpressStage("idle");
+      return;
+    }
+    if (!expressDiningEnabled || !confirmCode || dismissExpressPrompt || expressInitialized) return;
+
+    let cancelled = false;
+
+    async function loadExpress() {
+      setExpressLoading(true);
+      setExpressError("");
+      try {
+        const [lookupRes, menuRes] = await Promise.all([
+          fetch(`/api/preorder?code=${encodeURIComponent(confirmCode)}&phone=${encodeURIComponent(phone)}`),
+          fetch("/api/menu/categories?public=true"),
+        ]);
+
+        if (!lookupRes.ok || !menuRes.ok) {
+          if (!cancelled) setExpressStage("idle");
+          return;
+        }
+
+        const lookup = await lookupRes.json();
+        const categories = await menuRes.json();
+
+        const config = lookup?.config as ExpressConfig | undefined;
+        const cutoffOpen = Boolean(lookup?.cutoffOpen);
+        const existing = (lookup?.preOrder || null) as PreOrderRecord | null;
+
+        const categoryList = Array.isArray(categories)
+          ? (categories as ExpressMenuCategory[])
+              .filter(category => ["starter", "drink"].includes(String(category.type || "starter").toLowerCase()))
+              .filter(category => Array.isArray(category.items) && category.items.length > 0)
+          : [];
+
+        if (!config || !cutoffOpen || categoryList.length === 0) {
+          if (!cancelled) setExpressStage("idle");
+          return;
+        }
+
+        if (cancelled) return;
+
+        setExpressConfig(config);
+        setExpressCategories(categoryList);
+        setExpressPayNow(config.payment === "precharge");
+
+        if (existing && existing.status !== "cancelled") {
+          const sectionMap = new Map<number, "starter" | "drink">();
+          for (const category of categoryList) {
+            for (const item of category.items) {
+              sectionMap.set(item.id, categorySection(category.type));
+            }
+          }
+          const mapped = (existing.items || []).map((item, idx) => ({
+            key: `existing-${item.id}-${idx}`,
+            menuItemId: item.menuItemId,
+            itemName: item.menuItem?.name || `Item ${item.menuItemId}`,
+            quantity: Math.max(1, Number(item.quantity || 1)),
+            specialInstructions: item.specialInstructions || "",
+            price: Number(item.price || 0),
+            section: sectionMap.get(item.menuItemId) || "starter",
+          }));
+          setExpressLines(mapped);
+          setExpressNotes(existing.specialNotes || "");
+          setExpressSubmitted(existing);
+          setExpressPreOrderId(existing.id);
+          setExpressStage("done");
+        } else {
+          setExpressStage("prompt");
+        }
+
+        setExpressInitialized(true);
+      } catch {
+        if (!cancelled) {
+          setExpressStage("idle");
+        }
+      } finally {
+        if (!cancelled) setExpressLoading(false);
+      }
+    }
+
+    loadExpress();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [confirmCode, dismissExpressPrompt, expressDiningEnabled, expressInitialized, phone, step]);
+
   const depositApplies = availabilityDeposit.required;
   const canCaptureLoyalty = loyaltyOptInEnabled && Boolean(normalizePhone(phone)) && !loyaltyKnown && !loyaltyChecking;
 
@@ -310,6 +547,134 @@ export default function ReserveWidgetClient({
       if (prev.toLowerCase().includes(trimmed.toLowerCase())) return prev;
       return `${prev.replace(/\s+$/, "")}; ${trimmed}`;
     });
+  }
+
+  function addExpressItem(item: ExpressMenuItem, section: "starter" | "drink") {
+    setExpressLines(prev => {
+      const existingIdx = prev.findIndex(
+        line => line.menuItemId === item.id && line.specialInstructions.trim() === "",
+      );
+      if (existingIdx >= 0) {
+        return prev.map((line, idx) => (idx === existingIdx ? { ...line, quantity: line.quantity + 1 } : line));
+      }
+      return [
+        ...prev,
+        {
+          key: `${item.id}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          menuItemId: item.id,
+          itemName: item.name,
+          quantity: 1,
+          specialInstructions: "",
+          price: Number(item.price || 0),
+          section,
+        },
+      ];
+    });
+  }
+
+  function updateExpressLine(key: string, patch: Partial<ExpressLine>) {
+    setExpressLines(prev => prev.map(line => (line.key === key ? { ...line, ...patch } : line)));
+  }
+
+  function removeExpressLine(key: string) {
+    setExpressLines(prev => prev.filter(line => line.key !== key));
+  }
+
+  async function submitExpressPreOrder() {
+    if (!confirmCode || !expressConfig) return;
+    if (expressLines.length === 0) {
+      setExpressError("Choose at least one item before submitting.");
+      return;
+    }
+
+    const payNow = expressConfig.payment === "precharge"
+      ? true
+      : expressConfig.payment === "optional"
+        ? expressPayNow
+        : false;
+
+    setExpressLoading(true);
+    setExpressError("");
+    setExpressPaymentError("");
+    try {
+      const res = await fetch("/api/preorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reservationCode: confirmCode,
+          phone,
+          specialNotes: expressNotes || null,
+          payNow,
+          items: expressLines.map(line => ({
+            menuItemId: line.menuItemId,
+            quantity: Math.max(1, Math.trunc(line.quantity)),
+            specialInstructions: line.specialInstructions || undefined,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setExpressError(data.error || "Could not save pre-order.");
+        return;
+      }
+
+      const preOrder = (data.preOrder || null) as PreOrderRecord | null;
+      setExpressSubmitted(preOrder);
+      setExpressPreOrderId(preOrder?.id || null);
+
+      if (data.clientSecret) {
+        setExpressClientSecret(String(data.clientSecret));
+        setExpressStage("payment");
+        return;
+      }
+
+      setExpressStage("done");
+    } finally {
+      setExpressLoading(false);
+    }
+  }
+
+  async function finalizeExpressPayment() {
+    if (!expressPreOrderId || !confirmCode) {
+      setExpressPaymentError("Could not finalize payment. Please try again.");
+      return;
+    }
+
+    const res = await fetch(`/api/preorder/${expressPreOrderId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "mark_paid",
+        code: confirmCode,
+        phone,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setExpressPaymentError(data.error || "Could not finalize payment.");
+      return;
+    }
+
+    setExpressSubmitted((data.preOrder || data) as PreOrderRecord);
+    setExpressStage("done");
+  }
+
+  function resetExpressState() {
+    setDismissExpressPrompt(false);
+    setExpressInitialized(false);
+    setExpressStage("idle");
+    setExpressLoading(false);
+    setExpressError("");
+    setExpressPaymentError("");
+    setExpressConfig(null);
+    setExpressCategories([]);
+    setExpressLines([]);
+    setExpressNotes("");
+    setExpressPayNow(false);
+    setExpressClientSecret("");
+    setExpressPreOrderId(null);
+    setExpressSubmitted(null);
   }
 
   async function submit(e: React.FormEvent) {
@@ -393,55 +758,301 @@ export default function ReserveWidgetClient({
   }
 
   if (step === "done") {
+    const canShowExpress = expressDiningEnabled && !dismissExpressPrompt && expressStage !== "idle";
+
     return (
       <div className={wrapperClass}>
-        <div className={embedded ? "text-center" : "max-w-md mx-auto p-6 text-center transition-all duration-200"}>
-          <div className="text-5xl mb-4 animate-bounce">OK</div>
-          <h2 className="text-2xl font-bold mb-2">Request Received!</h2>
-          <p className={`${textMutedClass} mb-1`}>{date} at {fmt(selectedTime)}</p>
-          <p className={`${textMutedClass} mb-4`}>Party of {partySize}</p>
-          {depositMeta.required && (
-            <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              {depositMeta.message || depositMessage} {depositMeta.amount > 0 ? `Deposit amount: ${formatCents(depositMeta.amount)}.` : ""}
+        <div className={embedded ? "space-y-4" : "max-w-3xl mx-auto p-6 space-y-4 transition-all duration-200"}>
+          <div className={embedded ? "text-center" : "text-center"}>
+            <div className="text-5xl mb-4 animate-bounce">OK</div>
+            <h2 className="text-2xl font-bold mb-2">Request Received!</h2>
+            <p className={`${textMutedClass} mb-1`}>{date} at {fmt(selectedTime)}</p>
+            <p className={`${textMutedClass} mb-4`}>Party of {partySize}</p>
+            {depositMeta.required && (
+              <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 text-left">
+                {depositMeta.message || depositMessage} {depositMeta.amount > 0 ? `Deposit amount: ${formatCents(depositMeta.amount)}.` : ""}
+              </div>
+            )}
+            <p className={`text-sm ${textMutedClass} mb-2`}>Reference: <strong>{confirmCode}</strong></p>
+            <p className={`text-sm ${textMutedClass}`}>{reserveConfirmationMessage}</p>
+          </div>
+
+          {expressLoading && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              Loading starters & drinks...
             </div>
           )}
-          <p className={`text-sm ${textMutedClass} mb-2`}>Reference: <strong>{confirmCode}</strong></p>
-          <p className={`text-sm ${textMutedClass}`}>{reserveConfirmationMessage}</p>
-          {expressDiningEnabled && confirmCode && !dismissExpressPrompt && (
-            <div className="mt-4 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-900 p-3 text-left">
-              <p className="font-semibold text-sm">🍽 Want your food ready when you arrive?</p>
-              <p className="text-xs mt-1">{expressDiningMessage}</p>
+
+          {canShowExpress && expressStage === "prompt" && (
+            <div className="rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-900 p-4 text-left">
+              <p className="font-semibold text-sm">🍽 Would you like to pre-order starters & drinks?</p>
+              <p className="text-xs mt-1">
+                {expressConfig?.message || expressDiningMessage}
+              </p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <a
-                  href={`/preorder/${encodeURIComponent(confirmCode)}`}
-                  className="h-10 px-3 rounded bg-emerald-600 text-white text-xs font-medium inline-flex items-center"
-                >
-                  Browse Menu & Pre-Order
-                </a>
                 <button
                   type="button"
-                  onClick={() => setDismissExpressPrompt(true)}
+                  onClick={() => setExpressStage("editor")}
+                  className="h-10 px-3 rounded bg-emerald-600 text-white text-xs font-medium"
+                >
+                  Yes, browse the menu
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDismissExpressPrompt(true);
+                    setExpressStage("idle");
+                  }}
                   className="h-10 px-3 rounded border border-emerald-300 text-emerald-800 text-xs font-medium"
                 >
-                  Maybe later
+                  No thanks, skip
                 </button>
               </div>
             </div>
           )}
-          <button
-            onClick={() => {
-              setStep("select");
-              setSelectedTime("");
-              setPaymentClientSecret("");
-              setPaymentError("");
-              setPaymentProcessing(false);
-              setDismissExpressPrompt(false);
-            }}
-            className="mt-6 h-11 px-4 rounded-lg border text-sm transition-all duration-200"
-            style={{ borderColor: primary, color: primary }}
-          >
-            Make another reservation
-          </button>
+
+          {canShowExpress && expressStage === "editor" && (
+            <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 space-y-4">
+              <div>
+                <h3 className="text-lg font-bold">Starters & Drinks Pre-Order</h3>
+                <p className="text-sm text-gray-500">Optional and skippable. Submit what you want ready on arrival.</p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🍽</span>
+                  <h4 className="font-semibold">Starters</h4>
+                </div>
+                {expressStarterCategories.length === 0 ? (
+                  <p className="text-sm text-gray-500">No starter items available.</p>
+                ) : (
+                  expressStarterCategories.map(category => (
+                    <div key={`starter-${category.id}`} className="rounded-lg border border-gray-200 p-3">
+                      <p className="text-sm font-semibold mb-2">{category.name}</p>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {category.items.map(item => (
+                          <div key={item.id} className="rounded-lg border border-gray-100 p-2">
+                            <p className="text-sm font-medium">{item.name}</p>
+                            {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                            {tagList(item.dietaryTags).length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {tagList(item.dietaryTags).map(tag => (
+                                  <span key={`${item.id}-${tag}`} className="text-[10px] rounded-full bg-gray-100 text-gray-700 px-2 py-0.5">{tag}</span>
+                                ))}
+                              </div>
+                            )}
+                            {expressConfig?.mode === "prices" && typeof item.price === "number" && (
+                              <p className="text-xs font-semibold mt-1">{formatCents(item.price)}</p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => addExpressItem(item, "starter")}
+                              className="mt-2 h-9 px-3 rounded bg-emerald-600 text-white text-xs font-medium"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🥂</span>
+                  <h4 className="font-semibold">Drinks</h4>
+                </div>
+                {expressDrinkCategories.length === 0 ? (
+                  <p className="text-sm text-gray-500">No drinks available.</p>
+                ) : (
+                  expressDrinkCategories.map(category => (
+                    <div key={`drink-${category.id}`} className="rounded-lg border border-gray-200 p-3">
+                      <p className="text-sm font-semibold mb-2">{category.name}</p>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {category.items.map(item => (
+                          <div key={item.id} className="rounded-lg border border-gray-100 p-2">
+                            <p className="text-sm font-medium">{item.name}</p>
+                            {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                            {tagList(item.dietaryTags).length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {tagList(item.dietaryTags).map(tag => (
+                                  <span key={`${item.id}-${tag}`} className="text-[10px] rounded-full bg-gray-100 text-gray-700 px-2 py-0.5">{tag}</span>
+                                ))}
+                              </div>
+                            )}
+                            {expressConfig?.mode === "prices" && typeof item.price === "number" && (
+                              <p className="text-xs font-semibold mt-1">{formatCents(item.price)}</p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => addExpressItem(item, "drink")}
+                              className="mt-2 h-9 px-3 rounded bg-emerald-600 text-white text-xs font-medium"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="rounded-lg border border-gray-200 p-3">
+                <h4 className="font-semibold text-sm mb-2">Order Summary</h4>
+                {expressLines.length === 0 ? (
+                  <p className="text-sm text-gray-500">No items selected yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {expressLines.map(line => (
+                      <div key={line.key} className="rounded border border-gray-100 p-2">
+                        <div className="flex items-center justify-between gap-2 text-sm">
+                          <span>{line.quantity}x {line.itemName}</span>
+                          <button type="button" className="text-red-600 text-xs" onClick={() => removeExpressLine(line.key)}>Remove</button>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => updateExpressLine(line.key, { quantity: Math.max(1, line.quantity - 1) })}
+                            className="h-8 w-8 rounded border border-gray-200 text-sm"
+                          >
+                            -
+                          </button>
+                          <span className="text-sm min-w-[18px] text-center">{line.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateExpressLine(line.key, { quantity: line.quantity + 1 })}
+                            className="h-8 w-8 rounded border border-gray-200 text-sm"
+                          >
+                            +
+                          </button>
+                          <input
+                            value={line.specialInstructions}
+                            onChange={e => updateExpressLine(line.key, { specialInstructions: e.target.value })}
+                            placeholder="Instructions (optional)"
+                            className="h-8 flex-1 border rounded px-2 text-xs"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <textarea
+                  value={expressNotes}
+                  onChange={e => setExpressNotes(e.target.value)}
+                  placeholder="Any requests for the kitchen?"
+                  rows={2}
+                  className="mt-3 w-full border rounded px-3 py-2 text-sm"
+                />
+
+                {expressConfig?.mode === "prices" && (
+                  <p className="mt-2 text-sm font-semibold">Subtotal: {formatCents(expressSubtotal)}</p>
+                )}
+
+                {expressConfig?.payment === "optional" && (
+                  <label className="mt-2 flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={expressPayNow}
+                      onChange={e => setExpressPayNow(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    Pay now {expressConfig.mode === "prices" ? `(${formatCents(expressSubtotal)})` : ""}
+                  </label>
+                )}
+
+                {expressConfig?.payment === "precharge" && (
+                  <div className="mt-2 rounded border border-amber-300 bg-amber-50 text-amber-900 px-2 py-1 text-xs">
+                    Payment is required to submit this pre-order.
+                  </div>
+                )}
+
+                {expressError && <p className="mt-2 text-sm text-red-600">{expressError}</p>}
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={submitExpressPreOrder}
+                    disabled={expressLoading}
+                    className="h-10 px-3 rounded bg-emerald-600 text-white text-sm font-medium disabled:opacity-60"
+                  >
+                    {expressLoading ? "Submitting..." : "Submit Pre-Order"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDismissExpressPrompt(true);
+                      setExpressStage("idle");
+                    }}
+                    className="h-10 px-3 rounded border border-gray-200 text-sm"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {canShowExpress && expressStage === "payment" && (
+            <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 space-y-3">
+              <h3 className="text-lg font-bold">Complete Pre-Order Payment</h3>
+              <p className="text-sm text-gray-500">Your starters & drinks will be sent to staff immediately after payment.</p>
+              {expressPaymentError && <p className="text-sm text-red-600">{expressPaymentError}</p>}
+              {!stripePromise || !expressClientSecret ? (
+                <p className="text-sm text-red-600">Unable to initialize payment form.</p>
+              ) : (
+                <Elements stripe={stripePromise} options={{ clientSecret: expressClientSecret }}>
+                  <ExpressPaymentStep
+                    subtotal={expressSubtotal}
+                    processing={expressLoading}
+                    onProcessingChange={setExpressLoading}
+                    onError={setExpressPaymentError}
+                    onPaid={finalizeExpressPayment}
+                  />
+                </Elements>
+              )}
+            </div>
+          )}
+
+          {canShowExpress && expressStage === "done" && (
+            <div className="rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-900 p-4">
+              <p className="font-semibold text-sm">🍽 Your starters & drinks are confirmed!</p>
+              <p className="text-xs mt-1">We’ll have them ready when you arrive.</p>
+              {expressSubmitted && (
+                <div className="mt-2 text-xs">
+                  <div>Subtotal: {formatCents(expressSubmitted.subtotal)}</div>
+                  <div>Paid: {expressSubmitted.isPaid ? "Yes" : "No"}</div>
+                </div>
+              )}
+              <a
+                href={`/preorder/${encodeURIComponent(confirmCode)}`}
+                className="mt-3 inline-flex h-9 items-center px-3 rounded border border-emerald-300 text-xs font-medium"
+              >
+                View/Edit Full Pre-Order
+              </a>
+            </div>
+          )}
+
+          <div className="text-center">
+            <button
+              onClick={() => {
+                setStep("select");
+                setSelectedTime("");
+                setPaymentClientSecret("");
+                setPaymentError("");
+                setPaymentProcessing(false);
+                resetExpressState();
+              }}
+              className="mt-2 h-11 px-4 rounded-lg border text-sm transition-all duration-200"
+              style={{ borderColor: primary, color: primary }}
+            >
+              Make another reservation
+            </button>
+          </div>
         </div>
       </div>
     );

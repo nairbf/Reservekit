@@ -364,7 +364,7 @@ export default function TonightPage() {
                           onClick={() => setExpandedPreOrders(prev => ({ ...prev, [r.id]: !prev[r.id] }))}
                           className="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 hover:bg-violet-200 transition-all duration-200"
                         >
-                          🍽 Pre-ordered{r.preOrder.isPaid ? " (Paid ✓)" : ""}
+                          🍽 Starters & Drinks Pre-Ordered{r.preOrder.isPaid ? " (Paid ✓)" : ""}
                         </button>
                       )}
                     </div>

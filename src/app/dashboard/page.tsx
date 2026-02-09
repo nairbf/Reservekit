@@ -125,18 +125,43 @@ export default function InboxPage() {
   const [tables, setTables] = useState<TableItem[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "inbox";
 
   const load = useCallback(async () => {
     setRefreshing(true);
-    const [r, t] = await Promise.all([
-      fetch("/api/reservations?status=pending,counter_offered"),
-      fetch("/api/tables"),
-    ]);
-    setReservations(await r.json());
-    setTables(await t.json());
-    setRefreshing(false);
-    setLoaded(true);
+    setLoadError("");
+    try {
+      const [r, t] = await Promise.all([
+        fetch("/api/reservations?status=pending,counter_offered"),
+        fetch("/api/tables"),
+      ]);
+      if (!r.ok) {
+        let detail = "";
+        try { detail = (await r.json())?.error || ""; } catch {}
+        setLoadError(detail || `Reservation feed failed (${r.status}). If this is after an update, run: npx prisma db push`);
+        setReservations([]);
+        setTables([]);
+        return;
+      }
+      if (!t.ok) {
+        setLoadError(`Tables feed failed (${t.status}).`);
+        setReservations([]);
+        setTables([]);
+        return;
+      }
+      const reservationsData = await r.json();
+      const tablesData = await t.json();
+      setReservations(Array.isArray(reservationsData) ? reservationsData : []);
+      setTables(Array.isArray(tablesData) ? tablesData : []);
+    } catch (err) {
+      setLoadError("Could not load inbox data. Please refresh and try again.");
+      setReservations([]);
+      setTables([]);
+    } finally {
+      setRefreshing(false);
+      setLoaded(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -178,6 +203,12 @@ export default function InboxPage() {
         )}
       </div>
 
+      {loadError && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 px-3 py-2 text-sm">
+          {loadError}
+        </div>
+      )}
+
       {reservations.length === 0 && (
         <div className="bg-white rounded-xl shadow p-8 text-center">
           <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-xl">✓</div>
@@ -215,7 +246,7 @@ export default function InboxPage() {
                     )}
                     {r.preOrder && (
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-800">
-                        🍽 Pre-ordered{r.preOrder.isPaid ? " (Paid ✓)" : ""} · {formatCents(r.preOrder.subtotal)}
+                        🍽 Starters & Drinks Pre-Ordered{r.preOrder.isPaid ? " (Paid ✓)" : ""} · {formatCents(r.preOrder.subtotal)}
                       </span>
                     )}
                   </div>

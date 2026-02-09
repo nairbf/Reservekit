@@ -40,7 +40,8 @@ export async function getExpressDiningConfig(): Promise<ExpressDiningConfig> {
   const licensed = await isModuleActive("expressdining");
   return {
     licensed,
-    enabled: licensed && settings.expressDiningEnabled,
+    // Guest-facing enablement is controlled by settings; license is advisory for staff UI only.
+    enabled: settings.expressDiningEnabled,
     mode: settings.expressDiningMode,
     payment: settings.expressDiningPayment,
     cutoffHours: settings.expressDiningCutoffHours,
@@ -70,4 +71,3 @@ export async function findReservationByCodeAndPhone(code: string, phone: string)
   if (digitsOnly(reservation.guestPhone).slice(-4) !== normalizedPhone.slice(-4)) return null;
   return reservation;
 }
-

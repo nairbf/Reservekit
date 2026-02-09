@@ -196,6 +196,7 @@ model EventTicket {
 model MenuCategory {
   id        Int        @id @default(autoincrement())
   name      String
+  type      String     @default("starter")
   sortOrder Int        @default(0)
   isActive  Boolean    @default(true)
   createdAt DateTime   @default(now())

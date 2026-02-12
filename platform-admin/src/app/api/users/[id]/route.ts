@@ -3,7 +3,7 @@ import { PlatformRole } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import {
   hashPassword,
-  requireSession,
+  requireSessionFromRequest,
   verifyPassword,
 } from "@/lib/auth";
 import { badRequest, forbidden, unauthorized } from "@/lib/api";
@@ -16,7 +16,13 @@ function parseRole(value: unknown): PlatformRole | null {
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession().catch(() => null);
+  const session = (() => {
+    try {
+      return requireSessionFromRequest(req);
+    } catch {
+      return null;
+    }
+  })();
   if (!session) return unauthorized();
 
   const { id } = await params;
@@ -90,7 +96,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession().catch(() => null);
+  const session = (() => {
+    try {
+      return requireSessionFromRequest(_req);
+    } catch {
+      return null;
+    }
+  })();
   if (!session) return unauthorized();
   if (!isSuperAdmin(session.role)) return forbidden();
 

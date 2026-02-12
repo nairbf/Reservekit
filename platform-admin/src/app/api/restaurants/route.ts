@@ -2,8 +2,8 @@ import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { RestaurantPlan, RestaurantStatus, LicenseEventType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth";
-import { requireAdminOrSuper } from "@/lib/rbac";
+import { requireSessionFromRequest } from "@/lib/auth";
+import { isAdminOrSuper } from "@/lib/rbac";
 import { badRequest, unauthorized } from "@/lib/api";
 import { buildRestaurantDbPath, nextAvailablePort, slugify } from "@/lib/platform";
 import { getLatestHealthMap } from "@/lib/overview";
@@ -22,7 +22,7 @@ function parseStatus(value: string | null): RestaurantStatus | null {
 
 export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    requireSessionFromRequest(req);
   } catch {
     return unauthorized();
   }
@@ -61,8 +61,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   let session;
   try {
-    session = await requireAdminOrSuper();
+    session = requireSessionFromRequest(req);
   } catch {
+    return unauthorized();
+  }
+
+  if (!isAdminOrSuper(session.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

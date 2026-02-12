@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { LicenseEventType, RestaurantPlan, RestaurantStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth";
+import { requireSessionFromRequest } from "@/lib/auth";
 import { isAdminOrSuper, isSupport } from "@/lib/rbac";
 import { badRequest, forbidden, unauthorized } from "@/lib/api";
 
@@ -27,7 +27,7 @@ function eventFromStatusChange(previous: RestaurantStatus, next: RestaurantStatu
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireSession();
+    requireSessionFromRequest(_req);
   } catch {
     return unauthorized();
   }
@@ -51,7 +51,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession().catch(() => null);
+  const session = (() => {
+    try {
+      return requireSessionFromRequest(req);
+    } catch {
+      return null;
+    }
+  })();
   if (!session) return unauthorized();
 
   const { id } = await params;
@@ -120,7 +126,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession().catch(() => null);
+  const session = (() => {
+    try {
+      return requireSessionFromRequest(_req);
+    } catch {
+      return null;
+    }
+  })();
   if (!session) return unauthorized();
   if (!isAdminOrSuper(session.role)) return forbidden();
 

@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireSessionFromRequest } from "@/lib/auth";
 import { unauthorized } from "@/lib/api";
 import { prisma } from "@/lib/db";
 
@@ -11,9 +11,9 @@ function csvEscape(value: string | number | null) {
   return raw;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    requireSessionFromRequest(req);
   } catch {
     return unauthorized();
   }

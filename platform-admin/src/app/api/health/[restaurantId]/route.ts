@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth";
+import { requireSessionFromRequest } from "@/lib/auth";
 import { unauthorized } from "@/lib/api";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ restaurantId: string }> }) {
   try {
-    await requireSession();
+    requireSessionFromRequest(req);
   } catch {
     return unauthorized();
   }

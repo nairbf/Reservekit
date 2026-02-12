@@ -1,13 +1,19 @@
 import { randomUUID } from "crypto";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { LicenseEventType } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth";
+import { requireSessionFromRequest } from "@/lib/auth";
 import { isAdminOrSuper } from "@/lib/rbac";
 import { forbidden, unauthorized } from "@/lib/api";
 
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await requireSession().catch(() => null);
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = (() => {
+    try {
+      return requireSessionFromRequest(req);
+    } catch {
+      return null;
+    }
+  })();
   if (!session) return unauthorized();
   if (!isAdminOrSuper(session.role)) return forbidden();
 

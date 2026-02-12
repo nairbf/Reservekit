@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { createSession, verifyPassword } from "@/lib/auth";
+import { setAuthCookie, signSession, verifyPassword } from "@/lib/auth";
 import { badRequest } from "@/lib/api";
 
 export const runtime = "nodejs";
@@ -18,14 +18,14 @@ export async function POST(req: NextRequest) {
   const valid = await verifyPassword(password, user.password);
   if (!valid) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
 
-  await createSession({
+  const token = signSession({
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role,
   });
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     user: {
       id: user.id,
       email: user.email,
@@ -33,4 +33,6 @@ export async function POST(req: NextRequest) {
       role: user.role,
     },
   });
+  setAuthCookie(response, token);
+  return response;
 }

@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { requireSessionFromRequest } from "@/lib/auth";
 import { unauthorized } from "@/lib/api";
 import { getOverviewData } from "@/lib/overview";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    requireSessionFromRequest(req);
   } catch {
     return unauthorized();
   }

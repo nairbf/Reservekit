@@ -1,10 +1,10 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { cookies } from "next/headers";
+import type { NextRequest, NextResponse } from "next/server";
 import type { PlatformRole } from "@/generated/prisma/client";
 
 export const AUTH_COOKIE = "platform_token";
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
+export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 export interface SessionUser {
   id: string;
@@ -71,10 +71,20 @@ export function decodeSession(token: string): SessionUser | null {
   }
 }
 
-export async function createSession(user: SessionUser) {
-  const token = signSession(user);
-  const cookieStore = await cookies();
-  cookieStore.set(AUTH_COOKIE, token, {
+export function getSessionFromRequest(request: NextRequest): SessionUser | null {
+  const token = request.cookies.get(AUTH_COOKIE)?.value;
+  if (!token) return null;
+  return decodeSession(token);
+}
+
+export function requireSessionFromRequest(request: NextRequest): SessionUser {
+  const session = getSessionFromRequest(request);
+  if (!session) throw new Error("Unauthorized");
+  return session;
+}
+
+export function setAuthCookie(response: NextResponse, token: string) {
+  response.cookies.set(AUTH_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -83,28 +93,14 @@ export async function createSession(user: SessionUser) {
   });
 }
 
-export async function clearSession() {
-  const cookieStore = await cookies();
-  cookieStore.set(AUTH_COOKIE, "", {
+export function clearAuthCookie(response: NextResponse) {
+  response.cookies.set(AUTH_COOKIE, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: 0,
   });
-}
-
-export async function getSession(): Promise<SessionUser | null> {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE)?.value;
-  if (!token) return null;
-  return decodeSession(token);
-}
-
-export async function requireSession(): Promise<SessionUser> {
-  const session = await getSession();
-  if (!session) throw new Error("Unauthorized");
-  return session;
 }
 
 export async function hashPassword(password: string) {

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/lib/auth";
+import { requireSessionFromRequest } from "@/lib/auth";
 import { unauthorized } from "@/lib/api";
 import { prisma } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    requireSessionFromRequest(req);
   } catch {
     return unauthorized();
   }

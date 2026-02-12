@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { HealthStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { requireSession } from "@/lib/auth";
+import { requireSessionFromRequest } from "@/lib/auth";
 import { unauthorized } from "@/lib/api";
 
 async function ping(url: string, timeoutMs: number) {
@@ -41,9 +41,9 @@ async function ping(url: string, timeoutMs: number) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    await requireSession();
+    requireSessionFromRequest(req);
   } catch {
     return unauthorized();
   }

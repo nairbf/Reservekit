@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PlatformRole } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
-import { hashPassword, requireSession } from "@/lib/auth";
+import { hashPassword, requireSessionFromRequest } from "@/lib/auth";
 import { forbidden, unauthorized, badRequest } from "@/lib/api";
 import { isSuperAdmin } from "@/lib/rbac";
 
@@ -11,8 +11,14 @@ function parseRole(value: unknown): PlatformRole | null {
   return null;
 }
 
-export async function GET() {
-  const session = await requireSession().catch(() => null);
+export async function GET(req: NextRequest) {
+  const session = (() => {
+    try {
+      return requireSessionFromRequest(req);
+    } catch {
+      return null;
+    }
+  })();
   if (!session) return unauthorized();
   if (!isSuperAdmin(session.role)) return forbidden();
 
@@ -32,7 +38,13 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireSession().catch(() => null);
+  const session = (() => {
+    try {
+      return requireSessionFromRequest(req);
+    } catch {
+      return null;
+    }
+  })();
   if (!session) return unauthorized();
   if (!isSuperAdmin(session.role)) return forbidden();
 

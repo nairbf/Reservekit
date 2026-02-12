@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { clearSession } from "@/lib/auth";
+import { clearAuthCookie } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 export async function POST() {
-  await clearSession();
-  return NextResponse.json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  clearAuthCookie(response);
+  return response;
 }

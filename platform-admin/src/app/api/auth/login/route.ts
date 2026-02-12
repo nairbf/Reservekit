@@ -33,6 +33,6 @@ export async function POST(req: NextRequest) {
       role: user.role,
     },
   });
-  setAuthCookie(response, token);
+  setAuthCookie(response, token, req);
   return response;
 }

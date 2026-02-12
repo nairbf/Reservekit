@@ -83,20 +83,34 @@ export function requireSessionFromRequest(request: NextRequest): SessionUser {
   return session;
 }
 
-export function setAuthCookie(response: NextResponse, token: string) {
+export function shouldUseSecureCookies(request?: NextRequest) {
+  const override = process.env.COOKIE_SECURE?.trim().toLowerCase();
+  if (override === "true") return true;
+  if (override === "false") return false;
+
+  const protoHeader = request?.headers.get("x-forwarded-proto")?.toLowerCase();
+  if (protoHeader) return protoHeader === "https";
+
+  const protocol = request?.nextUrl?.protocol?.toLowerCase();
+  if (protocol) return protocol === "https:";
+
+  return process.env.NODE_ENV === "production";
+}
+
+export function setAuthCookie(response: NextResponse, token: string, request?: NextRequest) {
   response.cookies.set(AUTH_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(request),
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_TTL_SECONDS,
   });
 }
 
-export function clearAuthCookie(response: NextResponse) {
+export function clearAuthCookie(response: NextResponse, request?: NextRequest) {
   response.cookies.set(AUTH_COOKIE, "", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureCookies(request),
     sameSite: "lax",
     path: "/",
     maxAge: 0,

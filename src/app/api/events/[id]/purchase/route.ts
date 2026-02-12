@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { requireAuth } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
 import { createPaymentIntent } from "@/lib/payments";
 import { generateEventICS } from "@/lib/calendar";
 
 function normalizePhone(value: string): string {
-  return String(value || "").replace(/[^\d+]/g, "").trim();
+  return String(value || "").replace(/\D/g, "").trim();
 }
 
 function formatTime12(value: string): string {
@@ -17,42 +18,114 @@ function formatTime12(value: string): string {
 function generateEventTicketCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "RS-EVT-";
-  for (let i = 0; i < 4; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  for (let i = 0; i < 4; i += 1) out += chars[Math.floor(Math.random() * chars.length)];
   return out;
 }
 
-async function getStripeClient() {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) throw new Error("Stripe not configured");
+async function uniqueTicketCode(tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0]) {
+  let code = generateEventTicketCode();
+  while (await tx.eventTicket.findUnique({ where: { code } })) {
+    code = generateEventTicketCode();
+  }
+  return code;
+}
+
+async function stripePaymentStatus(paymentIntentId: string) {
+  if (!process.env.STRIPE_SECRET_KEY) throw new Error("Stripe not configured");
   const Stripe = (await import("stripe")).default;
-  return new Stripe(secret);
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  return stripe.paymentIntents.retrieve(paymentIntentId);
+}
+
+async function getRestaurantName(): Promise<string> {
+  const row = await prisma.setting.findUnique({ where: { key: "restaurantName" } });
+  return row?.value || "ReserveSit";
+}
+
+async function ensureGuest(guestName: string, guestEmail: string, rawPhone: string, normalizedPhone: string): Promise<number | null> {
+  if (!normalizedPhone && !rawPhone) return null;
+
+  const guest = await prisma.guest.findFirst({
+    where: {
+      OR: [
+        normalizedPhone ? { phone: normalizedPhone } : undefined,
+        rawPhone ? { phone: rawPhone } : undefined,
+      ].filter(Boolean) as Array<{ phone: string }>,
+    },
+  });
+
+  if (guest) {
+    await prisma.guest.update({
+      where: { id: guest.id },
+      data: {
+        name: guestName || guest.name,
+        email: guestEmail || guest.email,
+      },
+    });
+    return guest.id;
+  }
+
+  const phoneForCreate = normalizedPhone || rawPhone;
+  if (!phoneForCreate) return null;
+
+  const created = await prisma.guest.create({
+    data: {
+      phone: phoneForCreate,
+      name: guestName || "Guest",
+      email: guestEmail || null,
+    },
+  });
+  return created.id;
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const eventId = Number(id);
-  if (!Number.isFinite(eventId) || eventId <= 0) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  if (!Number.isFinite(eventId) || eventId <= 0) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  }
 
   const body = await req.json();
-  const phase = String(body?.phase || "prepare");
   const guestName = String(body?.guestName || "").trim();
   const guestEmail = String(body?.guestEmail || "").trim();
-  const guestPhoneRaw = String(body?.guestPhone || "");
+  const guestPhoneRaw = String(body?.guestPhone || "").trim();
   const guestPhone = normalizePhone(guestPhoneRaw);
-  const quantity = Math.max(1, Math.trunc(Number(body?.quantity || 1)));
+  const quantity = Math.max(1, Math.min(10, Math.trunc(Number(body?.quantity || 1))));
+  const manual = Boolean(body?.manual);
+  const manualPaid = Boolean(body?.paid);
+  const paymentIntentId = String(body?.paymentIntentId || "").trim();
+
+  if (manual) {
+    try {
+      await requireAuth();
+    } catch {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
 
   const event = await prisma.event.findUnique({ where: { id: Math.trunc(eventId) } });
-  if (!event || !event.isActive) return NextResponse.json({ error: "Event not available" }, { status: 404 });
+  if (!event || !event.isActive) {
+    return NextResponse.json({ error: "Event not available" }, { status: 404 });
+  }
 
   const remaining = Math.max(0, event.maxTickets - event.soldTickets);
-  if (remaining < quantity) return NextResponse.json({ error: "Not enough tickets remaining" }, { status: 409 });
+  if (remaining < quantity) {
+    return NextResponse.json({ error: "Not enough tickets remaining" }, { status: 409 });
+  }
 
   if (!guestName || !guestEmail) {
     return NextResponse.json({ error: "Guest name and email are required" }, { status: 400 });
   }
 
-  if (phase === "prepare") {
+  const stripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY);
+  const requiresStripePayment = !manual && event.ticketPrice > 0 && stripeConfigured;
+
+  if (requiresStripePayment && !paymentIntentId) {
     const amount = event.ticketPrice * quantity;
+    if (amount < 50) {
+      return NextResponse.json({ error: "Minimum payment amount is $0.50" }, { status: 400 });
+    }
+
     const intent = await createPaymentIntent({
       amount,
       currency: "usd",
@@ -64,6 +137,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         guestEmail,
       },
     });
+
     return NextResponse.json({
       clientSecret: intent.client_secret,
       paymentIntentId: intent.id,
@@ -73,107 +147,114 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
   }
 
-  if (phase !== "finalize") {
-    return NextResponse.json({ error: "Unknown phase" }, { status: 400 });
+  if (requiresStripePayment && paymentIntentId) {
+    const existingByIntent = await prisma.eventTicket.findMany({
+      where: { eventId: event.id, stripePaymentIntentId: paymentIntentId },
+      orderBy: { createdAt: "asc" },
+    });
+    if (existingByIntent.length > 0) {
+      const ics = await generateEventICS({
+        id: event.id,
+        name: event.name,
+        date: event.date,
+        startTime: event.startTime,
+        endTime: event.endTime,
+        ticketCode: existingByIntent[0].code,
+      });
+      return NextResponse.json({
+        tickets: existingByIntent,
+        calendarIcs: ics,
+      });
+    }
+
+    const intent = await stripePaymentStatus(paymentIntentId);
+    if (intent.status !== "succeeded") {
+      return NextResponse.json({ error: "Payment is not completed" }, { status: 409 });
+    }
+
+    const totalRequired = event.ticketPrice * quantity;
+    if ((intent.amount_received || 0) < totalRequired) {
+      return NextResponse.json({ error: "Insufficient paid amount" }, { status: 409 });
+    }
   }
 
-  const paymentIntentId = String(body?.paymentIntentId || "").trim();
-  if (!paymentIntentId) return NextResponse.json({ error: "paymentIntentId is required" }, { status: 400 });
+  const guestId = await ensureGuest(guestName, guestEmail, guestPhoneRaw, guestPhone);
 
-  const existing = await prisma.eventTicket.findFirst({ where: { stripePaymentIntentId: paymentIntentId } });
-  if (existing) return NextResponse.json(existing);
+  const perTicketPaid = manual
+    ? (manualPaid ? event.ticketPrice : 0)
+    : (requiresStripePayment ? event.ticketPrice : 0);
 
-  const stripe = await getStripeClient();
-  const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
-  if (!intent || intent.status !== "succeeded") {
-    return NextResponse.json({ error: "Payment is not completed" }, { status: 409 });
-  }
-
-  const totalPaid = event.ticketPrice * quantity;
-  if (intent.amount_received < totalPaid) {
-    return NextResponse.json({ error: "Insufficient paid amount" }, { status: 409 });
-  }
-
-  const guest = guestPhone
-    ? await prisma.guest.findFirst({
-        where: {
-          OR: [{ phone: guestPhone }, { phone: guestPhoneRaw }],
-        },
-      })
-    : null;
-
-  let code = generateEventTicketCode();
-  while (await prisma.eventTicket.findUnique({ where: { code } })) code = generateEventTicketCode();
-
-  const ticket = await prisma.$transaction(async tx => {
+  const createdTickets = await prisma.$transaction(async tx => {
     const latest = await tx.event.findUnique({ where: { id: event.id } });
     if (!latest || !latest.isActive) throw new Error("Event unavailable");
     if (latest.soldTickets + quantity > latest.maxTickets) throw new Error("Sold out");
 
-    const created = await tx.eventTicket.create({
-      data: {
-        eventId: latest.id,
-        guestName,
-        guestEmail,
-        guestPhone: guestPhone || null,
-        quantity,
-        totalPaid,
-        stripePaymentIntentId: paymentIntentId,
-        status: "confirmed",
-        code,
-        guestId: guest?.id || null,
-      },
-    });
+    const tickets = [] as Awaited<ReturnType<typeof tx.eventTicket.create>>[];
+    for (let i = 0; i < quantity; i += 1) {
+      const code = await uniqueTicketCode(tx);
+      const ticket = await tx.eventTicket.create({
+        data: {
+          eventId: latest.id,
+          guestName,
+          guestEmail,
+          guestPhone: guestPhone || guestPhoneRaw || null,
+          quantity: 1,
+          totalPaid: perTicketPaid,
+          stripePaymentIntentId: requiresStripePayment ? paymentIntentId : null,
+          status: "confirmed",
+          code,
+          guestId,
+        },
+      });
+      tickets.push(ticket);
+    }
 
     await tx.event.update({
       where: { id: latest.id },
       data: { soldTickets: { increment: quantity } },
     });
 
-    return created;
+    return tickets;
   });
 
-  const appUrl = process.env.APP_URL || "http://localhost:3000";
-  const subject = `Your tickets for ${event.name}`;
-  const eventIcs = await generateEventICS({
+  const restaurantName = await getRestaurantName();
+  const ticketCodes = createdTickets.map(ticket => ticket.code);
+  const ics = await generateEventICS({
     id: event.id,
     name: event.name,
     date: event.date,
     startTime: event.startTime,
     endTime: event.endTime,
-    ticketCode: ticket.code,
+    ticketCode: ticketCodes[0],
   });
-  const message = [
+
+  const emailBody = [
     `Hi ${guestName},`,
     "",
-    `Thanks for purchasing tickets for ${event.name}.`,
+    `You're confirmed for ${event.name}!`,
+    "",
     `Date: ${event.date}`,
     `Time: ${formatTime12(event.startTime)}${event.endTime ? ` - ${formatTime12(event.endTime)}` : ""}`,
-    `Quantity: ${quantity}`,
-    `Total paid: $${(totalPaid / 100).toFixed(2)}`,
-    `Ticket code: ${ticket.code}`,
+    `Tickets: ${createdTickets.length}`,
     "",
-    `View event: ${appUrl}/events/${event.slug}`,
+    "Your ticket code(s):",
+    ...ticketCodes,
+    "",
+    "Show this code at the door when you arrive.",
+    "",
+    `— ${restaurantName}`,
   ].join("\n");
 
   await sendEmail({
     to: guestEmail,
-    subject,
-    body: message,
+    subject: `${event.name} — Your Ticket Confirmation`,
+    body: emailBody,
     messageType: "event_ticket_confirmation",
-    attachments: [{ filename: `${event.slug}.ics`, content: eventIcs, contentType: "text/calendar" }],
+    attachments: [{ filename: `${event.slug}.ics`, content: ics, contentType: "text/calendar" }],
   });
 
   return NextResponse.json({
-    ticket,
-    calendarIcs: eventIcs,
-    event: {
-      id: event.id,
-      slug: event.slug,
-      name: event.name,
-      date: event.date,
-      startTime: event.startTime,
-      endTime: event.endTime,
-    },
+    tickets: createdTickets,
+    calendarIcs: ics,
   });
 }

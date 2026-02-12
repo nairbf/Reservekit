@@ -7,9 +7,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await getSession();
   if (!session) redirect("/login");
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 md:flex">
       <DashboardNav email={session.email} canAccessAdmin={isMasterAdminEmail(session.email)} />
-      <main className="p-4 sm:p-6 max-w-6xl mx-auto">{children}</main>
+      <main className="flex-1 min-w-0 p-4 sm:p-6">
+        <div className="max-w-6xl mx-auto">{children}</div>
+      </main>
       <SetupTourCoach />
     </div>
   );

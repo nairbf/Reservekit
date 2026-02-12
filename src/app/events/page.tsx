@@ -1,20 +1,5 @@
-"use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
-interface EventItem {
-  id: number;
-  name: string;
-  description: string | null;
-  date: string;
-  startTime: string;
-  ticketPrice: number;
-  maxTickets: number;
-  soldTickets: number;
-  slug: string;
-  remainingTickets: number;
-  soldOut: boolean;
-}
+import { prisma } from "@/lib/db";
 
 function formatTime12(value: string): string {
   const [h, m] = String(value || "00:00").split(":").map(Number);
@@ -22,53 +7,70 @@ function formatTime12(value: string): string {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
 }
 
-export default function EventsPage() {
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [loading, setLoading] = useState(true);
+function formatDate(value: string): string {
+  const dt = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(dt.getTime())) return value;
+  return dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
 
-  useEffect(() => {
-    fetch("/api/events")
-      .then(r => r.json())
-      .then(data => setEvents(Array.isArray(data) ? data : []))
-      .finally(() => setLoading(false));
-  }, []);
+export default async function EventsPage() {
+  const today = new Date().toISOString().split("T")[0];
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 px-4 py-10">
-        <div className="max-w-5xl mx-auto flex items-center gap-3 text-gray-500">
-          <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
-          Loading events...
-        </div>
-      </div>
-    );
-  }
+  const [events, restaurantRow] = await Promise.all([
+    prisma.event.findMany({
+      where: { isActive: true, date: { gte: today } },
+      orderBy: [{ date: "asc" }, { startTime: "asc" }],
+    }),
+    prisma.setting.findUnique({ where: { key: "restaurantName" } }),
+  ]);
+
+  const restaurantName = restaurantRow?.value || "ReserveSit";
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-10">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">Upcoming Events</h1>
-        <p className="text-sm text-gray-500 mb-6">Book special dinners and pre-paid experiences.</p>
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 px-4 py-10">
+      <div className="max-w-6xl mx-auto">
+        <p className="text-sm uppercase tracking-wide text-blue-700 font-semibold">{restaurantName}</p>
+        <h1 className="text-3xl sm:text-4xl font-bold mt-1">Upcoming Events</h1>
+        <p className="text-sm sm:text-base text-gray-600 mt-2 mb-6">Book special dinners, tastings, and limited-seat experiences.</p>
 
         {events.length === 0 ? (
-          <div className="bg-white rounded-xl shadow p-10 text-center text-gray-500">No upcoming events. Check back soon!</div>
+          <div className="bg-white rounded-2xl shadow p-10 text-center border border-gray-100">
+            <p className="text-gray-500 text-lg">No upcoming events. Check back soon!</p>
+          </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {events.map(event => (
-              <Link key={event.id} href={`/events/${event.slug}`} className="bg-white rounded-xl shadow p-5 border border-gray-100 hover:shadow-md transition-all duration-200">
-                <div className="text-sm text-gray-500">{event.date} · {formatTime12(event.startTime)}</div>
-                <h2 className="text-lg font-bold mt-1">{event.name}</h2>
-                {event.description && <p className="text-sm text-gray-600 mt-2 line-clamp-3">{event.description}</p>}
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="font-semibold">${(event.ticketPrice / 100).toFixed(2)}</span>
-                  {event.soldOut ? (
-                    <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">Sold Out</span>
-                  ) : (
-                    <span className="text-xs px-2 py-1 rounded-full bg-blue-50 text-blue-700">{event.remainingTickets} left</span>
+            {events.map(event => {
+              const remainingTickets = Math.max(0, event.maxTickets - event.soldTickets);
+              const soldOut = remainingTickets <= 0;
+              return (
+                <Link
+                  key={event.id}
+                  href={`/events/${event.slug}`}
+                  className={`rounded-2xl border p-5 transition-all duration-200 ${soldOut ? "bg-gray-100 border-gray-200 opacity-80" : "bg-white border-gray-100 hover:shadow-lg hover:-translate-y-0.5"}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-medium text-gray-500">{formatDate(event.date)} · {formatTime12(event.startTime)}</p>
+                      <h2 className="text-xl font-bold mt-1 text-gray-900">{event.name}</h2>
+                    </div>
+                    {soldOut ? (
+                      <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">Sold Out</span>
+                    ) : (
+                      <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">{remainingTickets} left</span>
+                    )}
+                  </div>
+
+                  {event.description && (
+                    <p className="text-sm text-gray-600 mt-3 line-clamp-3">{event.description}</p>
                   )}
-                </div>
-              </Link>
-            ))}
+
+                  <div className="mt-5 flex items-center justify-between">
+                    <span className="text-lg font-semibold text-gray-900">${(event.ticketPrice / 100).toFixed(2)}</span>
+                    <span className="text-sm font-medium text-blue-700">View Event</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

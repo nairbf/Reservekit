@@ -1,5 +1,6 @@
 "use client";
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 type AddOnId = "sms" | "floorplan" | "reports" | "guesthistory" | "eventticketing";
 
@@ -15,6 +16,21 @@ interface Bundle {
   name: string;
   items: Array<"core" | AddOnId>;
   note: string;
+}
+
+interface EventPreview {
+  id: number;
+  name: string;
+  date: string;
+  startTime: string;
+  ticketPrice: number;
+  slug: string;
+}
+
+function formatTime12(value: string): string {
+  const [h, m] = String(value || "00:00").split(":").map(Number);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return value;
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
 }
 
 const CORE_PRICE = 1799;
@@ -45,11 +61,22 @@ export default function LandingPage() {
   const [addons, setAddons] = useState<AddOnId[]>([]);
   const [email, setEmail] = useState("");
   const [checkoutTarget, setCheckoutTarget] = useState<string | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<EventPreview[]>([]);
 
   const customTotal = useMemo(
     () => totalFor(["core", ...addons]),
     [addons],
   );
+
+  useEffect(() => {
+    fetch("/api/events")
+      .then(async res => (res.ok ? res.json() : []))
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        setUpcomingEvents(data.slice(0, 3));
+      })
+      .catch(() => {});
+  }, []);
 
   function toggle(id: AddOnId) {
     setAddons(current => (current.includes(id) ? current.filter(value => value !== id) : [...current, id]));
@@ -77,12 +104,48 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <header className="border-b bg-white/95 backdrop-blur sticky top-0 z-20">
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="font-bold">ReserveSit</div>
+          <div className="flex items-center gap-3 text-sm">
+            <Link href="/events" className="text-gray-600 hover:text-blue-700 transition-all duration-200">Events</Link>
+            <a href="#pricing" className="text-gray-600 hover:text-blue-700 transition-all duration-200">Pricing</a>
+          </div>
+        </div>
+      </header>
+
       <div className="max-w-5xl mx-auto px-6 py-20 text-center">
         <h1 className="text-5xl font-bold mb-4">ReserveSit</h1>
         <p className="text-xl text-gray-600 mb-2">The reservation platform you buy once and own.</p>
         <p className="text-gray-500 mb-8">Legacy platforms can run $3,500+/year. ReserveSit is a one-time license.</p>
         <a href="#pricing" className="w-full sm:w-auto inline-flex items-center justify-center bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium transition-all duration-200">See Pricing</a>
       </div>
+
+      {upcomingEvents.length > 0 && (
+        <div className="py-14 bg-white">
+          <div className="max-w-5xl mx-auto px-6">
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <h2 className="text-2xl font-bold">Upcoming Events</h2>
+              <Link href="/events" className="text-sm font-medium text-blue-700 hover:text-blue-800 transition-all duration-200">
+                View All Events
+              </Link>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {upcomingEvents.map(event => (
+                <Link
+                  key={event.id}
+                  href={`/events/${event.slug}`}
+                  className="rounded-xl border border-gray-200 bg-gray-50 hover:bg-white hover:shadow-sm transition-all duration-200 p-4"
+                >
+                  <div className="text-xs text-gray-500">{event.date} · {formatTime12(event.startTime)}</div>
+                  <div className="font-semibold mt-1">{event.name}</div>
+                  <div className="text-sm text-gray-600 mt-2">${(event.ticketPrice / 100).toFixed(2)}</div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-gray-50 py-16">
         <div className="max-w-5xl mx-auto px-6">
@@ -307,7 +370,12 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <footer className="py-8 text-center text-gray-400 text-sm">ReserveSit - Your reservations. Your guests. Your data.</footer>
+      <footer className="py-8 text-center text-gray-400 text-sm">
+        <div className="mb-2">
+          <Link href="/events" className="text-gray-500 hover:text-blue-700 transition-all duration-200">Events</Link>
+        </div>
+        ReserveSit - Your reservations. Your guests. Your data.
+      </footer>
     </div>
   );
 }

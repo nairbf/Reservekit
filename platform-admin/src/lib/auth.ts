@@ -22,8 +22,23 @@ interface SessionToken {
   exp: number;
 }
 
+let cachedJwtSecret: string | null = null;
+
 function getJwtSecret() {
-  return process.env.JWT_SECRET || "dev-secret-change-me";
+  if (cachedJwtSecret) return cachedJwtSecret;
+
+  const configured = process.env.JWT_SECRET?.trim();
+  if (configured) {
+    cachedJwtSecret = configured;
+    return configured;
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("JWT_SECRET is required in production runtime");
+  }
+
+  cachedJwtSecret = "dev-secret-change-me";
+  return cachedJwtSecret;
 }
 
 export function signSession(user: SessionUser) {
@@ -40,8 +55,9 @@ export function signSession(user: SessionUser) {
 }
 
 export function decodeSession(token: string): SessionUser | null {
+  const secret = getJwtSecret();
   try {
-    const payload = jwt.verify(token, getJwtSecret()) as SessionToken;
+    const payload = jwt.verify(token, secret) as SessionToken;
     if (!payload?.sub || !payload?.email || !payload?.role) return null;
     return {
       id: payload.sub,
@@ -50,6 +66,7 @@ export function decodeSession(token: string): SessionUser | null {
       role: payload.role,
     };
   } catch {
+    // Keep auth failures non-fatal for request flow.
     return null;
   }
 }

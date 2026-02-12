@@ -3,6 +3,8 @@ import { getSession } from "@/lib/auth";
 import { SessionProvider } from "@/components/session-provider";
 import { DashboardShell } from "@/components/dashboard-shell";
 
+export const runtime = "nodejs";
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/login");

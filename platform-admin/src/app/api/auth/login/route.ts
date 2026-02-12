@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { createSession, verifyPassword } from "@/lib/auth";
 import { badRequest } from "@/lib/api";
 
+export const runtime = "nodejs";
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const email = String(body?.email || "").trim().toLowerCase();

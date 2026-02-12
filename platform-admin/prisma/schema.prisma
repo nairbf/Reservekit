@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum PlatformRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+}
+
+enum RestaurantStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL
+  CANCELLED
+}
+
+enum RestaurantPlan {
+  CORE
+  SERVICE_PRO
+  FULL_SUITE
+}
+
+enum LicenseEventType {
+  CREATED
+  ACTIVATED
+  SUSPENDED
+  REACTIVATED
+  CANCELLED
+  KEY_ROTATED
+}
+
+enum HealthStatus {
+  HEALTHY
+  UNHEALTHY
+  UNREACHABLE
+}
+
+model PlatformUser {
+  id        String       @id @default(cuid())
+  email     String       @unique
+  password  String
+  name      String
+  role      PlatformRole
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model Restaurant {
+  id                   String           @id @default(cuid())
+  slug                 String           @unique
+  name                 String
+  adminEmail           String
+  status               RestaurantStatus
+  plan                 RestaurantPlan
+  port                 Int              @unique
+  dbPath               String
+  licenseKey           String           @unique
+  licenseActivatedAt   DateTime?
+  trialEndsAt          DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  monthlyHostingActive Boolean          @default(false)
+  notes                String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  licenseEvents LicenseEvent[]
+  healthChecks  HealthCheck[]
+}
+
+model LicenseEvent {
+  id           String           @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  event        LicenseEventType
+  details      String?
+  performedBy  String?
+  createdAt    DateTime         @default(now())
+
+  @@index([restaurantId, createdAt])
+}
+
+model HealthCheck {
+  id             String       @id @default(cuid())
+  restaurantId   String
+  restaurant     Restaurant   @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  status         HealthStatus
+  responseTimeMs Int?
+  checkedAt      DateTime     @default(now())
+
+  @@index([restaurantId, checkedAt])
+}

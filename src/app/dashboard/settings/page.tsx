@@ -30,6 +30,14 @@ const TABS: Array<{ key: SettingsTab; label: string; desc: string }> = [
   { key: "integrations", label: "Integrations", desc: "SpotOn POS sync and mapping" },
 ];
 
+const ACCENT_PRESETS = [
+  { label: "Navy", value: "#1e3a5f" },
+  { label: "Forest", value: "#2d5016" },
+  { label: "Burgundy", value: "#5f1e2e" },
+  { label: "Slate", value: "#3f4f5f" },
+  { label: "Gold", value: "#5f4b1e" },
+];
+
 interface TabButtonProps {
   tab: SettingsTab;
   label: string;
@@ -322,15 +330,122 @@ export default function SettingsPage() {
       </div>
 
       {activeTab === "restaurant" && (
-        <Section title="Restaurant Details">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Name" value={settings.restaurantName} onChange={v => set("restaurantName", v)} placeholder="My Restaurant" />
-            <Field label="Phone" value={settings.phone} onChange={v => set("phone", v)} placeholder="(555) 123-4567" />
-          </div>
-          <div className="mt-4">
-            <Field label="Address" value={settings.address} onChange={v => set("address", v)} />
-          </div>
-        </Section>
+        <div className="space-y-6">
+          <Section title="Restaurant Details">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field label="Name" value={settings.restaurantName} onChange={v => set("restaurantName", v)} placeholder="My Restaurant" />
+              <Field label="Phone" value={settings.phone} onChange={v => set("phone", v)} placeholder="(555) 123-4567" />
+            </div>
+            <div className="mt-4">
+              <Field label="Address" value={settings.address} onChange={v => set("address", v)} />
+            </div>
+          </Section>
+
+          <Section title="Landing Page">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Field
+                label="Restaurant Slug"
+                value={settings.slug || ""}
+                onChange={v => set("slug", v)}
+                placeholder="reef"
+              />
+              <Field
+                label="Hero Image URL"
+                value={settings.heroImageUrl || ""}
+                onChange={v => set("heroImageUrl", v)}
+                placeholder="https://images.unsplash.com/..."
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4 mt-4">
+              <Field
+                label="Tagline"
+                value={settings.tagline || ""}
+                onChange={v => set("tagline", v)}
+                placeholder="Modern coastal cuisine in the heart of downtown"
+              />
+              <Field
+                label="Announcement Banner"
+                value={settings.announcementText || ""}
+                onChange={v => set("announcementText", v)}
+                placeholder="Now accepting Valentine's Day reservations"
+              />
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-1">Description</label>
+              <textarea
+                value={settings.description || ""}
+                onChange={e => set("description", e.target.value)}
+                rows={3}
+                className="w-full border rounded px-3 py-2 text-sm"
+                placeholder="Short welcome paragraph for your homepage."
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Accent Color Preset</label>
+                <select
+                  value={
+                    ACCENT_PRESETS.some(preset => preset.value.toLowerCase() === (settings.accentColor || "").toLowerCase())
+                      ? settings.accentColor
+                      : "custom"
+                  }
+                  onChange={e => {
+                    if (e.target.value !== "custom") set("accentColor", e.target.value);
+                  }}
+                  className="h-11 w-full border rounded px-3 text-sm"
+                >
+                  {ACCENT_PRESETS.map(preset => (
+                    <option key={preset.value} value={preset.value}>{preset.label} ({preset.value})</option>
+                  ))}
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              <Field
+                label="Custom Accent Color"
+                value={settings.accentColor || "#1e3a5f"}
+                onChange={v => set("accentColor", v)}
+                placeholder="#1e3a5f"
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4 mt-4">
+              <Field
+                label="Public Phone"
+                value={settings.phone || ""}
+                onChange={v => set("phone", v)}
+                placeholder="(555) 123-4567"
+              />
+              <Field
+                label="Public Address"
+                value={settings.address || ""}
+                onChange={v => set("address", v)}
+                placeholder="123 Harbor Drive, Coastal City, CA 90210"
+              />
+              <Field
+                label="Contact Email"
+                value={settings.contactEmail || ""}
+                onChange={v => set("contactEmail", v)}
+                placeholder="hello@yourrestaurant.com"
+              />
+              <Field
+                label="Instagram URL"
+                value={settings.socialInstagram || ""}
+                onChange={v => set("socialInstagram", v)}
+                placeholder="https://instagram.com/yourrestaurant"
+              />
+              <Field
+                label="Facebook URL"
+                value={settings.socialFacebook || ""}
+                onChange={v => set("socialFacebook", v)}
+                placeholder="https://facebook.com/yourrestaurant"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-3">Leave announcement and social links blank to hide them on the homepage.</p>
+          </Section>
+        </div>
       )}
 
       {activeTab === "operations" && (

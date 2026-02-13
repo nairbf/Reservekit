@@ -11,3 +11,14 @@
   --rk-gray-500: #6b7280;
   --rk-gray-900: #111827;
 }
+
+.reveal-section {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 620ms ease, transform 620ms ease;
+}
+
+.reveal-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}

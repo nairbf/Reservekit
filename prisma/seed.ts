@@ -9,14 +9,23 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const defaults: Record<string, string> = {
-    restaurantName: "My Restaurant",
+    restaurantName: "The Reef Restaurant",
     timezone: "America/New_York",
-    phone: "",
-    address: "",
+    phone: "(555) 123-4567",
+    address: "123 Harbor Drive, Coastal City, CA 90210",
+    contactEmail: "hello@reef.restaurant",
     openTime: "17:00",
     closeTime: "22:00",
     slotInterval: "30",
     maxCoversPerSlot: "40",
+    slug: "reef",
+    heroImageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
+    tagline: "Modern coastal cuisine in the heart of downtown",
+    description: "At Reef, we celebrate the ocean's bounty with locally sourced ingredients and innovative preparations. Join us for an unforgettable dining experience.",
+    accentColor: "#1e3a5f",
+    announcementText: "",
+    socialInstagram: "",
+    socialFacebook: "",
     diningDurations: JSON.stringify({
       1: 60, 2: 75, 3: 90, 4: 90, 5: 105, 6: 120, 7: 120, 8: 120,
     }),

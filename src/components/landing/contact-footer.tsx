@@ -3,6 +3,7 @@ import Image from "next/image";
 interface ContactFooterProps {
   restaurantName: string;
   logoUrl?: string;
+  footerTagline?: string;
   phone: string;
   email: string;
   address: string;
@@ -27,6 +28,7 @@ function SocialLink({ href, label }: { href: string; label: string }) {
 export function ContactFooter({
   restaurantName,
   logoUrl,
+  footerTagline,
   phone,
   email,
   address,
@@ -48,7 +50,7 @@ export function ContactFooter({
           ) : null}
           <h3 className={`text-xl font-semibold font-serif ${logoUrl ? "mt-3" : ""}`}>{restaurantName}</h3>
           <p className="mt-3 text-sm text-slate-300">
-            Join us for seasonal cuisine, thoughtful service, and a dining room built for memorable nights.
+            {footerTagline || "Join us for seasonal cuisine, thoughtful service, and a dining room built for memorable nights."}
           </p>
         </div>
 
@@ -70,9 +72,6 @@ export function ContactFooter({
         </div>
       </div>
 
-      <div className="border-t border-slate-800 px-6 py-4 text-center text-xs text-slate-400">
-        Powered by ReserveSit
-      </div>
     </footer>
   );
 }

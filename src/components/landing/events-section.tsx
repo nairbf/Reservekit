@@ -15,6 +15,7 @@ interface EventCard {
 interface EventsSectionProps {
   events: EventCard[];
   accentColor: string;
+  maxEvents?: number;
 }
 
 function formatDate(value: string): string {
@@ -35,8 +36,9 @@ function formatTime(value: string): string {
   return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
-export function EventsSection({ events, accentColor }: EventsSectionProps) {
+export function EventsSection({ events, accentColor, maxEvents = 4 }: EventsSectionProps) {
   if (events.length === 0) return null;
+  const visibleEvents = events.slice(0, Math.max(1, maxEvents));
 
   return (
     <section className="bg-stone-50/80">
@@ -52,7 +54,7 @@ export function EventsSection({ events, accentColor }: EventsSectionProps) {
         </div>
 
         <div className="mt-7 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {events.map(event => (
+          {visibleEvents.map(event => (
             <Link
               key={event.id}
               href={`/events/${event.slug}`}

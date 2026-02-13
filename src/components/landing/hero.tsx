@@ -4,12 +4,16 @@ import { AnnouncementBanner } from "@/components/landing/announcement-banner";
 
 interface HeroProps {
   restaurantName: string;
-  tagline: string;
-  announcementText: string;
-  heroImageUrl: string;
+  tagline?: string;
+  announcementText?: string;
+  heroImageUrl?: string;
   logoUrl?: string;
-  reserveHref: string;
-  menuHref: string;
+  reserveHref?: string;
+  menuHref?: string;
+  primaryCtaText?: string;
+  primaryCtaLink?: string;
+  secondaryCtaText?: string;
+  secondaryCtaLink?: string;
   accentColor: string;
 }
 
@@ -21,8 +25,15 @@ export function Hero({
   logoUrl,
   reserveHref,
   menuHref,
+  primaryCtaText = "Reserve a Table",
+  primaryCtaLink,
+  secondaryCtaText = "View Menu",
+  secondaryCtaLink,
   accentColor,
 }: HeroProps) {
+  const primaryHref = primaryCtaLink || reserveHref || "/reserve/reef";
+  const secondaryHref = secondaryCtaLink || menuHref || "/menu";
+
   return (
     <section className="relative isolate min-h-[72vh] overflow-hidden">
       {heroImageUrl ? (
@@ -41,7 +52,7 @@ export function Hero({
       <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/55 to-black/70" />
 
       <div className="relative mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-center px-6 py-16 text-white sm:px-8 lg:px-10">
-        <AnnouncementBanner text={announcementText} />
+        <AnnouncementBanner text={announcementText || ""} />
 
         {logoUrl ? (
           <div className="mt-4">
@@ -60,22 +71,22 @@ export function Hero({
         </h1>
 
         <p className="mt-4 max-w-2xl text-base text-white/90 sm:text-lg">
-          {tagline}
+          {tagline || "Modern coastal cuisine in the heart of downtown"}
         </p>
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            href={reserveHref}
+            href={primaryHref}
             className="inline-flex min-h-11 items-center justify-center rounded-md px-6 text-sm font-semibold text-white shadow-md transition-all duration-200 hover:translate-y-[-1px]"
             style={{ backgroundColor: accentColor }}
           >
-            Reserve a Table
+            {primaryCtaText}
           </Link>
           <Link
-            href={menuHref}
+            href={secondaryHref}
             className="inline-flex min-h-11 items-center justify-center rounded-md border border-white/35 bg-white/10 px-6 text-sm font-semibold text-white transition-all duration-200 hover:bg-white/20"
           >
-            View Menu
+            {secondaryCtaText}
           </Link>
         </div>
       </div>

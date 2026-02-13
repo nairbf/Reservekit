@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import FileUpload from "@/components/file-upload";
+import LandingBuilder from "@/components/landing-builder";
 
 type SettingsTab = "restaurant" | "reservations" | "notifications" | "license";
 
@@ -20,14 +20,6 @@ const FEATURE_ROWS = [
   { key: "feature_reporting", label: "Reporting Dashboard" },
   { key: "feature_guest_history", label: "Guest History" },
   { key: "feature_event_ticketing", label: "Event Ticketing" },
-];
-
-const ACCENT_PRESETS = [
-  { label: "Navy", value: "#1e3a5f" },
-  { label: "Forest", value: "#2d5016" },
-  { label: "Burgundy", value: "#5f1e2e" },
-  { label: "Slate", value: "#3f4f5f" },
-  { label: "Gold", value: "#5f4b1e" },
 ];
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -91,14 +83,6 @@ function formatDateTime(value: string) {
   return dt.toLocaleString();
 }
 
-function extractUploadedFilename(url: string, category: string): string | null {
-  const prefix = `/api/uploads/serve/${category}/`;
-  if (!String(url || "").startsWith(prefix)) return null;
-  const raw = String(url).slice(prefix.length).split("?")[0];
-  if (!raw) return null;
-  return decodeURIComponent(raw);
-}
-
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("restaurant");
   const [settings, setSettings] = useState<SettingsMap>({});
@@ -128,15 +112,6 @@ export default function SettingsPage() {
     setSaved(false);
   }
 
-  async function removeUploadedAsset(settingKey: string, category: string) {
-    const currentUrl = settings[settingKey] || "";
-    const filename = extractUploadedFilename(currentUrl, category);
-    if (filename) {
-      await fetch(`/api/uploads/${encodeURIComponent(filename)}?category=${encodeURIComponent(category)}`, { method: "DELETE" }).catch(() => {});
-    }
-    setField(settingKey, "");
-  }
-
   async function saveChanges() {
     setSaving(true);
     try {
@@ -150,6 +125,15 @@ export default function SettingsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function savePartial(patch: Record<string, string>) {
+    await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    setSettings((previous) => ({ ...previous, ...patch }));
   }
 
   async function validateNow() {
@@ -206,7 +190,7 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold">Settings</h1>
           <p className="text-sm text-gray-500">Configure your restaurant profile and reservation operations.</p>
         </div>
-        {activeTab !== "license" && (
+        {activeTab !== "license" && activeTab !== "restaurant" && (
           <button
             onClick={saveChanges}
             disabled={saving}
@@ -235,92 +219,7 @@ export default function SettingsPage() {
       </div>
 
       {activeTab === "restaurant" && (
-        <div className="space-y-6">
-          <Section title="Identity">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Restaurant Name" value={settings.restaurantName || ""} onChange={(v) => setField("restaurantName", v)} />
-              <Field label="Slug" value={settings.slug || "reef"} onChange={(v) => setField("slug", v)} placeholder="reef" />
-              <Field label="Tagline" value={settings.tagline || ""} onChange={(v) => setField("tagline", v)} />
-            </div>
-            <div className="mt-4">
-              <Label>Description</Label>
-              <textarea
-                value={settings.description || ""}
-                onChange={(event) => setField("description", event.target.value)}
-                rows={3}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              />
-            </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Accent Preset</Label>
-                <select
-                  value={ACCENT_PRESETS.some((preset) => preset.value.toLowerCase() === (settings.accentColor || "").toLowerCase()) ? settings.accentColor : "custom"}
-                  onChange={(event) => {
-                    if (event.target.value !== "custom") setField("accentColor", event.target.value);
-                  }}
-                  className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                >
-                  {ACCENT_PRESETS.map((preset) => (
-                    <option key={preset.value} value={preset.value}>
-                      {preset.label} ({preset.value})
-                    </option>
-                  ))}
-                  <option value="custom">Custom</option>
-                </select>
-              </div>
-              <Field label="Custom Accent Hex" value={settings.accentColor || "#1e3a5f"} onChange={(v) => setField("accentColor", v)} />
-            </div>
-            <div className="mt-4">
-              <Field
-                label="Announcement Banner"
-                value={settings.announcementText || ""}
-                onChange={(v) => setField("announcementText", v)}
-                placeholder="Leave blank to hide"
-              />
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <FileUpload
-                accept="image"
-                category="hero"
-                label="Hero Image"
-                hint="Recommended: 1920x1080 JPG."
-                currentUrl={settings.heroImageUrl || ""}
-                onUpload={(url) => setField("heroImageUrl", url)}
-                onRemove={() => removeUploadedAsset("heroImageUrl", "hero")}
-              />
-              <FileUpload
-                accept="image"
-                category="logo"
-                label="Logo"
-                hint="Recommended: 200x60 PNG or JPG."
-                currentUrl={settings.logoUrl || ""}
-                onUpload={(url) => setField("logoUrl", url)}
-                onRemove={() => removeUploadedAsset("logoUrl", "logo")}
-              />
-              <FileUpload
-                accept="image"
-                category="favicon"
-                label="Favicon"
-                hint="Recommended: 32x32 PNG."
-                currentUrl={settings.faviconUrl || ""}
-                onUpload={(url) => setField("faviconUrl", url)}
-                onRemove={() => removeUploadedAsset("faviconUrl", "favicon")}
-              />
-            </div>
-          </Section>
-
-          <Section title="Contact">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Phone" value={settings.phone || ""} onChange={(v) => setField("phone", v)} />
-              <Field label="Public Email" value={settings.contactEmail || ""} onChange={(v) => setField("contactEmail", v)} />
-              <Field label="Address" value={settings.address || ""} onChange={(v) => setField("address", v)} />
-              <Field label="Instagram URL" value={settings.socialInstagram || ""} onChange={(v) => setField("socialInstagram", v)} />
-              <Field label="Facebook URL" value={settings.socialFacebook || ""} onChange={(v) => setField("socialFacebook", v)} />
-            </div>
-          </Section>
-        </div>
+        <LandingBuilder settings={settings} onSavePartial={savePartial} />
       )}
 
       {activeTab === "reservations" && (

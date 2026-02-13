@@ -28,6 +28,7 @@ interface MenuSectionProps {
   categories: MenuCategoryView[];
   menuFiles: MenuFileView[];
   accentColor: string;
+  showPreview?: boolean;
 }
 
 function formatMoney(cents: number): string {
@@ -40,7 +41,7 @@ function formatDate(value: string): string {
   return date.toLocaleDateString();
 }
 
-export function MenuSection({ categories, menuFiles, accentColor }: MenuSectionProps) {
+export function MenuSection({ categories, menuFiles, accentColor, showPreview = true }: MenuSectionProps) {
   const usingUploads = menuFiles.length > 0;
 
   const firstCategory = categories[0]?.id ?? null;
@@ -65,7 +66,18 @@ export function MenuSection({ categories, menuFiles, accentColor }: MenuSectionP
         </Link>
       </div>
 
-      {usingUploads ? (
+      {!showPreview ? (
+        <div className="mt-8 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-600">Our latest menus are available on the full menu page.</p>
+          <Link
+            href="/menu"
+            className="mt-3 inline-flex h-10 items-center rounded-lg px-3 text-sm font-medium text-white"
+            style={{ backgroundColor: accentColor }}
+          >
+            View Full Menu
+          </Link>
+        </div>
+      ) : usingUploads ? (
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {menuFiles.slice(0, 6).map((file) => (
             <article key={file.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">

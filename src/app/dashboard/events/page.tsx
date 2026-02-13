@@ -110,14 +110,10 @@ export default function EventsDashboardPage() {
   useEffect(() => {
     Promise.all([
       fetch("/api/settings").then(r => r.json()),
-      fetch("/api/auth/me").then(r => (r.ok ? r.json() : null)).catch(() => null),
       loadEvents(),
     ])
-      .then(([settings, session]) => {
-        const key = String(settings.license_events || "").toUpperCase();
-        const hasKey = /^RS-EVT-[A-Z0-9]{8}$/.test(key);
-        const isAdmin = session?.role === "admin" || session?.role === "superadmin";
-        setLicensed(hasKey || isAdmin);
+      .then(([settings]) => {
+        setLicensed(settings.feature_event_ticketing === "true");
       })
       .finally(() => setLoading(false));
   }, []);
@@ -289,8 +285,7 @@ export default function EventsDashboardPage() {
       <div className="max-w-3xl">
         <h1 className="text-2xl font-bold mb-4">Events</h1>
         <div className="bg-white rounded-xl shadow p-6">
-          <p className="text-gray-600 mb-4">Event Ticketing is a paid add-on.</p>
-          <a href="/#pricing" className="inline-flex items-center h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">Upgrade to Unlock</a>
+          <p className="text-gray-600">Feature not available for your current plan. Contact support to enable Event Ticketing.</p>
         </div>
       </div>
     );

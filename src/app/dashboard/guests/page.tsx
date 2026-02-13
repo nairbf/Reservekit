@@ -38,15 +38,10 @@ export default function GuestsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/settings").then(r => r.json()),
-      fetch("/api/auth/me").then(r => (r.ok ? r.json() : null)).catch(() => null),
-    ])
-      .then(([s, session]) => {
-        const key = String(s.license_guesthistory || "").toUpperCase();
-        const hasKey = /^RS-GST-[A-Z0-9]{8}$/.test(key);
-        const isAdmin = session?.role === "admin";
-        setLicenseOk(hasKey || isAdmin);
+    fetch("/api/settings")
+      .then(r => r.json())
+      .then((s) => {
+        setLicenseOk(s.feature_guest_history === "true");
       })
       .catch(() => setLicenseOk(false));
   }, []);
@@ -82,8 +77,7 @@ export default function GuestsPage() {
       <div className="max-w-3xl">
         <h1 className="text-2xl font-bold mb-4">Guest History</h1>
         <div className="bg-white rounded-xl shadow p-6">
-          <p className="text-gray-600 mb-4">Guest History is a paid add-on.</p>
-          <Link href="/#pricing" className="inline-flex items-center h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">Upgrade to Unlock</Link>
+          <p className="text-gray-600">Feature not available for your current plan. Contact support to enable Guest History.</p>
         </div>
       </div>
     );

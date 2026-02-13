@@ -22,10 +22,39 @@ function Card({ label, value, color }: { label: string; value: string | number; 
 
 export default function ReportsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [featureEnabled, setFeatureEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("/api/reports/stats").then(r => r.json()).then(setStats);
+    fetch("/api/settings")
+      .then(r => r.json())
+      .then(data => {
+        const enabled = data.feature_reporting === "true";
+        setFeatureEnabled(enabled);
+        if (!enabled) return null;
+        return fetch("/api/reports/stats").then(r => r.json()).then(setStats);
+      })
+      .catch(() => setFeatureEnabled(false));
   }, []);
+
+  if (featureEnabled === null) {
+    return (
+      <div className="flex items-center gap-3 text-gray-500">
+        <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+        Loading...
+      </div>
+    );
+  }
+
+  if (!featureEnabled) {
+    return (
+      <div className="max-w-3xl">
+        <h1 className="text-2xl font-bold mb-4">Reports</h1>
+        <div className="bg-white rounded-xl shadow p-6">
+          <p className="text-gray-600">Feature not available for your current plan. Contact support to enable Reporting Dashboard.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!stats) {
     return (

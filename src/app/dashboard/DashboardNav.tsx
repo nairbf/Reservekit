@@ -10,18 +10,28 @@ const NAV = [
   { href: "/dashboard/kitchen", label: "Kitchen", icon: "KT" },
   { href: "/dashboard/waitlist", label: "Waitlist", icon: "WL" },
   { href: "/dashboard/tables", label: "Tables", icon: "TB" },
-  { href: "/dashboard/floorplan", label: "Floor Plan", icon: "FP" },
+  { href: "/dashboard/floorplan", label: "Floor Plan", icon: "FP", feature: "floorplan" },
   { href: "/dashboard/schedule", label: "Schedule", icon: "SC" },
-  { href: "/dashboard/reports", label: "Reports", icon: "RP" },
-  { href: "/dashboard/events", label: "Events", icon: "EV" },
+  { href: "/dashboard/reports", label: "Reports", icon: "RP", feature: "reporting" },
+  { href: "/dashboard/events", label: "Events", icon: "EV", feature: "event_ticketing" },
   { href: "/dashboard/menu", label: "Menu", icon: "MN" },
-  { href: "/dashboard/guests", label: "Guests", icon: "GS" },
+  { href: "/dashboard/guests", label: "Guests", icon: "GS", feature: "guest_history" },
   { href: "/dashboard/settings", label: "Settings", icon: "ST" },
 ];
 
 const SIDEBAR_STORAGE_KEY = "dashboardSidebarCollapsed";
 
-export default function DashboardNav({ email, canAccessAdmin }: { email: string; canAccessAdmin: boolean }) {
+type DashboardFeatures = Record<string, boolean>;
+
+export default function DashboardNav({
+  email,
+  canAccessAdmin,
+  features,
+}: {
+  email: string;
+  canAccessAdmin: boolean;
+  features: DashboardFeatures;
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [restaurantName, setRestaurantName] = useState("ReserveSit");
@@ -30,7 +40,11 @@ export default function DashboardNav({ email, canAccessAdmin }: { email: string;
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const nav = canAccessAdmin ? [...NAV, { href: "/dashboard/admin", label: "Admin", icon: "AD" }] : NAV;
+  const filteredNav = NAV.filter((item) => {
+    if (!("feature" in item) || !item.feature) return true;
+    return features[item.feature as keyof DashboardFeatures] === true;
+  });
+  const nav = canAccessAdmin ? [...filteredNav, { href: "/dashboard/admin", label: "Admin", icon: "AD" }] : filteredNav;
   const inSetupPreview = searchParams.get("fromSetup") === "1";
 
   useEffect(() => {

@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 interface TableItem {
@@ -118,15 +117,10 @@ export default function FloorPlanPage() {
   useEffect(() => { tablesRef.current = tables; }, [tables]);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/settings").then(r => r.json()),
-      fetch("/api/auth/me").then(r => (r.ok ? r.json() : null)).catch(() => null),
-    ])
-      .then(([s, session]) => {
-        const key = String(s.license_floorplan || "").toUpperCase();
-        const hasKey = /^RS-FLR-[A-Z0-9]{8}$/.test(key);
-        const isAdmin = session?.role === "admin";
-        setLicenseOk(hasKey || isAdmin);
+    fetch("/api/settings")
+      .then(r => r.json())
+      .then((s) => {
+        setLicenseOk(s.feature_floorplan === "true");
         if (s.restaurantName) setRestaurantName(s.restaurantName);
       })
       .catch(() => setLicenseOk(false));
@@ -358,8 +352,7 @@ export default function FloorPlanPage() {
       <div className={`max-w-3xl ${showTourHighlight ? "rounded-2xl ring-2 ring-blue-300 p-2" : ""}`}>
         <h1 className="text-2xl font-bold mb-4">Floor Plan</h1>
         <div className="bg-white rounded-xl shadow p-6">
-          <p className="text-gray-600 mb-4">Visual Floor Plan is a paid add-on.</p>
-          <Link href="/#pricing" className="inline-flex items-center justify-center h-11 px-4 rounded bg-blue-600 text-white text-sm transition-all duration-200">Purchase Add-On</Link>
+          <p className="text-gray-600">Feature not available for your current plan. Contact support to enable Visual Floor Plan.</p>
         </div>
       </div>
     );

@@ -24,7 +24,7 @@ interface SessionToken {
 
 let cachedJwtSecret: string | null = null;
 
-function getJwtSecret() {
+export function getJwtSecret() {
   if (cachedJwtSecret) return cachedJwtSecret;
 
   const configured = process.env.JWT_SECRET?.trim();

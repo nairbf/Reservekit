@@ -24,6 +24,16 @@ interface MenuCategory {
   items: MenuItem[];
 }
 
+interface UploadedMenuFile {
+  id: string;
+  label: string;
+  filename: string;
+  url: string;
+  type: "pdf" | "image";
+  order: number;
+  uploadedAt: string;
+}
+
 function formatCents(cents: number): string {
   return `$${(Math.max(0, Math.trunc(cents)) / 100).toFixed(2)}`;
 }
@@ -43,8 +53,12 @@ export default function MenuPage() {
   const [licensed, setLicensed] = useState<boolean | null>(null);
   const [expressEnabled, setExpressEnabled] = useState(false);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [menuFiles, setMenuFiles] = useState<UploadedMenuFile[]>([]);
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadLabel, setUploadLabel] = useState("");
+  const [uploadingMenuFile, setUploadingMenuFile] = useState(false);
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryType, setNewCategoryType] = useState<CategoryType>("starter");
@@ -57,10 +71,11 @@ export default function MenuPage() {
   }>>({});
 
   async function load() {
-    const [settingsRes, meRes, categoriesRes] = await Promise.all([
+    const [settingsRes, meRes, categoriesRes, menuFilesRes] = await Promise.all([
       fetch("/api/settings"),
       fetch("/api/auth/me").catch(() => null),
       fetch("/api/menu/categories"),
+      fetch("/api/menu/upload"),
     ]);
 
     const settings = await settingsRes.json();
@@ -77,6 +92,13 @@ export default function MenuPage() {
       setCategories(Array.isArray(list) ? list : []);
     } else {
       setCategories([]);
+    }
+
+    if (menuFilesRes.ok) {
+      const payload = await menuFilesRes.json();
+      setMenuFiles(Array.isArray(payload?.files) ? payload.files as UploadedMenuFile[] : []);
+    } else {
+      setMenuFiles([]);
     }
     setLoading(false);
   }
@@ -106,6 +128,89 @@ export default function MenuPage() {
     () => filtered.filter(category => category.type === "drink"),
     [filtered],
   );
+
+  async function uploadMenuFile() {
+    if (!uploadFile) {
+      setMessage("Choose a PDF or image file first.");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("file", uploadFile);
+    form.append("label", uploadLabel.trim() || "Menu");
+
+    setUploadingMenuFile(true);
+    setMessage("");
+    const res = await fetch("/api/menu/upload", {
+      method: "POST",
+      body: form,
+    });
+    const data = await res.json().catch(() => ({}));
+    setUploadingMenuFile(false);
+
+    if (!res.ok) {
+      setMessage(data.error || "Could not upload menu file.");
+      return;
+    }
+
+    setUploadFile(null);
+    setUploadLabel("");
+    setMessage("Menu file uploaded.");
+    await load();
+  }
+
+  async function saveMenuFileOrder(next: UploadedMenuFile[]) {
+    const payload = next.map((file, index) => ({
+      id: file.id,
+      label: file.label,
+      order: index,
+    }));
+    const res = await fetch("/api/menu/upload", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files: payload }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setMessage(data.error || "Could not reorder menu files.");
+      return;
+    }
+    await load();
+  }
+
+  async function moveMenuFile(index: number, direction: "up" | "down") {
+    const nextIndex = direction === "up" ? index - 1 : index + 1;
+    if (nextIndex < 0 || nextIndex >= menuFiles.length) return;
+    const next = [...menuFiles];
+    const [entry] = next.splice(index, 1);
+    next.splice(nextIndex, 0, entry);
+    setMenuFiles(next);
+    await saveMenuFileOrder(next);
+  }
+
+  async function renameMenuFile(file: UploadedMenuFile) {
+    const nextLabel = prompt("Menu label:", file.label)?.trim();
+    if (!nextLabel) return;
+    const next = menuFiles.map((entry) => (entry.id === file.id ? { ...entry, label: nextLabel } : entry));
+    setMenuFiles(next);
+    await saveMenuFileOrder(next);
+  }
+
+  async function deleteMenuFile(file: UploadedMenuFile) {
+    if (!confirm(`Delete "${file.label}"?`)) return;
+    const res = await fetch("/api/menu/upload", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: file.id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(data.error || "Could not delete menu file.");
+      return;
+    }
+    setMessage("Menu file deleted.");
+    await load();
+  }
 
   async function createCategory() {
     if (!newCategoryName.trim()) return;
@@ -420,24 +525,12 @@ export default function MenuPage() {
     );
   }
 
-  if (licensed === false) {
-    return (
-      <div className="max-w-3xl">
-        <h1 className="text-2xl font-bold mb-4">Menu</h1>
-        <div className="bg-white rounded-xl shadow p-6">
-          <p className="text-gray-600 mb-4">Express Dining is a paid add-on.</p>
-          <a href="/#pricing" className="inline-flex items-center h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">Upgrade to Unlock</a>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold">Menu Manager</h1>
-          <p className="text-sm text-gray-500">Build categories and items for starters & drinks pre-ordering.</p>
+          <p className="text-sm text-gray-500">Upload real menu files, and optionally maintain a digital menu builder for pre-ordering.</p>
         </div>
         <input
           value={search}
@@ -447,55 +540,132 @@ export default function MenuPage() {
         />
       </div>
 
-      {!expressEnabled && (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
-          Express Dining is off. Enable it in Settings to let guests pre-order.
+      <section className="bg-white rounded-xl shadow p-4 sm:p-6 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-bold">Menu Files</h2>
+            <p className="text-sm text-gray-500">Upload PDFs or photos exactly as your printed menus appear.</p>
+          </div>
+          <a href="/menu" target="_blank" rel="noreferrer" className="text-sm text-blue-700 hover:underline">
+            Preview Public Menu →
+          </a>
         </div>
-      )}
 
-      <div className="bg-white rounded-xl shadow p-4">
-        <div className="grid sm:grid-cols-[1fr_180px_auto] gap-2">
+        <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-2">
           <input
-            value={newCategoryName}
-            onChange={e => setNewCategoryName(e.target.value)}
-            placeholder="New category name"
+            value={uploadLabel}
+            onChange={(event) => setUploadLabel(event.target.value)}
+            placeholder="Label (e.g. Dinner Menu)"
             className="h-11 border rounded px-3"
           />
-          <select
-            value={newCategoryType}
-            onChange={e => setNewCategoryType((e.target.value === "drink" ? "drink" : "starter"))}
-            className="h-11 border rounded px-3"
+          <input
+            type="file"
+            accept="application/pdf,image/jpeg,image/png,image/webp,image/gif"
+            onChange={(event) => setUploadFile(event.target.files?.[0] || null)}
+            className="h-11 border rounded px-3 py-2 text-sm"
+          />
+          <button
+            onClick={uploadMenuFile}
+            disabled={uploadingMenuFile}
+            className="h-11 px-4 rounded bg-blue-600 text-white text-sm font-medium disabled:opacity-60"
           >
-            <option value="starter">Starter section</option>
-            <option value="drink">Drink section</option>
-          </select>
-          <button onClick={createCategory} className="h-11 px-4 rounded bg-blue-600 text-white text-sm font-medium">Add Category</button>
+            {uploadingMenuFile ? "Uploading..." : "Upload Menu"}
+          </button>
         </div>
-      </div>
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🍽</span>
-          <h2 className="text-lg font-bold">Starters & Appetizers</h2>
-        </div>
-        {starterCategories.length === 0 ? (
-          <div className="bg-white rounded-xl shadow p-6 text-sm text-gray-500">No starter categories yet.</div>
+        {menuFiles.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500">
+            No menu files uploaded yet.
+          </div>
         ) : (
-          starterCategories.map(renderCategoryCard)
+          <div className="grid md:grid-cols-2 gap-3">
+            {menuFiles.map((file, index) => (
+              <div key={file.id} className="rounded-lg border border-gray-200 p-3 bg-gray-50">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <div className="font-medium">{file.label}</div>
+                    <div className="text-xs text-gray-500">{file.type.toUpperCase()} · {new Date(file.uploadedAt).toLocaleDateString()}</div>
+                  </div>
+                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${file.type === "pdf" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
+                    {file.type.toUpperCase()}
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={() => moveMenuFile(index, "up")} className="h-8 px-2 rounded border border-gray-200 text-xs">↑</button>
+                  <button onClick={() => moveMenuFile(index, "down")} className="h-8 px-2 rounded border border-gray-200 text-xs">↓</button>
+                  <button onClick={() => renameMenuFile(file)} className="h-8 px-2 rounded border border-gray-200 text-xs">Rename</button>
+                  <a href={file.url} target="_blank" rel="noreferrer" className="h-8 px-2 rounded border border-gray-200 text-xs inline-flex items-center">Open</a>
+                  <button onClick={() => deleteMenuFile(file)} className="h-8 px-2 rounded border border-red-200 text-red-700 text-xs">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </section>
 
-      <section className="space-y-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">🥂</span>
-          <h2 className="text-lg font-bold">Drinks & Cocktails</h2>
+      {licensed === false ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
+          Digital Menu Builder is part of the Express Dining add-on. Upload-based menu files above still work for public menu display.
         </div>
-        {drinkCategories.length === 0 ? (
-          <div className="bg-white rounded-xl shadow p-6 text-sm text-gray-500">No drink categories yet.</div>
-        ) : (
-          drinkCategories.map(renderCategoryCard)
-        )}
-      </section>
+      ) : null}
+
+      {licensed !== false && !expressEnabled ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
+          Express Dining is off. Enable it in Settings to let guests pre-order from the Digital Menu Builder.
+        </div>
+      ) : null}
+
+      {licensed !== false ? (
+        <>
+          <section className="bg-white rounded-xl shadow p-4">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2 className="text-lg font-bold">Digital Menu Builder</h2>
+              <span className="text-xs text-gray-500">For Express Dining pre-orders</span>
+            </div>
+            <div className="grid sm:grid-cols-[1fr_180px_auto] gap-2">
+              <input
+                value={newCategoryName}
+                onChange={e => setNewCategoryName(e.target.value)}
+                placeholder="New category name"
+                className="h-11 border rounded px-3"
+              />
+              <select
+                value={newCategoryType}
+                onChange={e => setNewCategoryType((e.target.value === "drink" ? "drink" : "starter"))}
+                className="h-11 border rounded px-3"
+              >
+                <option value="starter">Starter section</option>
+                <option value="drink">Drink section</option>
+              </select>
+              <button onClick={createCategory} className="h-11 px-4 rounded bg-blue-600 text-white text-sm font-medium">Add Category</button>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🍽</span>
+              <h2 className="text-lg font-bold">Starters & Appetizers</h2>
+            </div>
+            {starterCategories.length === 0 ? (
+              <div className="bg-white rounded-xl shadow p-6 text-sm text-gray-500">No starter categories yet.</div>
+            ) : (
+              starterCategories.map(renderCategoryCard)
+            )}
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🥂</span>
+              <h2 className="text-lg font-bold">Drinks & Cocktails</h2>
+            </div>
+            {drinkCategories.length === 0 ? (
+              <div className="bg-white rounded-xl shadow p-6 text-sm text-gray-500">No drink categories yet.</div>
+            ) : (
+              drinkCategories.map(renderCategoryCard)
+            )}
+          </section>
+        </>
+      ) : null}
 
       {message && (
         <div className="text-sm text-gray-700 bg-white rounded-lg border px-3 py-2">{message}</div>
@@ -503,4 +673,3 @@ export default function MenuPage() {
     </div>
   );
 }
-

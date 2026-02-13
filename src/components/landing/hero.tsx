@@ -7,7 +7,9 @@ interface HeroProps {
   tagline: string;
   announcementText: string;
   heroImageUrl: string;
+  logoUrl?: string;
   reserveHref: string;
+  menuHref: string;
   accentColor: string;
 }
 
@@ -16,7 +18,9 @@ export function Hero({
   tagline,
   announcementText,
   heroImageUrl,
+  logoUrl,
   reserveHref,
+  menuHref,
   accentColor,
 }: HeroProps) {
   return (
@@ -39,6 +43,18 @@ export function Hero({
       <div className="relative mx-auto flex min-h-[72vh] max-w-6xl flex-col justify-center px-6 py-16 text-white sm:px-8 lg:px-10">
         <AnnouncementBanner text={announcementText} />
 
+        {logoUrl ? (
+          <div className="mt-4">
+            <Image
+              src={logoUrl}
+              alt={`${restaurantName} logo`}
+              width={220}
+              height={80}
+              className="h-14 w-auto object-contain"
+            />
+          </div>
+        ) : null}
+
         <h1 className="mt-6 max-w-3xl text-4xl font-semibold leading-tight tracking-tight font-serif sm:text-5xl lg:text-6xl">
           {restaurantName}
         </h1>
@@ -55,12 +71,12 @@ export function Hero({
           >
             Reserve a Table
           </Link>
-          <a
-            href="#menu"
+          <Link
+            href={menuHref}
             className="inline-flex min-h-11 items-center justify-center rounded-md border border-white/35 bg-white/10 px-6 text-sm font-semibold text-white transition-all duration-200 hover:bg-white/20"
           >
             View Menu
-          </a>
+          </Link>
         </div>
       </div>
     </section>

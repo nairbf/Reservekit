@@ -26,6 +26,7 @@ const PUBLIC_API_EXACT = new Set([
 
 function isPublicApi(pathname: string): boolean {
   if (PUBLIC_API_EXACT.has(pathname)) return true;
+  if (pathname.startsWith("/api/uploads/serve/")) return true;
   if (pathname.startsWith("/api/events")) return true;
   if (pathname.startsWith("/api/preorder/") && pathname !== "/api/preorder/confirm") return true;
   if (pathname.startsWith("/api/webhooks/")) return true;

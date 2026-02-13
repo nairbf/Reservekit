@@ -1,5 +1,8 @@
+import Image from "next/image";
+
 interface ContactFooterProps {
   restaurantName: string;
+  logoUrl?: string;
   phone: string;
   email: string;
   address: string;
@@ -23,6 +26,7 @@ function SocialLink({ href, label }: { href: string; label: string }) {
 
 export function ContactFooter({
   restaurantName,
+  logoUrl,
   phone,
   email,
   address,
@@ -33,7 +37,16 @@ export function ContactFooter({
     <footer className="bg-slate-900 text-slate-100">
       <div className="mx-auto grid max-w-6xl gap-8 px-6 py-12 sm:px-8 lg:grid-cols-3 lg:px-10">
         <div>
-          <h3 className="text-xl font-semibold font-serif">{restaurantName}</h3>
+          {logoUrl ? (
+            <Image
+              src={logoUrl}
+              alt={`${restaurantName} logo`}
+              width={180}
+              height={60}
+              className="h-10 w-auto object-contain"
+            />
+          ) : null}
+          <h3 className={`text-xl font-semibold font-serif ${logoUrl ? "mt-3" : ""}`}>{restaurantName}</h3>
           <p className="mt-3 text-sm text-slate-300">
             Join us for seasonal cuisine, thoughtful service, and a dining room built for memorable nights.
           </p>

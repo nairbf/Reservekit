@@ -5,6 +5,7 @@ import { HoursSection } from "@/components/landing/hours-section";
 import { MenuSection } from "@/components/landing/menu-section";
 import { Reveal } from "@/components/landing/reveal";
 import { prisma } from "@/lib/db";
+import { getMenuFiles } from "@/lib/menu-files";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +63,7 @@ function parseWeeklyHours(settings: SettingsMap) {
 }
 
 export default async function HomePage() {
-  const [settingRows, categoriesRaw, eventsRaw] = await Promise.all([
+  const [settingRows, menuFiles, categoriesRaw, eventsRaw] = await Promise.all([
     prisma.setting.findMany({
       where: {
         NOT: [
@@ -72,6 +73,7 @@ export default async function HomePage() {
         ],
       },
     }),
+    getMenuFiles(),
     prisma.menuCategory.findMany({
       where: { isActive: true },
       include: {
@@ -96,11 +98,13 @@ export default async function HomePage() {
   const restaurantName = settings.restaurantName || "The Reef Restaurant";
   const slug = settings.slug || "reef";
   const reserveHref = `/reserve/${encodeURIComponent(slug)}`;
+  const menuHref = "/menu";
   const accentColor = isHexColor(settings.accentColor || "") ? settings.accentColor : "#1e3a5f";
   const tagline = settings.tagline || "Modern coastal cuisine in the heart of downtown";
   const description = settings.description || "At Reef, we celebrate the ocean's bounty with locally sourced ingredients and thoughtful service in a warm, modern dining room.";
   const announcementText = settings.announcementText || "";
   const heroImageUrl = settings.heroImageUrl || "";
+  const logoUrl = settings.logoUrl || "";
   const address = settings.address || "";
   const phone = settings.phone || "";
   const contactEmail = settings.contactEmail || "";
@@ -117,7 +121,9 @@ export default async function HomePage() {
         tagline={tagline}
         announcementText={announcementText}
         heroImageUrl={heroImageUrl}
+        logoUrl={logoUrl}
         reserveHref={reserveHref}
+        menuHref={menuHref}
         accentColor={accentColor}
       />
 
@@ -129,9 +135,9 @@ export default async function HomePage() {
         </section>
       </Reveal>
 
-      {categories.length > 0 ? (
+      {menuFiles.length > 0 || categories.length > 0 ? (
         <Reveal>
-          <MenuSection categories={categories} accentColor={accentColor} />
+          <MenuSection categories={categories} menuFiles={menuFiles} accentColor={accentColor} />
         </Reveal>
       ) : null}
 
@@ -147,6 +153,7 @@ export default async function HomePage() {
 
       <ContactFooter
         restaurantName={restaurantName}
+        logoUrl={logoUrl}
         phone={phone}
         email={contactEmail}
         address={address}

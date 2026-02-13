@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import FileUpload from "@/components/file-upload";
 
 type SettingsTab = "restaurant" | "reservations" | "notifications" | "license";
 
@@ -90,6 +91,14 @@ function formatDateTime(value: string) {
   return dt.toLocaleString();
 }
 
+function extractUploadedFilename(url: string, category: string): string | null {
+  const prefix = `/api/uploads/serve/${category}/`;
+  if (!String(url || "").startsWith(prefix)) return null;
+  const raw = String(url).slice(prefix.length).split("?")[0];
+  if (!raw) return null;
+  return decodeURIComponent(raw);
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("restaurant");
   const [settings, setSettings] = useState<SettingsMap>({});
@@ -117,6 +126,15 @@ export default function SettingsPage() {
   function setField(key: string, value: string) {
     setSettings((previous) => ({ ...previous, [key]: value }));
     setSaved(false);
+  }
+
+  async function removeUploadedAsset(settingKey: string, category: string) {
+    const currentUrl = settings[settingKey] || "";
+    const filename = extractUploadedFilename(currentUrl, category);
+    if (filename) {
+      await fetch(`/api/uploads/${encodeURIComponent(filename)}?category=${encodeURIComponent(category)}`, { method: "DELETE" }).catch(() => {});
+    }
+    setField(settingKey, "");
   }
 
   async function saveChanges() {
@@ -223,7 +241,6 @@ export default function SettingsPage() {
               <Field label="Restaurant Name" value={settings.restaurantName || ""} onChange={(v) => setField("restaurantName", v)} />
               <Field label="Slug" value={settings.slug || "reef"} onChange={(v) => setField("slug", v)} placeholder="reef" />
               <Field label="Tagline" value={settings.tagline || ""} onChange={(v) => setField("tagline", v)} />
-              <Field label="Hero Image URL" value={settings.heroImageUrl || ""} onChange={(v) => setField("heroImageUrl", v)} />
             </div>
             <div className="mt-4">
               <Label>Description</Label>
@@ -260,6 +277,36 @@ export default function SettingsPage() {
                 value={settings.announcementText || ""}
                 onChange={(v) => setField("announcementText", v)}
                 placeholder="Leave blank to hide"
+              />
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              <FileUpload
+                accept="image"
+                category="hero"
+                label="Hero Image"
+                hint="Recommended: 1920x1080 JPG."
+                currentUrl={settings.heroImageUrl || ""}
+                onUpload={(url) => setField("heroImageUrl", url)}
+                onRemove={() => removeUploadedAsset("heroImageUrl", "hero")}
+              />
+              <FileUpload
+                accept="image"
+                category="logo"
+                label="Logo"
+                hint="Recommended: 200x60 PNG or JPG."
+                currentUrl={settings.logoUrl || ""}
+                onUpload={(url) => setField("logoUrl", url)}
+                onRemove={() => removeUploadedAsset("logoUrl", "logo")}
+              />
+              <FileUpload
+                accept="image"
+                category="favicon"
+                label="Favicon"
+                hint="Recommended: 32x32 PNG."
+                currentUrl={settings.faviconUrl || ""}
+                onUpload={(url) => setField("faviconUrl", url)}
+                onRemove={() => removeUploadedAsset("faviconUrl", "favicon")}
               />
             </div>
           </Section>

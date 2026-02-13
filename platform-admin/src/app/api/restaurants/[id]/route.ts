@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { LicenseEventType, RestaurantPlan, RestaurantStatus } from "@/generated/prisma/client";
+import { LicenseEventType, RestaurantPlan, RestaurantStatus, HostingStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { requireSessionFromRequest } from "@/lib/auth";
 import { isAdminOrSuper, isSupport } from "@/lib/rbac";
 import { badRequest, forbidden, unauthorized } from "@/lib/api";
+import { createLicenseEvent } from "@/lib/license-events";
 
 function parsePlan(value: unknown): RestaurantPlan | null {
   const v = String(value || "");
@@ -17,17 +18,15 @@ function parseStatus(value: unknown): RestaurantStatus | null {
   return null;
 }
 
-function eventFromStatusChange(previous: RestaurantStatus, next: RestaurantStatus): LicenseEventType | null {
-  if (previous === next) return null;
-  if (next === "SUSPENDED") return LicenseEventType.SUSPENDED;
-  if (next === "CANCELLED") return LicenseEventType.CANCELLED;
-  if (next === "ACTIVE" && previous !== "ACTIVE") return LicenseEventType.REACTIVATED;
+function parseHostingStatus(value: unknown): HostingStatus | null {
+  const v = String(value || "");
+  if (v === "ACTIVE" || v === "SUSPENDED" || v === "SELF_HOSTED") return v;
   return null;
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    requireSessionFromRequest(_req);
+    requireSessionFromRequest(req);
   } catch {
     return unauthorized();
   }
@@ -64,10 +63,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const current = await prisma.restaurant.findUnique({ where: { id } });
   if (!current) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = await req.json();
+  const body = (await req.json()) as Record<string, unknown>;
 
   if (isSupport(session.role)) {
-    const notes = body?.notes !== undefined ? String(body.notes || "") : current.notes;
+    const notes = body.notes !== undefined ? String(body.notes || "") : current.notes;
     const updated = await prisma.restaurant.update({
       where: { id },
       data: { notes },
@@ -77,11 +76,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (!isAdminOrSuper(session.role)) return forbidden();
 
-  const nextPlan = body?.plan !== undefined ? parsePlan(body.plan) : null;
-  const nextStatus = body?.status !== undefined ? parseStatus(body.status) : null;
+  const nextPlan = body.plan !== undefined ? parsePlan(body.plan) : null;
+  const nextStatus = body.status !== undefined ? parseStatus(body.status) : null;
+  const nextHostingStatus = body.hostingStatus !== undefined ? parseHostingStatus(body.hostingStatus) : null;
 
-  if (body?.plan !== undefined && !nextPlan) return badRequest("Invalid plan");
-  if (body?.status !== undefined && !nextStatus) return badRequest("Invalid status");
+  if (body.plan !== undefined && !nextPlan) return badRequest("Invalid plan");
+  if (body.status !== undefined && !nextStatus) return badRequest("Invalid status");
+  if (body.hostingStatus !== undefined && !nextHostingStatus) return badRequest("Invalid hostingStatus");
 
   let trialEndsAtValue: Date | null | undefined = undefined;
   if (nextStatus) {
@@ -95,40 +96,59 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const updated = await prisma.restaurant.update({
     where: { id },
     data: {
-      name: body?.name !== undefined ? String(body.name || "").trim() : undefined,
-      adminEmail: body?.adminEmail !== undefined ? String(body.adminEmail || "").trim().toLowerCase() : undefined,
+      name: body.name !== undefined ? String(body.name || "").trim() : undefined,
+      domain: body.domain !== undefined ? String(body.domain || "").trim() : undefined,
+      adminEmail: body.adminEmail !== undefined ? String(body.adminEmail || "").trim().toLowerCase() : undefined,
+      ownerName: body.ownerName !== undefined ? String(body.ownerName || "").trim() : undefined,
+      ownerEmail: body.ownerEmail !== undefined ? String(body.ownerEmail || "").trim().toLowerCase() : undefined,
+      ownerPhone: body.ownerPhone !== undefined ? String(body.ownerPhone || "").trim() : undefined,
       plan: nextPlan || undefined,
       status: nextStatus || undefined,
-      notes: body?.notes !== undefined ? String(body.notes || "") : undefined,
+      hosted: body.hosted !== undefined ? Boolean(body.hosted) : undefined,
+      hostingStatus: nextHostingStatus || undefined,
+      notes: body.notes !== undefined ? String(body.notes || "") : undefined,
       monthlyHostingActive:
-        body?.monthlyHostingActive !== undefined
+        body.monthlyHostingActive !== undefined
           ? Boolean(body.monthlyHostingActive)
           : undefined,
       trialEndsAt: trialEndsAtValue,
+      port:
+        body.port !== undefined && Number.isFinite(Number(body.port)) && Number(body.port) > 0
+          ? Math.trunc(Number(body.port))
+          : undefined,
+      dbPath: body.dbPath !== undefined ? String(body.dbPath || "") : undefined,
+      licenseExpiry:
+        body.licenseExpiry !== undefined
+          ? (body.licenseExpiry ? new Date(String(body.licenseExpiry)) : null)
+          : undefined,
     },
   });
 
-  if (nextStatus) {
-    const event = eventFromStatusChange(current.status, nextStatus);
-    if (event) {
-      await prisma.licenseEvent.create({
-        data: {
-          restaurantId: id,
-          event,
-          details: `Status changed from ${current.status} to ${nextStatus}`,
-          performedBy: session.email,
-        },
-      });
-    }
+  if (nextStatus && nextStatus !== current.status) {
+    await createLicenseEvent({
+      restaurantId: id,
+      event: LicenseEventType.STATUS_CHANGED,
+      details: `Status changed from ${current.status} to ${nextStatus}`,
+      performedBy: session.email,
+    });
+  }
+
+  if (nextPlan && nextPlan !== current.plan) {
+    await createLicenseEvent({
+      restaurantId: id,
+      event: LicenseEventType.PLAN_CHANGED,
+      details: `Plan changed from ${current.plan} to ${nextPlan}`,
+      performedBy: session.email,
+    });
   }
 
   return NextResponse.json(updated);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = (() => {
     try {
-      return requireSessionFromRequest(_req);
+      return requireSessionFromRequest(req);
     } catch {
       return null;
     }

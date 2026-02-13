@@ -26,6 +26,12 @@ enum RestaurantPlan {
   FULL_SUITE
 }
 
+enum HostingStatus {
+  ACTIVE
+  SUSPENDED
+  SELF_HOSTED
+}
+
 enum LicenseEventType {
   CREATED
   ACTIVATED
@@ -33,6 +39,14 @@ enum LicenseEventType {
   REACTIVATED
   CANCELLED
   KEY_ROTATED
+  LICENSE_CREATED
+  LICENSE_KEY_ROTATED
+  ADDON_ENABLED
+  ADDON_DISABLED
+  PLAN_CHANGED
+  STATUS_CHANGED
+  ADDON_SYNCED
+  ADDON_SYNC_FAILED
 }
 
 enum HealthStatus {
@@ -55,13 +69,25 @@ model Restaurant {
   id                   String           @id @default(cuid())
   slug                 String           @unique
   name                 String
+  domain               String?
   adminEmail           String
-  status               RestaurantStatus
-  plan                 RestaurantPlan
+  status               RestaurantStatus @default(ACTIVE)
+  plan                 RestaurantPlan   @default(CORE)
   port                 Int              @unique
   dbPath               String
-  licenseKey           String           @unique
+  licenseKey           String           @unique @default(uuid())
+  licenseExpiry        DateTime?
   licenseActivatedAt   DateTime?
+  addonSms             Boolean          @default(false)
+  addonFloorPlan       Boolean          @default(false)
+  addonReporting       Boolean          @default(false)
+  addonGuestHistory    Boolean          @default(false)
+  addonEventTicketing  Boolean          @default(false)
+  hosted               Boolean          @default(true)
+  hostingStatus        HostingStatus    @default(ACTIVE)
+  ownerName            String?
+  ownerEmail           String?
+  ownerPhone           String?
   trialEndsAt          DateTime?
   stripeCustomerId     String?
   stripeSubscriptionId String?

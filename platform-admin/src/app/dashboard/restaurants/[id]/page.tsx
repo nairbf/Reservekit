@@ -1,30 +1,58 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import type { LicenseEventType, RestaurantPlan, RestaurantStatus, HealthStatus } from "@/generated/prisma/client";
+import type {
+  HealthStatus,
+  HostingStatus,
+  LicenseEventType,
+  RestaurantPlan,
+  RestaurantStatus,
+} from "@/generated/prisma/client";
 import { useSessionUser } from "@/components/session-provider";
 import { useToast } from "@/components/toast-provider";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { HealthStatusBadge, PlanBadge, RestaurantStatusBadge } from "@/components/status-badge";
+import { HealthStatusBadge, HostingStatusBadge, PlanBadge, RestaurantStatusBadge } from "@/components/status-badge";
+
+const ADDONS = [
+  { key: "addonSms", label: "SMS Notifications", price: "$199" },
+  { key: "addonFloorPlan", label: "Visual Floor Plan", price: "$249" },
+  { key: "addonReporting", label: "Reporting Dashboard", price: "$179" },
+  { key: "addonGuestHistory", label: "Guest History", price: "$179" },
+  { key: "addonEventTicketing", label: "Event Ticketing", price: "$129" },
+] as const;
+
+type AddonKey = (typeof ADDONS)[number]["key"];
+
+type SyncState = "" | "synced" | "failed";
 
 type RestaurantDetail = {
   id: string;
   slug: string;
   name: string;
+  domain: string | null;
   adminEmail: string;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  ownerPhone: string | null;
   status: RestaurantStatus;
   plan: RestaurantPlan;
+  hosted: boolean;
+  hostingStatus: HostingStatus;
   port: number;
   dbPath: string;
   licenseKey: string;
+  licenseExpiry: string | null;
   licenseActivatedAt: string | null;
   trialEndsAt: string | null;
-  stripeCustomerId: string | null;
-  stripeSubscriptionId: string | null;
   monthlyHostingActive: boolean;
   notes: string | null;
+  addonSms: boolean;
+  addonFloorPlan: boolean;
+  addonReporting: boolean;
+  addonGuestHistory: boolean;
+  addonEventTicketing: boolean;
   createdAt: string;
   updatedAt: string;
   healthChecks: Array<{
@@ -42,6 +70,14 @@ type RestaurantDetail = {
   }>;
 };
 
+function isIncludedInPlan(plan: RestaurantPlan, addon: AddonKey) {
+  if (plan === "FULL_SUITE") return true;
+  if (plan === "SERVICE_PRO") {
+    return addon === "addonSms" || addon === "addonFloorPlan" || addon === "addonReporting";
+  }
+  return false;
+}
+
 export default function RestaurantDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -51,21 +87,36 @@ export default function RestaurantDetailPage() {
 
   const [restaurant, setRestaurant] = useState<RestaurantDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [notes, setNotes] = useState("");
-  const [dirtyNotes, setDirtyNotes] = useState(false);
-  const [actionBusy, setActionBusy] = useState("");
-  const [editing, setEditing] = useState({
-    name: "",
-    adminEmail: "",
-    plan: "CORE",
-    status: "TRIAL",
-    monthlyHostingActive: false,
+  const [busy, setBusy] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<Record<AddonKey, SyncState>>({
+    addonSms: "",
+    addonFloorPlan: "",
+    addonReporting: "",
+    addonGuestHistory: "",
+    addonEventTicketing: "",
   });
 
+  const [overview, setOverview] = useState({
+    name: "",
+    domain: "",
+    adminEmail: "",
+    ownerName: "",
+    ownerEmail: "",
+    ownerPhone: "",
+    hosted: true,
+    hostingStatus: "ACTIVE",
+    monthlyHostingActive: true,
+    port: "",
+    dbPath: "",
+  });
+
+  const [notes, setNotes] = useState("");
+  const [planSelection, setPlanSelection] = useState<RestaurantPlan>("CORE");
+
   const canManage = useMemo(() => user.role === "ADMIN" || user.role === "SUPER_ADMIN", [user.role]);
-  const noteTimer = useRef<number | undefined>(undefined);
+  const healthLatest = restaurant?.healthChecks?.[0] || null;
 
   const load = useCallback(async () => {
     setError("");
@@ -77,15 +128,21 @@ export default function RestaurantDetailPage() {
       }
       const payload = (await res.json()) as RestaurantDetail;
       setRestaurant(payload);
-      setNotes(payload.notes || "");
-      setEditing({
+      setPlanSelection(payload.plan);
+      setOverview({
         name: payload.name,
+        domain: payload.domain || `${payload.slug}.reservesit.com`,
         adminEmail: payload.adminEmail,
-        plan: payload.plan,
-        status: payload.status,
+        ownerName: payload.ownerName || "",
+        ownerEmail: payload.ownerEmail || "",
+        ownerPhone: payload.ownerPhone || "",
+        hosted: payload.hosted,
+        hostingStatus: payload.hostingStatus,
         monthlyHostingActive: payload.monthlyHostingActive,
+        port: String(payload.port || ""),
+        dbPath: payload.dbPath || "",
       });
-      setDirtyNotes(false);
+      setNotes(payload.notes || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load restaurant");
     } finally {
@@ -97,76 +154,64 @@ export default function RestaurantDetailPage() {
     void load();
   }, [load]);
 
-  useEffect(() => {
+  async function saveOverview() {
     if (!restaurant) return;
-    if (!dirtyNotes) return;
-
-    window.clearTimeout(noteTimer.current);
-    noteTimer.current = window.setTimeout(async () => {
-      try {
-        await fetch(`/api/restaurants/${restaurant.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ notes }),
-        });
-        setDirtyNotes(false);
-        showToast("Notes saved.", "success");
-      } catch {
-        showToast("Failed to save notes.", "error");
-      }
-    }, 650);
-
-    return () => {
-      window.clearTimeout(noteTimer.current);
-    };
-  }, [dirtyNotes, notes, restaurant, showToast]);
-
-  async function saveDetails() {
-    if (!restaurant) return;
-    setSaving(true);
-    setError("");
-
+    setBusy("save-overview");
     try {
       const res = await fetch(`/api/restaurants/${restaurant.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editing),
+        body: JSON.stringify({
+          name: overview.name,
+          domain: overview.domain,
+          adminEmail: overview.adminEmail,
+          ownerName: overview.ownerName,
+          ownerEmail: overview.ownerEmail,
+          ownerPhone: overview.ownerPhone,
+          hosted: overview.hosted,
+          hostingStatus: overview.hostingStatus,
+          monthlyHostingActive: overview.monthlyHostingActive,
+          port: Number.isFinite(Number(overview.port)) && Number(overview.port) > 0 ? Number(overview.port) : undefined,
+          dbPath: overview.dbPath,
+        }),
       });
-
       const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.error || "Failed to update restaurant");
-
-      showToast("Restaurant updated.", "success");
+      if (!res.ok) throw new Error(payload?.error || "Failed to save details");
+      showToast("Restaurant details saved.", "success");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update restaurant");
+      showToast(err instanceof Error ? err.message : "Failed to save details", "error");
     } finally {
-      setSaving(false);
+      setBusy("");
     }
   }
 
-  async function rotateKey() {
+  async function saveNotes() {
     if (!restaurant) return;
-    if (!window.confirm("Rotate this license key? The previous key will stop working.")) return;
-
-    setActionBusy("rotate");
+    setBusy("save-notes");
     try {
-      const res = await fetch(`/api/restaurants/${restaurant.id}/rotate-key`, { method: "POST" });
+      const res = await fetch(`/api/restaurants/${restaurant.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
       const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload?.error || "Failed to rotate key");
-      showToast("License key rotated.", "success");
+      if (!res.ok) throw new Error(payload?.error || "Failed to save notes");
+      showToast("Notes saved.", "success");
       await load();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to rotate key", "error");
+      showToast(err instanceof Error ? err.message : "Failed to save notes", "error");
     } finally {
-      setActionBusy("");
+      setBusy("");
     }
   }
 
   async function toggleStatus() {
     if (!restaurant) return;
     const nextStatus = restaurant.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
-    setActionBusy("status");
+    if (!window.confirm(`Set status to ${nextStatus}?`)) return;
+
+    setBusy("status");
     try {
       const res = await fetch(`/api/restaurants/${restaurant.id}`, {
         method: "PATCH",
@@ -180,7 +225,107 @@ export default function RestaurantDetailPage() {
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to update status", "error");
     } finally {
-      setActionBusy("");
+      setBusy("");
+    }
+  }
+
+  async function regenerateKey() {
+    if (!restaurant) return;
+    if (!window.confirm("Generate a new license key? The old key will stop working.")) return;
+
+    setBusy("key");
+    try {
+      const res = await fetch(`/api/restaurants/${restaurant.id}/generate-key`, { method: "POST" });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Failed to regenerate key");
+      showToast("License key regenerated.", "success");
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to regenerate key", "error");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function applyPlan() {
+    if (!restaurant) return;
+    if (planSelection === restaurant.plan) return;
+
+    const downgrading =
+      (restaurant.plan === "FULL_SUITE" && planSelection !== "FULL_SUITE") ||
+      (restaurant.plan === "SERVICE_PRO" && planSelection === "CORE");
+
+    if (downgrading && !window.confirm("Downgrades do not auto-disable add-ons. Continue?")) return;
+
+    setBusy("plan");
+    try {
+      const res = await fetch(`/api/restaurants/${restaurant.id}/plan`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planSelection }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Failed to change plan");
+      showToast("Plan updated.", "success");
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to change plan", "error");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function toggleAddon(addon: AddonKey, enabled: boolean) {
+    if (!restaurant) return;
+    setBusy(addon);
+    try {
+      const res = await fetch(`/api/restaurants/${restaurant.id}/addons`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [addon]: enabled }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Failed to update add-on");
+
+      if (payload?.restaurant) {
+        setRestaurant((prev) => (prev ? { ...prev, ...payload.restaurant } : prev));
+      }
+
+      setSyncStatus((prev) => ({
+        ...prev,
+        [addon]: payload?.synced ? "synced" : "failed",
+      }));
+
+      if (!payload?.synced && payload?.syncError) {
+        showToast(`Updated in admin DB, but sync failed: ${payload.syncError}`, "error");
+      } else {
+        showToast("Add-on updated.", "success");
+      }
+
+      await load();
+    } catch (err) {
+      setSyncStatus((prev) => ({ ...prev, [addon]: "failed" }));
+      showToast(err instanceof Error ? err.message : "Failed to update add-on", "error");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function runHealthCheck() {
+    if (!restaurant) return;
+    setBusy("health");
+    try {
+      const res = await fetch("/api/health/check-all", { cache: "no-store" });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.error || "Health check failed");
+      }
+      showToast("Health check completed.", "success");
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Health check failed", "error");
+    } finally {
+      setBusy("");
     }
   }
 
@@ -188,7 +333,7 @@ export default function RestaurantDetailPage() {
     if (!restaurant) return;
     if (!window.confirm(`Delete ${restaurant.name}? This is destructive.`)) return;
 
-    setActionBusy("delete");
+    setBusy("delete");
     try {
       const res = await fetch(`/api/restaurants/${restaurant.id}`, { method: "DELETE" });
       const payload = await res.json().catch(() => ({}));
@@ -198,7 +343,7 @@ export default function RestaurantDetailPage() {
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to delete restaurant", "error");
     } finally {
-      setActionBusy("");
+      setBusy("");
     }
   }
 
@@ -217,11 +362,11 @@ export default function RestaurantDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">{restaurant.name}</h1>
-          <p className="text-sm text-slate-600">{restaurant.slug}.reservesit.com</p>
+          <p className="text-sm text-slate-600">{restaurant.domain || `${restaurant.slug}.reservesit.com`}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <a
-            href={`https://${restaurant.slug}.reservesit.com`}
+            href={`https://${restaurant.domain || `${restaurant.slug}.reservesit.com`}`}
             target="_blank"
             rel="noreferrer"
             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700"
@@ -234,177 +379,274 @@ export default function RestaurantDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
-          <h2 className="text-lg font-semibold text-slate-900">Restaurant Details</h2>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Restaurant Overview</h2>
+            <p className="text-sm text-slate-600">Name, owner contact, and instance metadata.</p>
+          </div>
+
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Name</span>
-              <input
-                value={editing.name}
-                onChange={(e) => setEditing((prev) => ({ ...prev, name: e.target.value }))}
-                disabled={!canManage}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100"
-              />
+              <input value={overview.name} onChange={(e) => setOverview((p) => ({ ...p, name: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Domain</span>
+              <input value={overview.domain} onChange={(e) => setOverview((p) => ({ ...p, domain: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Owner Name</span>
+              <input value={overview.ownerName} onChange={(e) => setOverview((p) => ({ ...p, ownerName: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Owner Email</span>
+              <input value={overview.ownerEmail} onChange={(e) => setOverview((p) => ({ ...p, ownerEmail: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Owner Phone</span>
+              <input value={overview.ownerPhone} onChange={(e) => setOverview((p) => ({ ...p, ownerPhone: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />
             </label>
             <label className="block">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Admin Email</span>
-              <input
-                value={editing.adminEmail}
-                onChange={(e) => setEditing((prev) => ({ ...prev, adminEmail: e.target.value }))}
-                disabled={!canManage}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100"
-              />
+              <input value={overview.adminEmail} onChange={(e) => setOverview((p) => ({ ...p, adminEmail: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Plan</span>
-              <select
-                value={editing.plan}
-                onChange={(e) => setEditing((prev) => ({ ...prev, plan: e.target.value }))}
-                disabled={!canManage}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100"
-              >
-                <option value="CORE">CORE</option>
-                <option value="SERVICE_PRO">SERVICE PRO</option>
-                <option value="FULL_SUITE">FULL SUITE</option>
-              </select>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Port</span>
+              <input value={overview.port} onChange={(e) => setOverview((p) => ({ ...p, port: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Status</span>
-              <select
-                value={editing.status}
-                onChange={(e) => setEditing((prev) => ({ ...prev, status: e.target.value }))}
-                disabled={!canManage}
-                className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100"
-              >
-                <option value="ACTIVE">ACTIVE</option>
-                <option value="TRIAL">TRIAL</option>
-                <option value="SUSPENDED">SUSPENDED</option>
-                <option value="CANCELLED">CANCELLED</option>
-              </select>
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">DB Path</span>
+              <input value={overview.dbPath} onChange={(e) => setOverview((p) => ({ ...p, dbPath: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />
             </label>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
             <PlanBadge plan={restaurant.plan} />
             <RestaurantStatusBadge status={restaurant.status} />
-            <span className="text-slate-600">Port: <strong>{restaurant.port}</strong></span>
-            <span className="text-slate-600">Created: <strong>{formatDate(restaurant.createdAt)}</strong></span>
-            <span className="text-slate-600">DB: <code className="text-xs">{restaurant.dbPath}</code></span>
+            <HostingStatusBadge status={restaurant.hostingStatus} />
+            <span className="text-slate-600">Created {formatDate(restaurant.createdAt)}</span>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={editing.monthlyHostingActive}
-              onChange={(e) => setEditing((prev) => ({ ...prev, monthlyHostingActive: e.target.checked }))}
-              disabled={!canManage}
-            />
-            Monthly hosting billing active
-          </label>
+          <div className="grid gap-3 md:grid-cols-3">
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={overview.hosted} disabled={!canManage} onChange={(e) => setOverview((p) => ({ ...p, hosted: e.target.checked }))} />
+              Hosted
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={overview.monthlyHostingActive} disabled={!canManage} onChange={(e) => setOverview((p) => ({ ...p, monthlyHostingActive: e.target.checked }))} />
+              Monthly billing active
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Hosting Status</span>
+              <select value={overview.hostingStatus} disabled={!canManage} onChange={(e) => setOverview((p) => ({ ...p, hostingStatus: e.target.value }))} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100">
+                <option value="ACTIVE">ACTIVE</option>
+                <option value="SUSPENDED">SUSPENDED</option>
+                <option value="SELF_HOSTED">SELF_HOSTED</option>
+              </select>
+            </label>
+          </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm">
-            <p className="font-medium text-slate-700">License Key</p>
-            <p className="mt-1 break-all font-mono text-xs text-slate-900">{restaurant.licenseKey}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
+          {canManage ? (
+            <button
+              type="button"
+              onClick={saveOverview}
+              disabled={busy === "save-overview"}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {busy === "save-overview" ? "Saving..." : "Save Overview"}
+            </button>
+          ) : null}
+        </section>
+
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">License Management</h2>
+            <p className="text-sm text-slate-600">Control key lifecycle and audit trail.</p>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">License Key</div>
+            <div className="mt-1 break-all font-mono text-xs text-slate-900">{showKey ? restaurant.licenseKey : `${restaurant.licenseKey.slice(0, 8)}••••••••${restaurant.licenseKey.slice(-6)}`}</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button type="button" onClick={() => setShowKey((v) => !v)} className="rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold">
+                {showKey ? "Hide" : "Reveal"}
+              </button>
               <button
                 type="button"
                 onClick={async () => {
                   await navigator.clipboard.writeText(restaurant.licenseKey);
                   showToast("License key copied.", "success");
                 }}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold"
+                className="rounded border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold"
               >
-                Copy Key
+                Copy
               </button>
               {canManage ? (
                 <button
                   type="button"
-                  onClick={rotateKey}
-                  disabled={actionBusy === "rotate"}
-                  className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 disabled:opacity-60"
+                  onClick={regenerateKey}
+                  disabled={busy === "key"}
+                  className="rounded border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 disabled:opacity-60"
                 >
-                  {actionBusy === "rotate" ? "Rotating..." : "Rotate Key"}
+                  {busy === "key" ? "Generating..." : "Regenerate Key"}
                 </button>
               ) : null}
             </div>
           </div>
 
-          <label className="block">
-            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Internal Notes (auto-saves)</span>
-            <textarea
-              value={notes}
-              onChange={(e) => {
-                setNotes(e.target.value);
-                setDirtyNotes(true);
-              }}
-              rows={5}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-          </label>
+          <div className="text-xs text-slate-600">
+            <div>Activated: {formatDateTime(restaurant.licenseActivatedAt) || "-"}</div>
+            <div>Expires: {formatDate(restaurant.licenseExpiry) || "No expiry"}</div>
+          </div>
+        </section>
+      </div>
 
-          {error ? <p className="text-sm text-rose-700">{error}</p> : null}
-
-          {canManage ? (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={saveDetails}
-                disabled={saving}
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleStatus}
-                disabled={actionBusy === "status"}
-                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 disabled:opacity-60"
-              >
-                {restaurant.status === "SUSPENDED" ? "Reactivate" : "Suspend"}
-              </button>
-
-              <button
-                type="button"
-                onClick={deleteRestaurant}
-                disabled={actionBusy === "delete"}
-                className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-800 disabled:opacity-60"
-              >
-                {actionBusy === "delete" ? "Deleting..." : "Delete"}
-              </button>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Plan & Add-ons</h2>
+              <p className="text-sm text-slate-600">Change plan tiers and control feature access.</p>
             </div>
-          ) : (
-            <p className="text-xs text-slate-500">SUPPORT role can edit notes only.</p>
-          )}
+          </div>
+
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Plan</span>
+              <select value={planSelection} onChange={(e) => setPlanSelection(e.target.value as RestaurantPlan)} disabled={!canManage} className="h-10 rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100">
+                <option value="CORE">CORE</option>
+                <option value="SERVICE_PRO">SERVICE PRO</option>
+                <option value="FULL_SUITE">FULL SUITE</option>
+              </select>
+            </label>
+            {canManage ? (
+              <button
+                type="button"
+                onClick={applyPlan}
+                disabled={busy === "plan" || planSelection === restaurant.plan}
+                className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold disabled:opacity-60"
+              >
+                {busy === "plan" ? "Applying..." : "Apply Plan"}
+              </button>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            {ADDONS.map((addon) => {
+              const value = Boolean(restaurant[addon.key]);
+              const included = isIncludedInPlan(restaurant.plan, addon.key);
+              const sync = syncStatus[addon.key];
+              return (
+                <div key={addon.key} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2">
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">{addon.label}</div>
+                    <div className="text-xs text-slate-500">
+                      {addon.price}
+                      {included ? " · Included in plan" : ""}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {sync === "synced" ? <span className="text-xs text-emerald-700">Synced</span> : null}
+                    {sync === "failed" ? <span className="text-xs text-rose-700">Sync failed</span> : null}
+                    <button
+                      type="button"
+                      disabled={!canManage || busy === addon.key}
+                      onClick={() => void toggleAddon(addon.key, !value)}
+                      className={`relative h-7 w-12 rounded-full transition-all duration-200 ${value ? "bg-emerald-500" : "bg-slate-300"} disabled:opacity-60`}
+                    >
+                      <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition-all duration-200 ${value ? "left-5" : "left-0.5"}`} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
 
         <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-900">Latest Health</h2>
-          {restaurant.healthChecks.length === 0 ? (
-            <p className="text-sm text-slate-500">No health checks recorded yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {restaurant.healthChecks.slice(0, 8).map((row) => (
-                <div key={row.id} className="rounded-lg border border-slate-200 p-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <HealthStatusBadge status={row.status} />
-                    <span className="text-xs text-slate-500">{formatDateTime(row.checkedAt)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-600">Response: {row.responseTimeMs ?? "-"} ms</p>
-                </div>
-              ))}
-            </div>
-          )}
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Hosting & Instance</h2>
+            <p className="text-sm text-slate-600">Runtime state and health checks for this customer instance.</p>
+          </div>
+
+          <div className="space-y-2 text-sm text-slate-700">
+            <div>URL: <a className="text-sky-700 underline" href={`https://${restaurant.domain || `${restaurant.slug}.reservesit.com`}`} target="_blank" rel="noreferrer">{restaurant.domain || `${restaurant.slug}.reservesit.com`}</a></div>
+            <div>Port: {restaurant.port}</div>
+            <div className="flex items-center gap-2">Hosting status: <HostingStatusBadge status={restaurant.hostingStatus} /></div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last Health Check</div>
+            {healthLatest ? (
+              <div className="mt-2 space-y-1 text-sm text-slate-700">
+                <div className="flex items-center gap-2"><HealthStatusBadge status={healthLatest.status} /> <span>{formatDateTime(healthLatest.checkedAt)}</span></div>
+                <div>Response: {healthLatest.responseTimeMs ?? "-"} ms</div>
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-slate-500">No checks recorded yet.</p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={runHealthCheck}
+            disabled={busy === "health"}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold disabled:opacity-60"
+          >
+            {busy === "health" ? "Running..." : "Health Check"}
+          </button>
         </section>
       </div>
+
+      <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={4}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={saveNotes}
+            disabled={busy === "save-notes"}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {busy === "save-notes" ? "Saving..." : "Save Notes"}
+          </button>
+
+          {canManage ? (
+            <button
+              type="button"
+              onClick={toggleStatus}
+              disabled={busy === "status"}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 disabled:opacity-60"
+            >
+              {busy === "status" ? "Updating..." : restaurant.status === "SUSPENDED" ? "Reactivate" : "Suspend"}
+            </button>
+          ) : null}
+
+          {canManage ? (
+            <button
+              type="button"
+              onClick={deleteRestaurant}
+              disabled={busy === "delete"}
+              className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-800 disabled:opacity-60"
+            >
+              {busy === "delete" ? "Deleting..." : "Delete Restaurant"}
+            </button>
+          ) : null}
+        </div>
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-900">Health History (last 50)</h2>
           </div>
-          <div className="max-h-72 overflow-auto">
+          <div className="max-h-80 overflow-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
@@ -434,7 +676,7 @@ export default function RestaurantDetailPage() {
           <div className="border-b border-slate-200 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-900">License Event Log</h2>
           </div>
-          <div className="max-h-72 overflow-auto">
+          <div className="max-h-80 overflow-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">

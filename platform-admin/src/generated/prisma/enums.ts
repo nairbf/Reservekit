@@ -37,13 +37,30 @@ export const RestaurantPlan = {
 export type RestaurantPlan = (typeof RestaurantPlan)[keyof typeof RestaurantPlan]
 
 
+export const HostingStatus = {
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  SELF_HOSTED: 'SELF_HOSTED'
+} as const
+
+export type HostingStatus = (typeof HostingStatus)[keyof typeof HostingStatus]
+
+
 export const LicenseEventType = {
   CREATED: 'CREATED',
   ACTIVATED: 'ACTIVATED',
   SUSPENDED: 'SUSPENDED',
   REACTIVATED: 'REACTIVATED',
   CANCELLED: 'CANCELLED',
-  KEY_ROTATED: 'KEY_ROTATED'
+  KEY_ROTATED: 'KEY_ROTATED',
+  LICENSE_CREATED: 'LICENSE_CREATED',
+  LICENSE_KEY_ROTATED: 'LICENSE_KEY_ROTATED',
+  ADDON_ENABLED: 'ADDON_ENABLED',
+  ADDON_DISABLED: 'ADDON_DISABLED',
+  PLAN_CHANGED: 'PLAN_CHANGED',
+  STATUS_CHANGED: 'STATUS_CHANGED',
+  ADDON_SYNCED: 'ADDON_SYNCED',
+  ADDON_SYNC_FAILED: 'ADDON_SYNC_FAILED'
 } as const
 
 export type LicenseEventType = (typeof LicenseEventType)[keyof typeof LicenseEventType]

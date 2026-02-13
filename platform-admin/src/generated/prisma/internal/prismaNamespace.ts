@@ -756,13 +756,25 @@ export const RestaurantScalarFieldEnum = {
   id: 'id',
   slug: 'slug',
   name: 'name',
+  domain: 'domain',
   adminEmail: 'adminEmail',
   status: 'status',
   plan: 'plan',
   port: 'port',
   dbPath: 'dbPath',
   licenseKey: 'licenseKey',
+  licenseExpiry: 'licenseExpiry',
   licenseActivatedAt: 'licenseActivatedAt',
+  addonSms: 'addonSms',
+  addonFloorPlan: 'addonFloorPlan',
+  addonReporting: 'addonReporting',
+  addonGuestHistory: 'addonGuestHistory',
+  addonEventTicketing: 'addonEventTicketing',
+  hosted: 'hosted',
+  hostingStatus: 'hostingStatus',
+  ownerName: 'ownerName',
+  ownerEmail: 'ownerEmail',
+  ownerPhone: 'ownerPhone',
   trialEndsAt: 'trialEndsAt',
   stripeCustomerId: 'stripeCustomerId',
   stripeSubscriptionId: 'stripeSubscriptionId',
@@ -866,6 +878,13 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'Boolean'
  */
 export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+/**
+ * Reference to a field of type 'HostingStatus'
+ */
+export type EnumHostingStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'HostingStatus'>
     
 
 

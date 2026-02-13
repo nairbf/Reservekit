@@ -38,13 +38,25 @@ export type RestaurantMinAggregateOutputType = {
   id: string | null
   slug: string | null
   name: string | null
+  domain: string | null
   adminEmail: string | null
   status: $Enums.RestaurantStatus | null
   plan: $Enums.RestaurantPlan | null
   port: number | null
   dbPath: string | null
   licenseKey: string | null
+  licenseExpiry: Date | null
   licenseActivatedAt: Date | null
+  addonSms: boolean | null
+  addonFloorPlan: boolean | null
+  addonReporting: boolean | null
+  addonGuestHistory: boolean | null
+  addonEventTicketing: boolean | null
+  hosted: boolean | null
+  hostingStatus: $Enums.HostingStatus | null
+  ownerName: string | null
+  ownerEmail: string | null
+  ownerPhone: string | null
   trialEndsAt: Date | null
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
@@ -58,13 +70,25 @@ export type RestaurantMaxAggregateOutputType = {
   id: string | null
   slug: string | null
   name: string | null
+  domain: string | null
   adminEmail: string | null
   status: $Enums.RestaurantStatus | null
   plan: $Enums.RestaurantPlan | null
   port: number | null
   dbPath: string | null
   licenseKey: string | null
+  licenseExpiry: Date | null
   licenseActivatedAt: Date | null
+  addonSms: boolean | null
+  addonFloorPlan: boolean | null
+  addonReporting: boolean | null
+  addonGuestHistory: boolean | null
+  addonEventTicketing: boolean | null
+  hosted: boolean | null
+  hostingStatus: $Enums.HostingStatus | null
+  ownerName: string | null
+  ownerEmail: string | null
+  ownerPhone: string | null
   trialEndsAt: Date | null
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
@@ -78,13 +102,25 @@ export type RestaurantCountAggregateOutputType = {
   id: number
   slug: number
   name: number
+  domain: number
   adminEmail: number
   status: number
   plan: number
   port: number
   dbPath: number
   licenseKey: number
+  licenseExpiry: number
   licenseActivatedAt: number
+  addonSms: number
+  addonFloorPlan: number
+  addonReporting: number
+  addonGuestHistory: number
+  addonEventTicketing: number
+  hosted: number
+  hostingStatus: number
+  ownerName: number
+  ownerEmail: number
+  ownerPhone: number
   trialEndsAt: number
   stripeCustomerId: number
   stripeSubscriptionId: number
@@ -108,13 +144,25 @@ export type RestaurantMinAggregateInputType = {
   id?: true
   slug?: true
   name?: true
+  domain?: true
   adminEmail?: true
   status?: true
   plan?: true
   port?: true
   dbPath?: true
   licenseKey?: true
+  licenseExpiry?: true
   licenseActivatedAt?: true
+  addonSms?: true
+  addonFloorPlan?: true
+  addonReporting?: true
+  addonGuestHistory?: true
+  addonEventTicketing?: true
+  hosted?: true
+  hostingStatus?: true
+  ownerName?: true
+  ownerEmail?: true
+  ownerPhone?: true
   trialEndsAt?: true
   stripeCustomerId?: true
   stripeSubscriptionId?: true
@@ -128,13 +176,25 @@ export type RestaurantMaxAggregateInputType = {
   id?: true
   slug?: true
   name?: true
+  domain?: true
   adminEmail?: true
   status?: true
   plan?: true
   port?: true
   dbPath?: true
   licenseKey?: true
+  licenseExpiry?: true
   licenseActivatedAt?: true
+  addonSms?: true
+  addonFloorPlan?: true
+  addonReporting?: true
+  addonGuestHistory?: true
+  addonEventTicketing?: true
+  hosted?: true
+  hostingStatus?: true
+  ownerName?: true
+  ownerEmail?: true
+  ownerPhone?: true
   trialEndsAt?: true
   stripeCustomerId?: true
   stripeSubscriptionId?: true
@@ -148,13 +208,25 @@ export type RestaurantCountAggregateInputType = {
   id?: true
   slug?: true
   name?: true
+  domain?: true
   adminEmail?: true
   status?: true
   plan?: true
   port?: true
   dbPath?: true
   licenseKey?: true
+  licenseExpiry?: true
   licenseActivatedAt?: true
+  addonSms?: true
+  addonFloorPlan?: true
+  addonReporting?: true
+  addonGuestHistory?: true
+  addonEventTicketing?: true
+  hosted?: true
+  hostingStatus?: true
+  ownerName?: true
+  ownerEmail?: true
+  ownerPhone?: true
   trialEndsAt?: true
   stripeCustomerId?: true
   stripeSubscriptionId?: true
@@ -255,13 +327,25 @@ export type RestaurantGroupByOutputType = {
   id: string
   slug: string
   name: string
+  domain: string | null
   adminEmail: string
   status: $Enums.RestaurantStatus
   plan: $Enums.RestaurantPlan
   port: number
   dbPath: string
   licenseKey: string
+  licenseExpiry: Date | null
   licenseActivatedAt: Date | null
+  addonSms: boolean
+  addonFloorPlan: boolean
+  addonReporting: boolean
+  addonGuestHistory: boolean
+  addonEventTicketing: boolean
+  hosted: boolean
+  hostingStatus: $Enums.HostingStatus
+  ownerName: string | null
+  ownerEmail: string | null
+  ownerPhone: string | null
   trialEndsAt: Date | null
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
@@ -298,13 +382,25 @@ export type RestaurantWhereInput = {
   id?: Prisma.StringFilter<"Restaurant"> | string
   slug?: Prisma.StringFilter<"Restaurant"> | string
   name?: Prisma.StringFilter<"Restaurant"> | string
+  domain?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   adminEmail?: Prisma.StringFilter<"Restaurant"> | string
   status?: Prisma.EnumRestaurantStatusFilter<"Restaurant"> | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFilter<"Restaurant"> | $Enums.RestaurantPlan
   port?: Prisma.IntFilter<"Restaurant"> | number
   dbPath?: Prisma.StringFilter<"Restaurant"> | string
   licenseKey?: Prisma.StringFilter<"Restaurant"> | string
+  licenseExpiry?: Prisma.DateTimeNullableFilter<"Restaurant"> | Date | string | null
   licenseActivatedAt?: Prisma.DateTimeNullableFilter<"Restaurant"> | Date | string | null
+  addonSms?: Prisma.BoolFilter<"Restaurant"> | boolean
+  addonFloorPlan?: Prisma.BoolFilter<"Restaurant"> | boolean
+  addonReporting?: Prisma.BoolFilter<"Restaurant"> | boolean
+  addonGuestHistory?: Prisma.BoolFilter<"Restaurant"> | boolean
+  addonEventTicketing?: Prisma.BoolFilter<"Restaurant"> | boolean
+  hosted?: Prisma.BoolFilter<"Restaurant"> | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFilter<"Restaurant"> | $Enums.HostingStatus
+  ownerName?: Prisma.StringNullableFilter<"Restaurant"> | string | null
+  ownerEmail?: Prisma.StringNullableFilter<"Restaurant"> | string | null
+  ownerPhone?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   trialEndsAt?: Prisma.DateTimeNullableFilter<"Restaurant"> | Date | string | null
   stripeCustomerId?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"Restaurant"> | string | null
@@ -320,13 +416,25 @@ export type RestaurantOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  domain?: Prisma.SortOrderInput | Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
   licenseKey?: Prisma.SortOrder
+  licenseExpiry?: Prisma.SortOrderInput | Prisma.SortOrder
   licenseActivatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  addonSms?: Prisma.SortOrder
+  addonFloorPlan?: Prisma.SortOrder
+  addonReporting?: Prisma.SortOrder
+  addonGuestHistory?: Prisma.SortOrder
+  addonEventTicketing?: Prisma.SortOrder
+  hosted?: Prisma.SortOrder
+  hostingStatus?: Prisma.SortOrder
+  ownerName?: Prisma.SortOrderInput | Prisma.SortOrder
+  ownerEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  ownerPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   trialEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -347,11 +455,23 @@ export type RestaurantWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.RestaurantWhereInput[]
   NOT?: Prisma.RestaurantWhereInput | Prisma.RestaurantWhereInput[]
   name?: Prisma.StringFilter<"Restaurant"> | string
+  domain?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   adminEmail?: Prisma.StringFilter<"Restaurant"> | string
   status?: Prisma.EnumRestaurantStatusFilter<"Restaurant"> | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFilter<"Restaurant"> | $Enums.RestaurantPlan
   dbPath?: Prisma.StringFilter<"Restaurant"> | string
+  licenseExpiry?: Prisma.DateTimeNullableFilter<"Restaurant"> | Date | string | null
   licenseActivatedAt?: Prisma.DateTimeNullableFilter<"Restaurant"> | Date | string | null
+  addonSms?: Prisma.BoolFilter<"Restaurant"> | boolean
+  addonFloorPlan?: Prisma.BoolFilter<"Restaurant"> | boolean
+  addonReporting?: Prisma.BoolFilter<"Restaurant"> | boolean
+  addonGuestHistory?: Prisma.BoolFilter<"Restaurant"> | boolean
+  addonEventTicketing?: Prisma.BoolFilter<"Restaurant"> | boolean
+  hosted?: Prisma.BoolFilter<"Restaurant"> | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFilter<"Restaurant"> | $Enums.HostingStatus
+  ownerName?: Prisma.StringNullableFilter<"Restaurant"> | string | null
+  ownerEmail?: Prisma.StringNullableFilter<"Restaurant"> | string | null
+  ownerPhone?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   trialEndsAt?: Prisma.DateTimeNullableFilter<"Restaurant"> | Date | string | null
   stripeCustomerId?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"Restaurant"> | string | null
@@ -367,13 +487,25 @@ export type RestaurantOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  domain?: Prisma.SortOrderInput | Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
   licenseKey?: Prisma.SortOrder
+  licenseExpiry?: Prisma.SortOrderInput | Prisma.SortOrder
   licenseActivatedAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  addonSms?: Prisma.SortOrder
+  addonFloorPlan?: Prisma.SortOrder
+  addonReporting?: Prisma.SortOrder
+  addonGuestHistory?: Prisma.SortOrder
+  addonEventTicketing?: Prisma.SortOrder
+  hosted?: Prisma.SortOrder
+  hostingStatus?: Prisma.SortOrder
+  ownerName?: Prisma.SortOrderInput | Prisma.SortOrder
+  ownerEmail?: Prisma.SortOrderInput | Prisma.SortOrder
+  ownerPhone?: Prisma.SortOrderInput | Prisma.SortOrder
   trialEndsAt?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -395,13 +527,25 @@ export type RestaurantScalarWhereWithAggregatesInput = {
   id?: Prisma.StringWithAggregatesFilter<"Restaurant"> | string
   slug?: Prisma.StringWithAggregatesFilter<"Restaurant"> | string
   name?: Prisma.StringWithAggregatesFilter<"Restaurant"> | string
+  domain?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
   adminEmail?: Prisma.StringWithAggregatesFilter<"Restaurant"> | string
   status?: Prisma.EnumRestaurantStatusWithAggregatesFilter<"Restaurant"> | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanWithAggregatesFilter<"Restaurant"> | $Enums.RestaurantPlan
   port?: Prisma.IntWithAggregatesFilter<"Restaurant"> | number
   dbPath?: Prisma.StringWithAggregatesFilter<"Restaurant"> | string
   licenseKey?: Prisma.StringWithAggregatesFilter<"Restaurant"> | string
+  licenseExpiry?: Prisma.DateTimeNullableWithAggregatesFilter<"Restaurant"> | Date | string | null
   licenseActivatedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Restaurant"> | Date | string | null
+  addonSms?: Prisma.BoolWithAggregatesFilter<"Restaurant"> | boolean
+  addonFloorPlan?: Prisma.BoolWithAggregatesFilter<"Restaurant"> | boolean
+  addonReporting?: Prisma.BoolWithAggregatesFilter<"Restaurant"> | boolean
+  addonGuestHistory?: Prisma.BoolWithAggregatesFilter<"Restaurant"> | boolean
+  addonEventTicketing?: Prisma.BoolWithAggregatesFilter<"Restaurant"> | boolean
+  hosted?: Prisma.BoolWithAggregatesFilter<"Restaurant"> | boolean
+  hostingStatus?: Prisma.EnumHostingStatusWithAggregatesFilter<"Restaurant"> | $Enums.HostingStatus
+  ownerName?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
+  ownerEmail?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
+  ownerPhone?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
   trialEndsAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Restaurant"> | Date | string | null
   stripeCustomerId?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
@@ -415,13 +559,25 @@ export type RestaurantCreateInput = {
   id?: string
   slug: string
   name: string
+  domain?: string | null
   adminEmail: string
-  status: $Enums.RestaurantStatus
-  plan: $Enums.RestaurantPlan
+  status?: $Enums.RestaurantStatus
+  plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
-  licenseKey: string
+  licenseKey?: string
+  licenseExpiry?: Date | string | null
   licenseActivatedAt?: Date | string | null
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: $Enums.HostingStatus
+  ownerName?: string | null
+  ownerEmail?: string | null
+  ownerPhone?: string | null
   trialEndsAt?: Date | string | null
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
@@ -437,13 +593,25 @@ export type RestaurantUncheckedCreateInput = {
   id?: string
   slug: string
   name: string
+  domain?: string | null
   adminEmail: string
-  status: $Enums.RestaurantStatus
-  plan: $Enums.RestaurantPlan
+  status?: $Enums.RestaurantStatus
+  plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
-  licenseKey: string
+  licenseKey?: string
+  licenseExpiry?: Date | string | null
   licenseActivatedAt?: Date | string | null
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: $Enums.HostingStatus
+  ownerName?: string | null
+  ownerEmail?: string | null
+  ownerPhone?: string | null
   trialEndsAt?: Date | string | null
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
@@ -459,13 +627,25 @@ export type RestaurantUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
   licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -481,13 +661,25 @@ export type RestaurantUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
   licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -503,13 +695,25 @@ export type RestaurantCreateManyInput = {
   id?: string
   slug: string
   name: string
+  domain?: string | null
   adminEmail: string
-  status: $Enums.RestaurantStatus
-  plan: $Enums.RestaurantPlan
+  status?: $Enums.RestaurantStatus
+  plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
-  licenseKey: string
+  licenseKey?: string
+  licenseExpiry?: Date | string | null
   licenseActivatedAt?: Date | string | null
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: $Enums.HostingStatus
+  ownerName?: string | null
+  ownerEmail?: string | null
+  ownerPhone?: string | null
   trialEndsAt?: Date | string | null
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
@@ -523,13 +727,25 @@ export type RestaurantUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
   licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -543,13 +759,25 @@ export type RestaurantUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
   licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -563,13 +791,25 @@ export type RestaurantCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  domain?: Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
   licenseKey?: Prisma.SortOrder
+  licenseExpiry?: Prisma.SortOrder
   licenseActivatedAt?: Prisma.SortOrder
+  addonSms?: Prisma.SortOrder
+  addonFloorPlan?: Prisma.SortOrder
+  addonReporting?: Prisma.SortOrder
+  addonGuestHistory?: Prisma.SortOrder
+  addonEventTicketing?: Prisma.SortOrder
+  hosted?: Prisma.SortOrder
+  hostingStatus?: Prisma.SortOrder
+  ownerName?: Prisma.SortOrder
+  ownerEmail?: Prisma.SortOrder
+  ownerPhone?: Prisma.SortOrder
   trialEndsAt?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
@@ -587,13 +827,25 @@ export type RestaurantMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  domain?: Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
   licenseKey?: Prisma.SortOrder
+  licenseExpiry?: Prisma.SortOrder
   licenseActivatedAt?: Prisma.SortOrder
+  addonSms?: Prisma.SortOrder
+  addonFloorPlan?: Prisma.SortOrder
+  addonReporting?: Prisma.SortOrder
+  addonGuestHistory?: Prisma.SortOrder
+  addonEventTicketing?: Prisma.SortOrder
+  hosted?: Prisma.SortOrder
+  hostingStatus?: Prisma.SortOrder
+  ownerName?: Prisma.SortOrder
+  ownerEmail?: Prisma.SortOrder
+  ownerPhone?: Prisma.SortOrder
   trialEndsAt?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
@@ -607,13 +859,25 @@ export type RestaurantMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   slug?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  domain?: Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
   licenseKey?: Prisma.SortOrder
+  licenseExpiry?: Prisma.SortOrder
   licenseActivatedAt?: Prisma.SortOrder
+  addonSms?: Prisma.SortOrder
+  addonFloorPlan?: Prisma.SortOrder
+  addonReporting?: Prisma.SortOrder
+  addonGuestHistory?: Prisma.SortOrder
+  addonEventTicketing?: Prisma.SortOrder
+  hosted?: Prisma.SortOrder
+  hostingStatus?: Prisma.SortOrder
+  ownerName?: Prisma.SortOrder
+  ownerEmail?: Prisma.SortOrder
+  ownerPhone?: Prisma.SortOrder
   trialEndsAt?: Prisma.SortOrder
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
@@ -630,6 +894,10 @@ export type RestaurantSumOrderByAggregateInput = {
 export type RestaurantScalarRelationFilter = {
   is?: Prisma.RestaurantWhereInput
   isNot?: Prisma.RestaurantWhereInput
+}
+
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
 }
 
 export type EnumRestaurantStatusFieldUpdateOperationsInput = {
@@ -652,12 +920,12 @@ export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 export type BoolFieldUpdateOperationsInput = {
   set?: boolean
+}
+
+export type EnumHostingStatusFieldUpdateOperationsInput = {
+  set?: $Enums.HostingStatus
 }
 
 export type RestaurantCreateNestedOneWithoutLicenseEventsInput = {
@@ -692,13 +960,25 @@ export type RestaurantCreateWithoutLicenseEventsInput = {
   id?: string
   slug: string
   name: string
+  domain?: string | null
   adminEmail: string
-  status: $Enums.RestaurantStatus
-  plan: $Enums.RestaurantPlan
+  status?: $Enums.RestaurantStatus
+  plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
-  licenseKey: string
+  licenseKey?: string
+  licenseExpiry?: Date | string | null
   licenseActivatedAt?: Date | string | null
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: $Enums.HostingStatus
+  ownerName?: string | null
+  ownerEmail?: string | null
+  ownerPhone?: string | null
   trialEndsAt?: Date | string | null
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
@@ -713,13 +993,25 @@ export type RestaurantUncheckedCreateWithoutLicenseEventsInput = {
   id?: string
   slug: string
   name: string
+  domain?: string | null
   adminEmail: string
-  status: $Enums.RestaurantStatus
-  plan: $Enums.RestaurantPlan
+  status?: $Enums.RestaurantStatus
+  plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
-  licenseKey: string
+  licenseKey?: string
+  licenseExpiry?: Date | string | null
   licenseActivatedAt?: Date | string | null
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: $Enums.HostingStatus
+  ownerName?: string | null
+  ownerEmail?: string | null
+  ownerPhone?: string | null
   trialEndsAt?: Date | string | null
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
@@ -750,13 +1042,25 @@ export type RestaurantUpdateWithoutLicenseEventsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
   licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -771,13 +1075,25 @@ export type RestaurantUncheckedUpdateWithoutLicenseEventsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
   licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -792,13 +1108,25 @@ export type RestaurantCreateWithoutHealthChecksInput = {
   id?: string
   slug: string
   name: string
+  domain?: string | null
   adminEmail: string
-  status: $Enums.RestaurantStatus
-  plan: $Enums.RestaurantPlan
+  status?: $Enums.RestaurantStatus
+  plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
-  licenseKey: string
+  licenseKey?: string
+  licenseExpiry?: Date | string | null
   licenseActivatedAt?: Date | string | null
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: $Enums.HostingStatus
+  ownerName?: string | null
+  ownerEmail?: string | null
+  ownerPhone?: string | null
   trialEndsAt?: Date | string | null
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
@@ -813,13 +1141,25 @@ export type RestaurantUncheckedCreateWithoutHealthChecksInput = {
   id?: string
   slug: string
   name: string
+  domain?: string | null
   adminEmail: string
-  status: $Enums.RestaurantStatus
-  plan: $Enums.RestaurantPlan
+  status?: $Enums.RestaurantStatus
+  plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
-  licenseKey: string
+  licenseKey?: string
+  licenseExpiry?: Date | string | null
   licenseActivatedAt?: Date | string | null
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: $Enums.HostingStatus
+  ownerName?: string | null
+  ownerEmail?: string | null
+  ownerPhone?: string | null
   trialEndsAt?: Date | string | null
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
@@ -850,13 +1190,25 @@ export type RestaurantUpdateWithoutHealthChecksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
   licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -871,13 +1223,25 @@ export type RestaurantUncheckedUpdateWithoutHealthChecksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   slug?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
   licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -932,13 +1296,25 @@ export type RestaurantSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   id?: boolean
   slug?: boolean
   name?: boolean
+  domain?: boolean
   adminEmail?: boolean
   status?: boolean
   plan?: boolean
   port?: boolean
   dbPath?: boolean
   licenseKey?: boolean
+  licenseExpiry?: boolean
   licenseActivatedAt?: boolean
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: boolean
+  ownerName?: boolean
+  ownerEmail?: boolean
+  ownerPhone?: boolean
   trialEndsAt?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
@@ -955,13 +1331,25 @@ export type RestaurantSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   id?: boolean
   slug?: boolean
   name?: boolean
+  domain?: boolean
   adminEmail?: boolean
   status?: boolean
   plan?: boolean
   port?: boolean
   dbPath?: boolean
   licenseKey?: boolean
+  licenseExpiry?: boolean
   licenseActivatedAt?: boolean
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: boolean
+  ownerName?: boolean
+  ownerEmail?: boolean
+  ownerPhone?: boolean
   trialEndsAt?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
@@ -975,13 +1363,25 @@ export type RestaurantSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   id?: boolean
   slug?: boolean
   name?: boolean
+  domain?: boolean
   adminEmail?: boolean
   status?: boolean
   plan?: boolean
   port?: boolean
   dbPath?: boolean
   licenseKey?: boolean
+  licenseExpiry?: boolean
   licenseActivatedAt?: boolean
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: boolean
+  ownerName?: boolean
+  ownerEmail?: boolean
+  ownerPhone?: boolean
   trialEndsAt?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
@@ -995,13 +1395,25 @@ export type RestaurantSelectScalar = {
   id?: boolean
   slug?: boolean
   name?: boolean
+  domain?: boolean
   adminEmail?: boolean
   status?: boolean
   plan?: boolean
   port?: boolean
   dbPath?: boolean
   licenseKey?: boolean
+  licenseExpiry?: boolean
   licenseActivatedAt?: boolean
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: boolean
+  ownerName?: boolean
+  ownerEmail?: boolean
+  ownerPhone?: boolean
   trialEndsAt?: boolean
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
@@ -1011,7 +1423,7 @@ export type RestaurantSelectScalar = {
   updatedAt?: boolean
 }
 
-export type RestaurantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "name" | "adminEmail" | "status" | "plan" | "port" | "dbPath" | "licenseKey" | "licenseActivatedAt" | "trialEndsAt" | "stripeCustomerId" | "stripeSubscriptionId" | "monthlyHostingActive" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["restaurant"]>
+export type RestaurantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "name" | "domain" | "adminEmail" | "status" | "plan" | "port" | "dbPath" | "licenseKey" | "licenseExpiry" | "licenseActivatedAt" | "addonSms" | "addonFloorPlan" | "addonReporting" | "addonGuestHistory" | "addonEventTicketing" | "hosted" | "hostingStatus" | "ownerName" | "ownerEmail" | "ownerPhone" | "trialEndsAt" | "stripeCustomerId" | "stripeSubscriptionId" | "monthlyHostingActive" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["restaurant"]>
 export type RestaurantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   licenseEvents?: boolean | Prisma.Restaurant$licenseEventsArgs<ExtArgs>
   healthChecks?: boolean | Prisma.Restaurant$healthChecksArgs<ExtArgs>
@@ -1030,13 +1442,25 @@ export type $RestaurantPayload<ExtArgs extends runtime.Types.Extensions.Internal
     id: string
     slug: string
     name: string
+    domain: string | null
     adminEmail: string
     status: $Enums.RestaurantStatus
     plan: $Enums.RestaurantPlan
     port: number
     dbPath: string
     licenseKey: string
+    licenseExpiry: Date | null
     licenseActivatedAt: Date | null
+    addonSms: boolean
+    addonFloorPlan: boolean
+    addonReporting: boolean
+    addonGuestHistory: boolean
+    addonEventTicketing: boolean
+    hosted: boolean
+    hostingStatus: $Enums.HostingStatus
+    ownerName: string | null
+    ownerEmail: string | null
+    ownerPhone: string | null
     trialEndsAt: Date | null
     stripeCustomerId: string | null
     stripeSubscriptionId: string | null
@@ -1472,13 +1896,25 @@ export interface RestaurantFieldRefs {
   readonly id: Prisma.FieldRef<"Restaurant", 'String'>
   readonly slug: Prisma.FieldRef<"Restaurant", 'String'>
   readonly name: Prisma.FieldRef<"Restaurant", 'String'>
+  readonly domain: Prisma.FieldRef<"Restaurant", 'String'>
   readonly adminEmail: Prisma.FieldRef<"Restaurant", 'String'>
   readonly status: Prisma.FieldRef<"Restaurant", 'RestaurantStatus'>
   readonly plan: Prisma.FieldRef<"Restaurant", 'RestaurantPlan'>
   readonly port: Prisma.FieldRef<"Restaurant", 'Int'>
   readonly dbPath: Prisma.FieldRef<"Restaurant", 'String'>
   readonly licenseKey: Prisma.FieldRef<"Restaurant", 'String'>
+  readonly licenseExpiry: Prisma.FieldRef<"Restaurant", 'DateTime'>
   readonly licenseActivatedAt: Prisma.FieldRef<"Restaurant", 'DateTime'>
+  readonly addonSms: Prisma.FieldRef<"Restaurant", 'Boolean'>
+  readonly addonFloorPlan: Prisma.FieldRef<"Restaurant", 'Boolean'>
+  readonly addonReporting: Prisma.FieldRef<"Restaurant", 'Boolean'>
+  readonly addonGuestHistory: Prisma.FieldRef<"Restaurant", 'Boolean'>
+  readonly addonEventTicketing: Prisma.FieldRef<"Restaurant", 'Boolean'>
+  readonly hosted: Prisma.FieldRef<"Restaurant", 'Boolean'>
+  readonly hostingStatus: Prisma.FieldRef<"Restaurant", 'HostingStatus'>
+  readonly ownerName: Prisma.FieldRef<"Restaurant", 'String'>
+  readonly ownerEmail: Prisma.FieldRef<"Restaurant", 'String'>
+  readonly ownerPhone: Prisma.FieldRef<"Restaurant", 'String'>
   readonly trialEndsAt: Prisma.FieldRef<"Restaurant", 'DateTime'>
   readonly stripeCustomerId: Prisma.FieldRef<"Restaurant", 'String'>
   readonly stripeSubscriptionId: Prisma.FieldRef<"Restaurant", 'String'>

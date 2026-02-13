@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   await createLicenseEvent({
     restaurantId: id,
     event: LicenseEventType.LICENSE_KEY_ROTATED,
-    details: "License key rotated",
+    details: "License key regenerated",
     performedBy: session.email,
   });
 

@@ -1,4 +1,4 @@
-import type { HealthStatus, RestaurantPlan, RestaurantStatus } from "@/generated/prisma/client";
+import type { HealthStatus, RestaurantPlan, RestaurantStatus, HostingStatus } from "@/generated/prisma/client";
 
 function cls(base: string, value: string) {
   if (value === "ACTIVE" || value === "HEALTHY") return `${base} bg-emerald-100 text-emerald-800 ring-emerald-200`;
@@ -15,6 +15,10 @@ export function RestaurantStatusBadge({ status }: { status: RestaurantStatus }) 
 }
 
 export function HealthStatusBadge({ status }: { status: HealthStatus }) {
+  return <span className={cls(base, status)}>{status.replaceAll("_", " ")}</span>;
+}
+
+export function HostingStatusBadge({ status }: { status: HostingStatus }) {
   return <span className={cls(base, status)}>{status.replaceAll("_", " ")}</span>;
 }
 

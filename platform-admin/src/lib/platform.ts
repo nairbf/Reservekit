@@ -35,8 +35,8 @@ export function formatStatus(status: RestaurantStatus) {
 }
 
 export function buildRestaurantDbPath(slug: string) {
-  const root = process.env.RESTAURANT_DB_ROOT || "/srv/reservesit";
-  return path.join(root, slug, "data", "reservekit.db");
+  const root = process.env.RESTAURANT_DB_ROOT || "/home/reservesit/customers";
+  return path.join(root, slug, "reservekit.db");
 }
 
 export async function nextAvailablePort(start = 3001) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { estimateWaitMinutes, getTodaysWaitlist, reorderActiveWaitlistPositions } from "@/lib/waitlist";
+import { sendNotification } from "@/lib/send-notification";
 
 function normalizePhone(value: string): string {
   return String(value || "").replace(/[^\d+]/g, "").trim();
@@ -65,6 +66,20 @@ export async function POST(req: NextRequest) {
   });
 
   await reorderActiveWaitlistPositions();
+
+  if (created.guestEmail) {
+    sendNotification({
+      templateId: "waitlist_added",
+      to: created.guestEmail,
+      messageType: "waitlist_added",
+      variables: {
+        guestName: created.guestName,
+        partySize: String(created.partySize),
+        estimatedWait: `${estimate.estimatedMinutes} minutes`,
+        position: String(created.position),
+      },
+    }).catch(console.error);
+  }
 
   return NextResponse.json({
     ...created,

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-import { sendEmail } from "@/lib/email";
 import { createPaymentIntent } from "@/lib/payments";
 import { generateEventICS } from "@/lib/calendar";
+import { sendNotification } from "@/lib/send-notification";
 
 function normalizePhone(value: string): string {
   return String(value || "").replace(/\D/g, "").trim();
@@ -228,29 +228,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     ticketCode: ticketCodes[0],
   });
 
-  const emailBody = [
-    `Hi ${guestName},`,
-    "",
-    `You're confirmed for ${event.name}!`,
-    "",
-    `Date: ${event.date}`,
-    `Time: ${formatTime12(event.startTime)}${event.endTime ? ` - ${formatTime12(event.endTime)}` : ""}`,
-    `Tickets: ${createdTickets.length}`,
-    "",
-    "Your ticket code(s):",
-    ...ticketCodes,
-    "",
-    "Show this code at the door when you arrive.",
-    "",
-    `— ${restaurantName}`,
-  ].join("\n");
-
-  await sendEmail({
+  const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  await sendNotification({
+    templateId: "event_ticket_confirmation",
     to: guestEmail,
-    subject: `${event.name} — Your Ticket Confirmation`,
-    body: emailBody,
     messageType: "event_ticket_confirmation",
     attachments: [{ filename: `${event.slug}.ics`, content: ics, contentType: "text/calendar" }],
+    variables: {
+      restaurantName,
+      guestName,
+      eventName: event.name,
+      eventDate: event.date,
+      eventTime: `${formatTime12(event.startTime)}${event.endTime ? ` - ${formatTime12(event.endTime)}` : ""}`,
+      ticketCount: String(createdTickets.length),
+      ticketTotal: `$${(createdTickets.reduce((sum, t) => sum + t.totalPaid, 0) / 100).toFixed(2)}`,
+      ticketUrl: `${appUrl}/events/${event.slug}`,
+      ticketCodes: ticketCodes.join("\n"),
+    },
   });
 
   return NextResponse.json({

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createPasswordResetToken } from "@/lib/auth";
-import { sendEmail } from "@/lib/email";
+import { sendNotification } from "@/lib/send-notification";
 
 function genericResponse(extra?: Record<string, unknown>) {
   return NextResponse.json({
@@ -27,17 +27,15 @@ export async function POST(req: NextRequest) {
   const appUrl = process.env.APP_URL || req.nextUrl.origin || "http://localhost:3000";
   const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
-  await sendEmail({
+  await sendNotification({
+    templateId: "password_reset",
     to: user.email,
-    subject: "Reset your ReserveSit password",
     messageType: "password_reset_request",
-    body: [
-      "You requested a password reset for your ReserveSit account.",
-      "",
-      `Reset link: ${resetUrl}`,
-      "",
-      "This link expires in 1 hour. If you did not request this, you can ignore this email.",
-    ].join("\n"),
+    variables: {
+      userName: user.name || "there",
+      resetUrl,
+    },
+    force: true,
   });
 
   if (process.env.NODE_ENV !== "production") {
@@ -45,4 +43,3 @@ export async function POST(req: NextRequest) {
   }
   return genericResponse();
 }
-

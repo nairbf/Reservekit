@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sendEmail } from "@/lib/email";
 import { sendSms } from "@/lib/sms";
 import { smsReminder } from "@/lib/sms-templates";
+import { sendNotification } from "@/lib/send-notification";
 
 function formatTime12(value: string): string {
   const [h, m] = String(value || "00:00").split(":").map(Number);
   if (!Number.isFinite(h) || !Number.isFinite(m)) return value;
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
+function formatDateLabel(value: string): string {
+  const dt = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(dt.getTime())) return value;
+  return dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
 export async function GET(req: NextRequest) {
@@ -34,25 +40,18 @@ export async function GET(req: NextRequest) {
 
   let sent = 0;
   for (const reservation of rows) {
-    const body = [
-      `Hi ${reservation.guestName},`,
-      "",
-      `Reminder: Your reservation is tomorrow at ${restaurantName}.`,
-      `Date: ${reservation.date}`,
-      `Time: ${formatTime12(reservation.time)}`,
-      `Party size: ${reservation.partySize}`,
-      `Reservation code: ${reservation.code}`,
-      "",
-      `Manage your reservation: ${appUrl}/reserve/${encodeURIComponent("test")}`,
-      "",
-      `— ${restaurantName}`,
-    ].join("\n");
-
     if (reservation.guestEmail) {
-      await sendEmail({
+      await sendNotification({
+        templateId: "reservation_reminder",
         to: reservation.guestEmail,
-        subject: `Reminder: Your reservation tomorrow at ${restaurantName}`,
-        body,
+        variables: {
+          guestName: reservation.guestName,
+          date: formatDateLabel(reservation.date),
+          time: formatTime12(reservation.time),
+          partySize: String(reservation.partySize),
+          confirmationCode: reservation.code,
+          manageUrl: `${appUrl}/reservation/manage?code=${encodeURIComponent(reservation.code)}`,
+        },
         reservationId: reservation.id,
         messageType: "reminder",
       });

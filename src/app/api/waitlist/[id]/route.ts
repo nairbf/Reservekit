@@ -6,6 +6,7 @@ import { getSettings, getDiningDuration } from "@/lib/settings";
 import { generateCode } from "@/lib/codes";
 import { minutesToTime, timeToMinutes } from "@/lib/availability";
 import { reorderActiveWaitlistPositions } from "@/lib/waitlist";
+import { sendNotification } from "@/lib/send-notification";
 
 function currentDateTime() {
   const now = new Date();
@@ -43,6 +44,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       body: `${restaurantName}: Hi ${updated.guestName}! Your table is almost ready. Please head to the host stand. Reply CANCEL to leave the waitlist.`,
       messageType: "waitlist_notify",
     });
+    if (updated.guestEmail) {
+      await sendNotification({
+        templateId: "waitlist_ready",
+        to: updated.guestEmail,
+        messageType: "waitlist_ready",
+        variables: {
+          guestName: updated.guestName,
+          partySize: String(updated.partySize),
+        },
+      });
+    }
     return NextResponse.json(updated);
   }
 

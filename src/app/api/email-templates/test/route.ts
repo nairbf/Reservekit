@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { sendNotification } from "@/lib/send-notification";
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 export async function POST(req: NextRequest) {
   let session;
   try {
@@ -10,15 +14,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await req.json()) as { templateId?: string };
+  const body = (await req.json()) as { templateId?: string; to?: string };
   const templateId = String(body?.templateId || "").trim();
   if (!templateId) {
     return NextResponse.json({ error: "templateId is required" }, { status: 400 });
   }
+  const requestedTo = String(body?.to || "").trim();
+  const recipientEmail = requestedTo && isValidEmail(requestedTo) ? requestedTo : session.email;
 
   const result = await sendNotification({
     templateId,
-    to: session.email,
+    to: recipientEmail,
     force: true,
     messageType: `${templateId}_test`,
   });
@@ -41,8 +47,8 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    sentTo: session.email,
-    message: `Test email sent to ${session.email}`,
+    sentTo: recipientEmail,
+    message: `Test email sent to ${recipientEmail}`,
     id: result.id || null,
   });
 }

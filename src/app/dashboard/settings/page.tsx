@@ -142,6 +142,7 @@ export default function SettingsPage() {
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [previewData, setPreviewData] = useState<{ templateId: string; subject: string; html: string } | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
+  const [testRecipient, setTestRecipient] = useState("");
 
   const smsEnabled = settings.feature_sms === "true";
 
@@ -156,7 +157,9 @@ export default function SettingsPage() {
       const response = await fetch("/api/auth/me");
       if (!response.ok) return;
       const data = (await response.json()) as { email?: string };
-      setCurrentUserEmail(String(data.email || ""));
+      const email = String(data.email || "");
+      setCurrentUserEmail(email);
+      setTestRecipient((previous) => previous || email);
     } catch {
       // ignore
     }
@@ -393,17 +396,18 @@ export default function SettingsPage() {
     setTemplateTesting(templateId);
     setTemplateMessage((previous) => ({ ...previous, [templateId]: "" }));
     try {
+      const recipient = String(testRecipient || currentUserEmail).trim();
       const response = await fetch("/api/email-templates/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ templateId }),
+        body: JSON.stringify({ templateId, to: recipient || undefined }),
       });
       const data = await response.json();
       if (!response.ok) {
         const detail = data?.error ? ` (${data.error})` : "";
         throw new Error(`Failed to send test email. Check that RESEND_API_KEY is configured.${detail}`);
       }
-      const sentTo = data?.sentTo || currentUserEmail || "your account email";
+      const sentTo = data?.sentTo || recipient || currentUserEmail || "your account email";
       setTemplateMessage((previous) => ({
         ...previous,
         [templateId]: `Test email sent to ${sentTo}! Check your inbox.`,
@@ -843,6 +847,13 @@ export default function SettingsPage() {
                             >
                               Preview
                             </button>
+                            <input
+                              type="email"
+                              value={testRecipient}
+                              onChange={(event) => setTestRecipient(event.target.value)}
+                              placeholder="Enter email address"
+                              className="h-10 w-64 rounded-lg border border-gray-300 px-3 text-sm"
+                            />
                             <button
                               type="button"
                               onClick={() => sendTestTemplate(template.id)}
@@ -852,7 +863,7 @@ export default function SettingsPage() {
                               {templateTesting === template.id ? "Sending..." : "Send Test Email"}
                             </button>
                             <span className="self-center text-xs text-gray-500">
-                              Test will be sent to: {currentUserEmail || "your account email"}
+                              Test will be sent to: {testRecipient || currentUserEmail || "your account email"}
                             </span>
                             <button
                               type="button"

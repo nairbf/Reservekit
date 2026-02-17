@@ -141,6 +141,7 @@ export default function SettingsPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [previewData, setPreviewData] = useState<{ templateId: string; subject: string; html: string } | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState("");
 
   const smsEnabled = settings.feature_sms === "true";
 
@@ -150,7 +151,19 @@ export default function SettingsPage() {
     setSettings(data);
   }
 
+  async function loadCurrentUserEmail() {
+    try {
+      const response = await fetch("/api/auth/me");
+      if (!response.ok) return;
+      const data = (await response.json()) as { email?: string };
+      setCurrentUserEmail(String(data.email || ""));
+    } catch {
+      // ignore
+    }
+  }
+
   useEffect(() => {
+    loadCurrentUserEmail().catch(() => undefined);
     loadSettings()
       .catch(() => setSettings({}))
       .finally(() => setLoading(false));
@@ -386,10 +399,17 @@ export default function SettingsPage() {
         body: JSON.stringify({ templateId }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Test email failed");
-      setTemplateMessage((previous) => ({ ...previous, [templateId]: "Test email sent." }));
+      if (!response.ok) {
+        const detail = data?.error ? ` (${data.error})` : "";
+        throw new Error(`Failed to send test email. Check that RESEND_API_KEY is configured.${detail}`);
+      }
+      const sentTo = data?.sentTo || currentUserEmail || "your account email";
+      setTemplateMessage((previous) => ({
+        ...previous,
+        [templateId]: `Test email sent to ${sentTo}! Check your inbox.`,
+      }));
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "Test email failed";
+      const msg = error instanceof Error ? error.message : "Failed to send test email. Check that RESEND_API_KEY is configured.";
       setTemplateMessage((previous) => ({ ...previous, [templateId]: msg }));
     } finally {
       setTemplateTesting(null);
@@ -569,9 +589,28 @@ export default function SettingsPage() {
 
       {activeTab === "notifications" && (
         <div className="space-y-6">
-          <Section title="Email Configuration">
-            <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-              Emails are sent from: <span className="font-semibold">reservations@{settings.slug || "restaurant"}.reservesit.com</span>
+          <Section title="Email Delivery">
+            <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+              <p>
+                Emails are sent from:{" "}
+                <span className="font-semibold">
+                  {`${settings.restaurantName || "Restaurant"} <reservations@reservesit.com>`}
+                </span>
+              </p>
+              <p>
+                Replies go to:{" "}
+                <span className="font-semibold">
+                  {settings.emailReplyTo || settings.contactEmail || "Not configured"}
+                </span>
+              </p>
+              {!settings.emailReplyTo && !settings.contactEmail && (
+                <p className="text-xs text-blue-800">
+                  Set a reply-to address below so guest replies go to your inbox.
+                </p>
+              )}
+              <p className="text-xs text-blue-800">
+                Guests will see your restaurant name as the sender. When they reply, it goes to your reply-to email.
+              </p>
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <Field
@@ -812,6 +851,9 @@ export default function SettingsPage() {
                             >
                               {templateTesting === template.id ? "Sending..." : "Send Test Email"}
                             </button>
+                            <span className="self-center text-xs text-gray-500">
+                              Test will be sent to: {currentUserEmail || "your account email"}
+                            </span>
                             <button
                               type="button"
                               onClick={() => resetTemplate(template.id)}

@@ -55,10 +55,9 @@ export async function sendEmail(options: SendEmailOptions) {
     return { success: false, error: "No API key configured" };
   }
 
-  const senderSlug = (options.slug || cleanEnv("RESTAURANT_SLUG") || "noreply").replace(/[^a-z0-9-]/gi, "").toLowerCase();
   const senderDomain = cleanEnv("SENDER_DOMAIN", "reservesit.com");
   const fromName = options.fromName || cleanEnv("RESTAURANT_NAME", "ReserveSit");
-  const from = `${fromName} <reservations@${senderSlug}.${senderDomain}>`;
+  const from = `${fromName} <reservations@${senderDomain}>`;
 
   const html = options.html || toHtmlFromBody(options.body || options.text || "");
   const text = options.text || options.body || "";

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { sanitizeString } from "@/lib/validate";
 
 export async function GET(req: NextRequest) {
   try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
 
   const { searchParams } = new URL(req.url);
-  const search = (searchParams.get("search") || "").trim();
+  const search = sanitizeString(searchParams.get("search"), 120);
 
   const where = search
     ? {

@@ -3,8 +3,13 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { verifyPasswordResetToken } from "@/lib/auth";
 import { sendEmail } from "@/lib/email";
+import { checkPasswordResetRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const limit = checkPasswordResetRate(ip);
+  if (!limit.allowed) return tooManyRequests(limit.resetAt);
+
   const { token, password } = await req.json();
   const nextPassword = String(password || "");
 
@@ -47,4 +52,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true });
 }
-

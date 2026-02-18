@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { sendNotification } from "@/lib/send-notification";
+import { checkEmailTestRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const limit = checkEmailTestRate(ip);
+  if (!limit.allowed) return tooManyRequests(limit.resetAt);
+
   let session;
   try {
     session = await requireAuth();

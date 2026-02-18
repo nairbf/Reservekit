@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyLogin, createToken } from "@/lib/auth";
+import { checkLoginRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const limit = checkLoginRate(ip);
+  if (!limit.allowed) return tooManyRequests(limit.resetAt);
+
   const { email, password } = await req.json();
   const user = await verifyLogin(email, password);
   if (!user) return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });

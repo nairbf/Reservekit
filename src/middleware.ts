@@ -33,6 +33,15 @@ function isPublicApi(pathname: string): boolean {
   return false;
 }
 
+function withSecurityHeaders(response: NextResponse) {
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  return response;
+}
+
 export function middleware(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
   const pathname = req.nextUrl.pathname;
@@ -40,18 +49,18 @@ export function middleware(req: NextRequest) {
   if (pathname.startsWith("/dashboard")) {
     if (!token) {
       const loginUrl = new URL("/login", req.url);
-      return NextResponse.redirect(loginUrl);
+      return withSecurityHeaders(NextResponse.redirect(loginUrl));
     }
-    return NextResponse.next();
+    return withSecurityHeaders(NextResponse.next());
   }
 
   if (pathname.startsWith("/api")) {
     if (!isPublicApi(pathname) && !token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return withSecurityHeaders(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
     }
   }
 
-  return NextResponse.next();
+  return withSecurityHeaders(NextResponse.next());
 }
 
 export const config = {

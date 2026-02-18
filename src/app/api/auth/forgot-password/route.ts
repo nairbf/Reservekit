@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createPasswordResetToken } from "@/lib/auth";
 import { sendNotification } from "@/lib/send-notification";
+import { checkPasswordResetRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { isValidEmail, sanitizeString } from "@/lib/validate";
 
 function genericResponse(extra?: Record<string, unknown>) {
   return NextResponse.json({
@@ -12,8 +14,13 @@ function genericResponse(extra?: Record<string, unknown>) {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const limit = checkPasswordResetRate(ip);
+  if (!limit.allowed) return tooManyRequests(limit.resetAt);
+
   const { email } = await req.json();
-  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedEmail = sanitizeString(email, 254).toLowerCase();
+  if (normalizedEmail && !isValidEmail(normalizedEmail)) return genericResponse();
   if (!normalizedEmail) return genericResponse();
 
   const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });

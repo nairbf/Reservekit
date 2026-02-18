@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { estimateWaitMinutes, getTodaysWaitlist, reorderActiveWaitlistPositions } from "@/lib/waitlist";
 import { sendNotification } from "@/lib/send-notification";
+import { checkWaitlistRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { isValidEmail, isValidPhone, sanitizeHtml, sanitizeString } from "@/lib/validate";
 
 function normalizePhone(value: string): string {
   return String(value || "").replace(/[^\d+]/g, "").trim();
@@ -21,15 +23,26 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const limit = checkWaitlistRate(ip);
+  if (!limit.allowed) return tooManyRequests(limit.resetAt);
+
   const body = await req.json();
-  const guestName = String(body?.guestName || "").trim();
-  const guestPhone = normalizePhone(body?.guestPhone || "");
-  const guestEmail = String(body?.guestEmail || "").trim() || null;
-  const notes = String(body?.notes || "").trim() || null;
+  const guestName = sanitizeString(body?.guestName, 120);
+  const guestPhone = normalizePhone(sanitizeString(body?.guestPhone, 32));
+  const guestEmailRaw = sanitizeString(body?.guestEmail, 254).toLowerCase();
+  const guestEmail = guestEmailRaw || null;
+  const notes = sanitizeHtml(sanitizeString(body?.notes, 300)) || null;
   const partySize = Math.max(1, parseInt(String(body?.partySize || "1"), 10) || 1);
 
   if (!guestName || !guestPhone || !partySize) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+  if (!isValidPhone(guestPhone)) {
+    return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
+  }
+  if (guestEmail && !isValidEmail(guestEmail)) {
+    return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
 
   const todays = await getTodaysWaitlist();

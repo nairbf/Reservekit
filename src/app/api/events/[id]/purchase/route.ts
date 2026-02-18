@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { createPaymentIntent } from "@/lib/payments";
 import { generateEventICS } from "@/lib/calendar";
 import { sendNotification } from "@/lib/send-notification";
+import { checkReservationRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
 
 function normalizePhone(value: string): string {
   return String(value || "").replace(/\D/g, "").trim();
@@ -79,6 +80,10 @@ async function ensureGuest(guestName: string, guestEmail: string, rawPhone: stri
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const ip = getClientIp(req);
+  const limit = checkReservationRate(ip);
+  if (!limit.allowed) return tooManyRequests(limit.resetAt);
+
   const { id } = await params;
   const eventId = Number(id);
   if (!Number.isFinite(eventId) || eventId <= 0) {

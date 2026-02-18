@@ -16,6 +16,22 @@ const ADDON_OPTIONS = [
   { key: "addonEventTicketing", label: "Event Ticketing", price: "$129" },
 ] as const;
 
+const TIMEZONE_OPTIONS = [
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "America/Phoenix",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
+  "Australia/Sydney",
+] as const;
+
 type AddonKey = (typeof ADDON_OPTIONS)[number]["key"];
 
 function slugify(value: string) {
@@ -55,6 +71,11 @@ export default function NewRestaurantPage() {
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
+  const [restaurantPhone, setRestaurantPhone] = useState("");
+  const [restaurantAddress, setRestaurantAddress] = useState("");
+  const [notificationEmail, setNotificationEmail] = useState("");
+  const [timezone, setTimezone] = useState("America/New_York");
+  const [initialPassword, setInitialPassword] = useState("");
   const [plan, setPlan] = useState("CORE");
   const [status, setStatus] = useState("TRIAL");
   const [port, setPort] = useState("");
@@ -63,6 +84,10 @@ export default function NewRestaurantPage() {
   const [error, setError] = useState("");
   const [provisioningCommand, setProvisioningCommand] = useState("");
   const [licenseKey, setLicenseKey] = useState("");
+  const [seededRestaurantDb, setSeededRestaurantDb] = useState(false);
+  const [adminUserCreated, setAdminUserCreated] = useState(false);
+  const [seedSkipped, setSeedSkipped] = useState(false);
+  const [seedError, setSeedError] = useState("");
 
   const [addons, setAddons] = useState<Record<AddonKey, boolean>>({
     addonSms: false,
@@ -90,12 +115,22 @@ export default function NewRestaurantPage() {
     void loadPort();
   }, []);
 
+  useEffect(() => {
+    if (!notificationEmail.trim()) {
+      setNotificationEmail(ownerEmail.trim().toLowerCase());
+    }
+  }, [ownerEmail, notificationEmail]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
     setProvisioningCommand("");
     setLicenseKey("");
+    setSeededRestaurantDb(false);
+    setAdminUserCreated(false);
+    setSeedSkipped(false);
+    setSeedError("");
 
     try {
       const normalizedAddons = applyPlanIncludes(plan, addons);
@@ -109,6 +144,11 @@ export default function NewRestaurantPage() {
           ownerName,
           ownerEmail,
           ownerPhone,
+          notificationEmail,
+          timezone,
+          phone: restaurantPhone,
+          address: restaurantAddress,
+          initialPassword,
           domain: slug ? `${slug}.reservesit.com` : undefined,
           plan,
           status,
@@ -125,6 +165,10 @@ export default function NewRestaurantPage() {
 
       setProvisioningCommand(payload?.provisioningCommand || "");
       setLicenseKey(payload?.restaurant?.licenseKey || "");
+      setSeededRestaurantDb(Boolean(payload?.seededRestaurantDb));
+      setAdminUserCreated(Boolean(payload?.adminUserCreated));
+      setSeedSkipped(Boolean(payload?.seedSkipped));
+      setSeedError(String(payload?.seedError || ""));
       showToast("Restaurant created.", "success");
 
       setName("");
@@ -132,6 +176,11 @@ export default function NewRestaurantPage() {
       setOwnerName("");
       setOwnerEmail("");
       setOwnerPhone("");
+      setRestaurantPhone("");
+      setRestaurantAddress("");
+      setNotificationEmail("");
+      setTimezone("America/New_York");
+      setInitialPassword("");
       setPlan("CORE");
       setStatus("TRIAL");
       setHosted(true);
@@ -187,8 +236,66 @@ export default function NewRestaurantPage() {
               <input value={ownerPhone} onChange={(e) => setOwnerPhone(e.target.value)} className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm" />
             </label>
             <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Initial Admin Password</span>
+              <input
+                value={initialPassword}
+                onChange={(e) => setInitialPassword(e.target.value)}
+                type="password"
+                required
+                minLength={8}
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+              />
+              <span className="mt-1 block text-xs text-slate-500">Used for the first admin account in the restaurant instance.</span>
+            </label>
+            <label className="block">
               <span className="mb-1 block text-sm font-medium text-slate-700">Port</span>
               <input value={port} onChange={(e) => setPort(e.target.value)} type="number" min={3001} className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm" />
+            </label>
+          </div>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold text-slate-900">Initial Setup</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Restaurant Phone</span>
+              <input
+                value={restaurantPhone}
+                onChange={(e) => setRestaurantPhone(e.target.value)}
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Notification Email</span>
+              <input
+                value={notificationEmail}
+                onChange={(e) => setNotificationEmail(e.target.value)}
+                type="email"
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+              />
+              <span className="mt-1 block text-xs text-slate-500">Reservation alerts and reply-to default.</span>
+            </label>
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Restaurant Address</span>
+              <input
+                value={restaurantAddress}
+                onChange={(e) => setRestaurantAddress(e.target.value)}
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Timezone</span>
+              <select
+                value={timezone}
+                onChange={(e) => setTimezone(e.target.value)}
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+              >
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {tz}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
         </section>
@@ -280,6 +387,12 @@ export default function NewRestaurantPage() {
           >
             Copy Command
           </button>
+          <div className="space-y-1 text-xs text-emerald-900">
+            <div>Settings seeded to restaurant DB: {seededRestaurantDb ? "Yes" : "No"}</div>
+            <div>Admin user created in restaurant DB: {adminUserCreated ? "Yes" : "No"}</div>
+            {seedSkipped ? <div>Restaurant DB not found yet. Settings/user setup will happen after provisioning.</div> : null}
+            {seedError ? <div className="text-rose-700">Setup warning: {seedError}</div> : null}
+          </div>
         </div>
       ) : null}
     </div>

@@ -42,6 +42,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       licenseEvents: {
         orderBy: { createdAt: "desc" },
       },
+      emailSequences: {
+        orderBy: [{ sequenceStep: "asc" }, { scheduledAt: "asc" }],
+      },
     },
   });
 

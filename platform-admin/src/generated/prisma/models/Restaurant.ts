@@ -422,6 +422,7 @@ export type RestaurantWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Restaurant"> | Date | string
   licenseEvents?: Prisma.LicenseEventListRelationFilter
   healthChecks?: Prisma.HealthCheckListRelationFilter
+  emailSequences?: Prisma.EmailSequenceEventListRelationFilter
 }
 
 export type RestaurantOrderByWithRelationInput = {
@@ -457,6 +458,7 @@ export type RestaurantOrderByWithRelationInput = {
   updatedAt?: Prisma.SortOrder
   licenseEvents?: Prisma.LicenseEventOrderByRelationAggregateInput
   healthChecks?: Prisma.HealthCheckOrderByRelationAggregateInput
+  emailSequences?: Prisma.EmailSequenceEventOrderByRelationAggregateInput
 }
 
 export type RestaurantWhereUniqueInput = Prisma.AtLeast<{
@@ -495,6 +497,7 @@ export type RestaurantWhereUniqueInput = Prisma.AtLeast<{
   updatedAt?: Prisma.DateTimeFilter<"Restaurant"> | Date | string
   licenseEvents?: Prisma.LicenseEventListRelationFilter
   healthChecks?: Prisma.HealthCheckListRelationFilter
+  emailSequences?: Prisma.EmailSequenceEventListRelationFilter
 }, "id" | "slug" | "port" | "licenseKey">
 
 export type RestaurantOrderByWithAggregationInput = {
@@ -604,6 +607,7 @@ export type RestaurantCreateInput = {
   updatedAt?: Date | string
   licenseEvents?: Prisma.LicenseEventCreateNestedManyWithoutRestaurantInput
   healthChecks?: Prisma.HealthCheckCreateNestedManyWithoutRestaurantInput
+  emailSequences?: Prisma.EmailSequenceEventCreateNestedManyWithoutRestaurantInput
 }
 
 export type RestaurantUncheckedCreateInput = {
@@ -639,6 +643,7 @@ export type RestaurantUncheckedCreateInput = {
   updatedAt?: Date | string
   licenseEvents?: Prisma.LicenseEventUncheckedCreateNestedManyWithoutRestaurantInput
   healthChecks?: Prisma.HealthCheckUncheckedCreateNestedManyWithoutRestaurantInput
+  emailSequences?: Prisma.EmailSequenceEventUncheckedCreateNestedManyWithoutRestaurantInput
 }
 
 export type RestaurantUpdateInput = {
@@ -674,6 +679,7 @@ export type RestaurantUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   licenseEvents?: Prisma.LicenseEventUpdateManyWithoutRestaurantNestedInput
   healthChecks?: Prisma.HealthCheckUpdateManyWithoutRestaurantNestedInput
+  emailSequences?: Prisma.EmailSequenceEventUpdateManyWithoutRestaurantNestedInput
 }
 
 export type RestaurantUncheckedUpdateInput = {
@@ -709,6 +715,7 @@ export type RestaurantUncheckedUpdateInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   licenseEvents?: Prisma.LicenseEventUncheckedUpdateManyWithoutRestaurantNestedInput
   healthChecks?: Prisma.HealthCheckUncheckedUpdateManyWithoutRestaurantNestedInput
+  emailSequences?: Prisma.EmailSequenceEventUncheckedUpdateManyWithoutRestaurantNestedInput
 }
 
 export type RestaurantCreateManyInput = {
@@ -992,6 +999,20 @@ export type RestaurantUpdateOneRequiredWithoutHealthChecksNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.RestaurantUpdateToOneWithWhereWithoutHealthChecksInput, Prisma.RestaurantUpdateWithoutHealthChecksInput>, Prisma.RestaurantUncheckedUpdateWithoutHealthChecksInput>
 }
 
+export type RestaurantCreateNestedOneWithoutEmailSequencesInput = {
+  create?: Prisma.XOR<Prisma.RestaurantCreateWithoutEmailSequencesInput, Prisma.RestaurantUncheckedCreateWithoutEmailSequencesInput>
+  connectOrCreate?: Prisma.RestaurantCreateOrConnectWithoutEmailSequencesInput
+  connect?: Prisma.RestaurantWhereUniqueInput
+}
+
+export type RestaurantUpdateOneRequiredWithoutEmailSequencesNestedInput = {
+  create?: Prisma.XOR<Prisma.RestaurantCreateWithoutEmailSequencesInput, Prisma.RestaurantUncheckedCreateWithoutEmailSequencesInput>
+  connectOrCreate?: Prisma.RestaurantCreateOrConnectWithoutEmailSequencesInput
+  upsert?: Prisma.RestaurantUpsertWithoutEmailSequencesInput
+  connect?: Prisma.RestaurantWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.RestaurantUpdateToOneWithWhereWithoutEmailSequencesInput, Prisma.RestaurantUpdateWithoutEmailSequencesInput>, Prisma.RestaurantUncheckedUpdateWithoutEmailSequencesInput>
+}
+
 export type RestaurantCreateWithoutLicenseEventsInput = {
   id?: string
   slug: string
@@ -1024,6 +1045,7 @@ export type RestaurantCreateWithoutLicenseEventsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   healthChecks?: Prisma.HealthCheckCreateNestedManyWithoutRestaurantInput
+  emailSequences?: Prisma.EmailSequenceEventCreateNestedManyWithoutRestaurantInput
 }
 
 export type RestaurantUncheckedCreateWithoutLicenseEventsInput = {
@@ -1058,6 +1080,7 @@ export type RestaurantUncheckedCreateWithoutLicenseEventsInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   healthChecks?: Prisma.HealthCheckUncheckedCreateNestedManyWithoutRestaurantInput
+  emailSequences?: Prisma.EmailSequenceEventUncheckedCreateNestedManyWithoutRestaurantInput
 }
 
 export type RestaurantCreateOrConnectWithoutLicenseEventsInput = {
@@ -1108,6 +1131,7 @@ export type RestaurantUpdateWithoutLicenseEventsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   healthChecks?: Prisma.HealthCheckUpdateManyWithoutRestaurantNestedInput
+  emailSequences?: Prisma.EmailSequenceEventUpdateManyWithoutRestaurantNestedInput
 }
 
 export type RestaurantUncheckedUpdateWithoutLicenseEventsInput = {
@@ -1142,6 +1166,7 @@ export type RestaurantUncheckedUpdateWithoutLicenseEventsInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   healthChecks?: Prisma.HealthCheckUncheckedUpdateManyWithoutRestaurantNestedInput
+  emailSequences?: Prisma.EmailSequenceEventUncheckedUpdateManyWithoutRestaurantNestedInput
 }
 
 export type RestaurantCreateWithoutHealthChecksInput = {
@@ -1176,6 +1201,7 @@ export type RestaurantCreateWithoutHealthChecksInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   licenseEvents?: Prisma.LicenseEventCreateNestedManyWithoutRestaurantInput
+  emailSequences?: Prisma.EmailSequenceEventCreateNestedManyWithoutRestaurantInput
 }
 
 export type RestaurantUncheckedCreateWithoutHealthChecksInput = {
@@ -1210,6 +1236,7 @@ export type RestaurantUncheckedCreateWithoutHealthChecksInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   licenseEvents?: Prisma.LicenseEventUncheckedCreateNestedManyWithoutRestaurantInput
+  emailSequences?: Prisma.EmailSequenceEventUncheckedCreateNestedManyWithoutRestaurantInput
 }
 
 export type RestaurantCreateOrConnectWithoutHealthChecksInput = {
@@ -1260,6 +1287,7 @@ export type RestaurantUpdateWithoutHealthChecksInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   licenseEvents?: Prisma.LicenseEventUpdateManyWithoutRestaurantNestedInput
+  emailSequences?: Prisma.EmailSequenceEventUpdateManyWithoutRestaurantNestedInput
 }
 
 export type RestaurantUncheckedUpdateWithoutHealthChecksInput = {
@@ -1294,6 +1322,163 @@ export type RestaurantUncheckedUpdateWithoutHealthChecksInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   licenseEvents?: Prisma.LicenseEventUncheckedUpdateManyWithoutRestaurantNestedInput
+  emailSequences?: Prisma.EmailSequenceEventUncheckedUpdateManyWithoutRestaurantNestedInput
+}
+
+export type RestaurantCreateWithoutEmailSequencesInput = {
+  id?: string
+  slug: string
+  name: string
+  domain?: string | null
+  adminEmail: string
+  status?: $Enums.RestaurantStatus
+  plan?: $Enums.RestaurantPlan
+  port: number
+  dbPath: string
+  licenseKey?: string
+  licenseExpiry?: Date | string | null
+  licenseActivatedAt?: Date | string | null
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: $Enums.HostingStatus
+  ownerName?: string | null
+  ownerEmail?: string | null
+  ownerPhone?: string | null
+  trialEndsAt?: Date | string | null
+  stripeCustomerId?: string | null
+  stripeSubscriptionId?: string | null
+  monthlyHostingActive?: boolean
+  oneTimeRevenue?: number | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  licenseEvents?: Prisma.LicenseEventCreateNestedManyWithoutRestaurantInput
+  healthChecks?: Prisma.HealthCheckCreateNestedManyWithoutRestaurantInput
+}
+
+export type RestaurantUncheckedCreateWithoutEmailSequencesInput = {
+  id?: string
+  slug: string
+  name: string
+  domain?: string | null
+  adminEmail: string
+  status?: $Enums.RestaurantStatus
+  plan?: $Enums.RestaurantPlan
+  port: number
+  dbPath: string
+  licenseKey?: string
+  licenseExpiry?: Date | string | null
+  licenseActivatedAt?: Date | string | null
+  addonSms?: boolean
+  addonFloorPlan?: boolean
+  addonReporting?: boolean
+  addonGuestHistory?: boolean
+  addonEventTicketing?: boolean
+  hosted?: boolean
+  hostingStatus?: $Enums.HostingStatus
+  ownerName?: string | null
+  ownerEmail?: string | null
+  ownerPhone?: string | null
+  trialEndsAt?: Date | string | null
+  stripeCustomerId?: string | null
+  stripeSubscriptionId?: string | null
+  monthlyHostingActive?: boolean
+  oneTimeRevenue?: number | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  licenseEvents?: Prisma.LicenseEventUncheckedCreateNestedManyWithoutRestaurantInput
+  healthChecks?: Prisma.HealthCheckUncheckedCreateNestedManyWithoutRestaurantInput
+}
+
+export type RestaurantCreateOrConnectWithoutEmailSequencesInput = {
+  where: Prisma.RestaurantWhereUniqueInput
+  create: Prisma.XOR<Prisma.RestaurantCreateWithoutEmailSequencesInput, Prisma.RestaurantUncheckedCreateWithoutEmailSequencesInput>
+}
+
+export type RestaurantUpsertWithoutEmailSequencesInput = {
+  update: Prisma.XOR<Prisma.RestaurantUpdateWithoutEmailSequencesInput, Prisma.RestaurantUncheckedUpdateWithoutEmailSequencesInput>
+  create: Prisma.XOR<Prisma.RestaurantCreateWithoutEmailSequencesInput, Prisma.RestaurantUncheckedCreateWithoutEmailSequencesInput>
+  where?: Prisma.RestaurantWhereInput
+}
+
+export type RestaurantUpdateToOneWithWhereWithoutEmailSequencesInput = {
+  where?: Prisma.RestaurantWhereInput
+  data: Prisma.XOR<Prisma.RestaurantUpdateWithoutEmailSequencesInput, Prisma.RestaurantUncheckedUpdateWithoutEmailSequencesInput>
+}
+
+export type RestaurantUpdateWithoutEmailSequencesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
+  port?: Prisma.IntFieldUpdateOperationsInput | number
+  dbPath?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  licenseEvents?: Prisma.LicenseEventUpdateManyWithoutRestaurantNestedInput
+  healthChecks?: Prisma.HealthCheckUpdateManyWithoutRestaurantNestedInput
+}
+
+export type RestaurantUncheckedUpdateWithoutEmailSequencesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  slug?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
+  port?: Prisma.IntFieldUpdateOperationsInput | number
+  dbPath?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseKey?: Prisma.StringFieldUpdateOperationsInput | string
+  licenseExpiry?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  licenseActivatedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  addonSms?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonFloorPlan?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonReporting?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonGuestHistory?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  addonEventTicketing?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hosted?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  hostingStatus?: Prisma.EnumHostingStatusFieldUpdateOperationsInput | $Enums.HostingStatus
+  ownerName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerEmail?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ownerPhone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  trialEndsAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  licenseEvents?: Prisma.LicenseEventUncheckedUpdateManyWithoutRestaurantNestedInput
+  healthChecks?: Prisma.HealthCheckUncheckedUpdateManyWithoutRestaurantNestedInput
 }
 
 
@@ -1304,11 +1489,13 @@ export type RestaurantUncheckedUpdateWithoutHealthChecksInput = {
 export type RestaurantCountOutputType = {
   licenseEvents: number
   healthChecks: number
+  emailSequences: number
 }
 
 export type RestaurantCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   licenseEvents?: boolean | RestaurantCountOutputTypeCountLicenseEventsArgs
   healthChecks?: boolean | RestaurantCountOutputTypeCountHealthChecksArgs
+  emailSequences?: boolean | RestaurantCountOutputTypeCountEmailSequencesArgs
 }
 
 /**
@@ -1333,6 +1520,13 @@ export type RestaurantCountOutputTypeCountLicenseEventsArgs<ExtArgs extends runt
  */
 export type RestaurantCountOutputTypeCountHealthChecksArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   where?: Prisma.HealthCheckWhereInput
+}
+
+/**
+ * RestaurantCountOutputType without action
+ */
+export type RestaurantCountOutputTypeCountEmailSequencesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.EmailSequenceEventWhereInput
 }
 
 
@@ -1369,6 +1563,7 @@ export type RestaurantSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   updatedAt?: boolean
   licenseEvents?: boolean | Prisma.Restaurant$licenseEventsArgs<ExtArgs>
   healthChecks?: boolean | Prisma.Restaurant$healthChecksArgs<ExtArgs>
+  emailSequences?: boolean | Prisma.Restaurant$emailSequencesArgs<ExtArgs>
   _count?: boolean | Prisma.RestaurantCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["restaurant"]>
 
@@ -1475,6 +1670,7 @@ export type RestaurantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs
 export type RestaurantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   licenseEvents?: boolean | Prisma.Restaurant$licenseEventsArgs<ExtArgs>
   healthChecks?: boolean | Prisma.Restaurant$healthChecksArgs<ExtArgs>
+  emailSequences?: boolean | Prisma.Restaurant$emailSequencesArgs<ExtArgs>
   _count?: boolean | Prisma.RestaurantCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type RestaurantIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1485,6 +1681,7 @@ export type $RestaurantPayload<ExtArgs extends runtime.Types.Extensions.Internal
   objects: {
     licenseEvents: Prisma.$LicenseEventPayload<ExtArgs>[]
     healthChecks: Prisma.$HealthCheckPayload<ExtArgs>[]
+    emailSequences: Prisma.$EmailSequenceEventPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1913,6 +2110,7 @@ export interface Prisma__RestaurantClient<T, Null = never, ExtArgs extends runti
   readonly [Symbol.toStringTag]: "PrismaPromise"
   licenseEvents<T extends Prisma.Restaurant$licenseEventsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Restaurant$licenseEventsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LicenseEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   healthChecks<T extends Prisma.Restaurant$healthChecksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Restaurant$healthChecksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$HealthCheckPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  emailSequences<T extends Prisma.Restaurant$emailSequencesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Restaurant$emailSequencesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$EmailSequenceEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2403,6 +2601,30 @@ export type Restaurant$healthChecksArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.HealthCheckScalarFieldEnum | Prisma.HealthCheckScalarFieldEnum[]
+}
+
+/**
+ * Restaurant.emailSequences
+ */
+export type Restaurant$emailSequencesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the EmailSequenceEvent
+   */
+  select?: Prisma.EmailSequenceEventSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the EmailSequenceEvent
+   */
+  omit?: Prisma.EmailSequenceEventOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.EmailSequenceEventInclude<ExtArgs> | null
+  where?: Prisma.EmailSequenceEventWhereInput
+  orderBy?: Prisma.EmailSequenceEventOrderByWithRelationInput | Prisma.EmailSequenceEventOrderByWithRelationInput[]
+  cursor?: Prisma.EmailSequenceEventWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.EmailSequenceEventScalarFieldEnum | Prisma.EmailSequenceEventScalarFieldEnum[]
 }
 
 /**

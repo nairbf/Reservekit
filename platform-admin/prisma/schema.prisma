@@ -103,8 +103,9 @@ model Restaurant {
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
-  licenseEvents LicenseEvent[]
-  healthChecks  HealthCheck[]
+  licenseEvents   LicenseEvent[]
+  healthChecks    HealthCheck[]
+  emailSequences  EmailSequenceEvent[]
 }
 
 model LicenseEvent {
@@ -128,4 +129,22 @@ model HealthCheck {
   checkedAt      DateTime     @default(now())
 
   @@index([restaurantId, checkedAt])
+}
+
+model EmailSequenceEvent {
+  id           String     @id @default(uuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  trigger      String
+  sequenceStep Int
+  scheduledAt  DateTime
+  sentAt       DateTime?
+  emailTo      String
+  emailSubject String
+  emailBody    String     @default("")
+  status       String     @default("pending")
+  createdAt    DateTime   @default(now())
+
+  @@index([restaurantId, scheduledAt])
+  @@index([status, scheduledAt])
 }

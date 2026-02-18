@@ -387,7 +387,8 @@ export const ModelName = {
   PlatformUser: 'PlatformUser',
   Restaurant: 'Restaurant',
   LicenseEvent: 'LicenseEvent',
-  HealthCheck: 'HealthCheck'
+  HealthCheck: 'HealthCheck',
+  EmailSequenceEvent: 'EmailSequenceEvent'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -403,7 +404,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "platformUser" | "restaurant" | "licenseEvent" | "healthCheck"
+    modelProps: "platformUser" | "restaurant" | "licenseEvent" | "healthCheck" | "emailSequenceEvent"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -703,6 +704,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    EmailSequenceEvent: {
+      payload: Prisma.$EmailSequenceEventPayload<ExtArgs>
+      fields: Prisma.EmailSequenceEventFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.EmailSequenceEventFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.EmailSequenceEventFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload>
+        }
+        findFirst: {
+          args: Prisma.EmailSequenceEventFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.EmailSequenceEventFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload>
+        }
+        findMany: {
+          args: Prisma.EmailSequenceEventFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload>[]
+        }
+        create: {
+          args: Prisma.EmailSequenceEventCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload>
+        }
+        createMany: {
+          args: Prisma.EmailSequenceEventCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.EmailSequenceEventCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload>[]
+        }
+        delete: {
+          args: Prisma.EmailSequenceEventDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload>
+        }
+        update: {
+          args: Prisma.EmailSequenceEventUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload>
+        }
+        deleteMany: {
+          args: Prisma.EmailSequenceEventDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.EmailSequenceEventUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.EmailSequenceEventUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload>[]
+        }
+        upsert: {
+          args: Prisma.EmailSequenceEventUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$EmailSequenceEventPayload>
+        }
+        aggregate: {
+          args: Prisma.EmailSequenceEventAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateEmailSequenceEvent>
+        }
+        groupBy: {
+          args: Prisma.EmailSequenceEventGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailSequenceEventGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.EmailSequenceEventCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.EmailSequenceEventCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -809,6 +884,23 @@ export const HealthCheckScalarFieldEnum = {
 } as const
 
 export type HealthCheckScalarFieldEnum = (typeof HealthCheckScalarFieldEnum)[keyof typeof HealthCheckScalarFieldEnum]
+
+
+export const EmailSequenceEventScalarFieldEnum = {
+  id: 'id',
+  restaurantId: 'restaurantId',
+  trigger: 'trigger',
+  sequenceStep: 'sequenceStep',
+  scheduledAt: 'scheduledAt',
+  sentAt: 'sentAt',
+  emailTo: 'emailTo',
+  emailSubject: 'emailSubject',
+  emailBody: 'emailBody',
+  status: 'status',
+  createdAt: 'createdAt'
+} as const
+
+export type EmailSequenceEventScalarFieldEnum = (typeof EmailSequenceEventScalarFieldEnum)[keyof typeof EmailSequenceEventScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1008,6 +1100,7 @@ export type GlobalOmitConfig = {
   restaurant?: Prisma.RestaurantOmit
   licenseEvent?: Prisma.LicenseEventOmit
   healthCheck?: Prisma.HealthCheckOmit
+  emailSequenceEvent?: Prisma.EmailSequenceEventOmit
 }
 
 /* Types for Logging */

@@ -56,6 +56,39 @@ export async function POST(request: NextRequest) {
         restaurantName: session.metadata?.restaurantName,
         amountTotal: session.amount_total,
       });
+
+      if (session.customer_email && session.metadata?.plan) {
+        try {
+          const adminApiUrl = process.env.ADMIN_API_URL || "https://admin.reservesit.com";
+          const sharedSecret = process.env.PLATFORM_WEBHOOK_SECRET || "";
+
+          const response = await fetch(`${adminApiUrl}/api/webhooks/stripe-purchase`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Webhook-Secret": sharedSecret,
+            },
+            body: JSON.stringify({
+              email: session.customer_email,
+              name: session.metadata?.customerName || session.customer_details?.name || "",
+              restaurantName: session.metadata?.restaurantName || "",
+              plan: session.metadata?.plan || "core",
+              addons: session.metadata?.addons || "",
+              hosting: session.metadata?.hosting || "none",
+              amountTotal: session.amount_total || 0,
+              stripeSessionId: session.id,
+              stripeCustomerId: typeof session.customer === "string" ? session.customer : session.customer?.id || "",
+            }),
+          });
+
+          if (!response.ok) {
+            const details = await response.text();
+            console.error("[STRIPE] Platform admin webhook failed", response.status, details);
+          }
+        } catch (error) {
+          console.error("[STRIPE] Failed to notify platform admin:", error);
+        }
+      }
       break;
     }
 

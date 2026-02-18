@@ -52,6 +52,18 @@ type RestaurantUser = {
   createdAt: string;
 };
 
+type EmailSequenceRow = {
+  id: string;
+  trigger: string;
+  sequenceStep: number;
+  scheduledAt: string;
+  sentAt: string | null;
+  emailTo: string;
+  emailSubject: string;
+  status: "pending" | "sent" | "failed" | "cancelled" | string;
+  createdAt: string;
+};
+
 type RestaurantSettings = {
   restaurantName: string;
   contactEmail: string;
@@ -120,6 +132,7 @@ type RestaurantDetail = {
     performedBy: string | null;
     createdAt: string;
   }>;
+  emailSequences: EmailSequenceRow[];
 };
 
 function isIncludedInPlan(plan: RestaurantPlan, addon: AddonKey) {
@@ -128,6 +141,13 @@ function isIncludedInPlan(plan: RestaurantPlan, addon: AddonKey) {
     return addon === "addonSms" || addon === "addonFloorPlan" || addon === "addonReporting";
   }
   return false;
+}
+
+function sequenceStatusClass(status: string) {
+  if (status === "sent") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (status === "pending") return "bg-amber-50 text-amber-700 border-amber-200";
+  if (status === "failed") return "bg-rose-50 text-rose-700 border-rose-200";
+  return "bg-slate-50 text-slate-700 border-slate-200";
 }
 
 export default function RestaurantDetailPage() {
@@ -650,6 +670,47 @@ export default function RestaurantDetailPage() {
       await load();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Health check failed", "error");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function resendFailedSequence(eventId: string) {
+    if (!restaurant) return;
+    setBusy(`resend-seq-${eventId}`);
+    try {
+      const res = await fetch(`/api/restaurants/${restaurant.id}/email-sequences`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resendFailed", eventId }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Failed to resend email");
+      showToast("Email resent.", "success");
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to resend email", "error");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function cancelPendingSequences() {
+    if (!restaurant) return;
+    if (!window.confirm("Cancel all pending sequence emails for this restaurant?")) return;
+    setBusy("cancel-sequences");
+    try {
+      const res = await fetch(`/api/restaurants/${restaurant.id}/email-sequences`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancelPending" }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || "Failed to cancel pending emails");
+      showToast(`Cancelled ${payload?.cancelled || 0} pending email(s).`, "success");
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to cancel pending emails", "error");
     } finally {
       setBusy("");
     }
@@ -1338,6 +1399,80 @@ export default function RestaurantDetailPage() {
                       ) : (
                         <span className="text-slate-400">Read only</span>
                       )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Email Sequence</h2>
+            <p className="text-sm text-slate-600">Post-purchase onboarding emails and delivery status.</p>
+          </div>
+          {canManage ? (
+            <button
+              type="button"
+              onClick={cancelPendingSequences}
+              disabled={busy === "cancel-sequences"}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+            >
+              {busy === "cancel-sequences" ? "Cancelling..." : "Cancel Remaining"}
+            </button>
+          ) : null}
+        </div>
+
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <th className="px-3 py-2">Step</th>
+                <th className="px-3 py-2">Subject</th>
+                <th className="px-3 py-2">Scheduled</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Sent</th>
+                <th className="px-3 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {restaurant.emailSequences.length === 0 ? (
+                <tr>
+                  <td className="px-3 py-4 text-slate-500" colSpan={6}>No email sequence events found.</td>
+                </tr>
+              ) : (
+                restaurant.emailSequences.map((event) => (
+                  <tr key={event.id} className="border-t border-slate-100">
+                    <td className="px-3 py-2 text-slate-700">{event.sequenceStep}</td>
+                    <td className="px-3 py-2 text-slate-900">
+                      <div className="font-medium">{event.emailSubject}</div>
+                      <div className="text-xs text-slate-500">{event.emailTo}</div>
+                    </td>
+                    <td className="px-3 py-2 text-slate-700">{formatDateTime(event.scheduledAt)}</td>
+                    <td className="px-3 py-2">
+                      <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${sequenceStatusClass(event.status)}`}>
+                        {event.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-slate-700">{formatDateTime(event.sentAt) || "-"}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex justify-end gap-1">
+                        {canManage && event.status === "failed" ? (
+                          <button
+                            type="button"
+                            onClick={() => void resendFailedSequence(event.id)}
+                            disabled={busy === `resend-seq-${event.id}`}
+                            className="rounded-lg border border-slate-300 bg-white px-2 py-1 text-xs font-semibold text-slate-700 disabled:opacity-60"
+                          >
+                            {busy === `resend-seq-${event.id}` ? "Sending..." : "Resend"}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-slate-400">-</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))

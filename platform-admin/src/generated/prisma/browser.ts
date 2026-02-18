@@ -37,3 +37,8 @@ export type LicenseEvent = Prisma.LicenseEventModel
  * 
  */
 export type HealthCheck = Prisma.HealthCheckModel
+/**
+ * Model EmailSequenceEvent
+ * 
+ */
+export type EmailSequenceEvent = Prisma.EmailSequenceEventModel

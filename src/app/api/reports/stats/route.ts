@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { addDaysToDateString, getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
+
+function isIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
 
 export async function GET(req: NextRequest) {
   try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
   const { searchParams } = new URL(req.url);
-  const endDate = searchParams.get("endDate") || new Date().toISOString().split("T")[0];
-  const startDate = searchParams.get("startDate") || (() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split("T")[0]; })();
+  const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
+  const endDateRaw = searchParams.get("endDate") || today;
+  const endDate = isIsoDate(endDateRaw) ? endDateRaw : today;
+  const startDateRaw = searchParams.get("startDate") || addDaysToDateString(endDate, -30);
+  const startDate = isIsoDate(startDateRaw) ? startDateRaw : addDaysToDateString(endDate, -30);
 
   const reservations = await prisma.reservation.findMany({ where: { date: { gte: startDate, lte: endDate } }, select: { date: true, partySize: true, status: true, source: true } });
 

@@ -62,6 +62,22 @@ const FEATURE_ROWS = [
   { key: "feature_event_ticketing", label: "Event Ticketing" },
 ];
 
+const TIMEZONE_OPTIONS = [
+  { value: "America/New_York", label: "America/New_York (Eastern)" },
+  { value: "America/Chicago", label: "America/Chicago (Central)" },
+  { value: "America/Denver", label: "America/Denver (Mountain)" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles (Pacific)" },
+  { value: "America/Anchorage", label: "America/Anchorage (Alaska)" },
+  { value: "Pacific/Honolulu", label: "Pacific/Honolulu (Hawaii)" },
+  { value: "America/Phoenix", label: "America/Phoenix (Arizona)" },
+  { value: "Europe/London", label: "Europe/London" },
+  { value: "Europe/Paris", label: "Europe/Paris" },
+  { value: "Europe/Berlin", label: "Europe/Berlin" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo" },
+  { value: "Asia/Shanghai", label: "Asia/Shanghai" },
+  { value: "Australia/Sydney", label: "Australia/Sydney" },
+];
+
 function Label({ children }: { children: React.ReactNode }) {
   return <label className="block text-sm font-medium mb-1">{children}</label>;
 }
@@ -123,6 +139,19 @@ function formatDateTime(value: string) {
   return dt.toLocaleString();
 }
 
+function currentTimeInTimezone(timezone: string, nowMs: number): string {
+  try {
+    return new Date(nowMs).toLocaleTimeString("en-US", {
+      timeZone: timezone || "America/New_York",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZoneName: "short",
+    });
+  } catch {
+    return "Unavailable";
+  }
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("restaurant");
   const [settings, setSettings] = useState<SettingsMap>({});
@@ -143,6 +172,7 @@ export default function SettingsPage() {
   const [previewData, setPreviewData] = useState<{ templateId: string; subject: string; html: string } | null>(null);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [testRecipient, setTestRecipient] = useState("");
+  const [clockMs, setClockMs] = useState(() => Date.now());
 
   const smsEnabled = settings.feature_sms === "true";
 
@@ -177,6 +207,11 @@ export default function SettingsPage() {
     if (templateLoading || Object.keys(templates).length > 0) return;
     loadTemplates().catch(() => undefined);
   }, [activeTab, templateLoading, templates]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockMs(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   function setField(key: string, value: string) {
     setSettings((previous) => ({ ...previous, [key]: value }));
@@ -482,6 +517,23 @@ export default function SettingsPage() {
         <div className="space-y-6">
           <Section title="Booking Rules">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div>
+                <Label>Restaurant Timezone</Label>
+                <select
+                  value={settings.timezone || "America/New_York"}
+                  onChange={(event) => setField("timezone", event.target.value)}
+                  className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                >
+                  {TIMEZONE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Current time: {currentTimeInTimezone(settings.timezone || "America/New_York", clockMs)}
+                </p>
+              </div>
               <Field label="Default Open Time" type="time" value={settings.openTime || "17:00"} onChange={(v) => setField("openTime", v)} />
               <Field label="Default Close Time" type="time" value={settings.closeTime || "22:00"} onChange={(v) => setField("closeTime", v)} />
               <Field label="Slot Duration (minutes)" type="number" value={settings.slotInterval || "30"} onChange={(v) => setField("slotInterval", v)} />

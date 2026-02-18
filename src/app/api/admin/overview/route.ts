@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireMasterAdmin } from "@/lib/auth";
+import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 export async function GET() {
   try { await requireMasterAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
   const [usersTotal, usersActive, reservationsTotal, reservationsToday, guestsTotal, tablesTotal, pendingCount, settingsCount] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { isActive: true } }),

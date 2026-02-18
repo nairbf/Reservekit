@@ -101,6 +101,22 @@ function formatDateLabel(value: string): string {
   return dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 }
 
+function dateInTimezone(timezone: string): string {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone || "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(new Date());
+  const byType = new Map<string, string>();
+  for (const part of parts) byType.set(part.type, part.value);
+  const year = byType.get("year") || "1970";
+  const month = byType.get("month") || "01";
+  const day = byType.get("day") || "01";
+  return `${year}-${month}-${day}`;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll("&", "&amp;")
@@ -120,8 +136,8 @@ export default function TonightPage() {
   const [loadingUpcoming, setLoadingUpcoming] = useState(false);
   const [expandedPreOrders, setExpandedPreOrders] = useState<Record<number, boolean>>({});
   const [loaded, setLoaded] = useState(false);
-  const today = new Date().toISOString().split("T")[0];
-  const [selectedDate, setSelectedDate] = useState(today);
+  const [today, setToday] = useState(() => dateInTimezone("America/New_York"));
+  const [selectedDate, setSelectedDate] = useState(() => dateInTimezone("America/New_York"));
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "tonight";
 
   const load = useCallback(async () => {
@@ -173,6 +189,23 @@ export default function TonightPage() {
       clearInterval(upcomingTimer);
     };
   }, [load, loadPosStatus, loadUpcoming]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/settings")
+      .then((response) => response.json())
+      .then((settings) => {
+        if (cancelled) return;
+        const timezone = String(settings?.timezone || "America/New_York");
+        const localToday = dateInTimezone(timezone);
+        setToday(localToday);
+        setSelectedDate(localToday);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function doAction(id: number, action: string, extra?: Record<string, unknown>) {
     await fetch(`/api/reservations/${id}/action`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });

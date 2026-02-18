@@ -7,6 +7,7 @@ import { Reveal } from "@/components/landing/reveal";
 import { prisma } from "@/lib/db";
 import { getMenuFiles } from "@/lib/menu-files";
 import type { Metadata } from "next";
+import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -166,6 +167,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
+  const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
   const [settingRows, menuFiles, categoriesRaw, eventsRaw] = await Promise.all([
     prisma.setting.findMany({
       where: {
@@ -190,7 +193,7 @@ export default async function HomePage() {
     prisma.event.findMany({
       where: {
         isActive: true,
-        date: { gte: new Date().toISOString().slice(0, 10) },
+        date: { gte: today },
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
       take: 12,

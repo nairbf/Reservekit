@@ -67,10 +67,22 @@ function toneForReservation(res: Reservation): string {
   return "bg-white border-gray-200";
 }
 
-function dateForMode(mode: "tonight" | "tomorrow"): string {
-  const d = new Date();
-  if (mode === "tomorrow") d.setDate(d.getDate() + 1);
-  return d.toISOString().split("T")[0];
+function dateInTimezone(timezone: string, dayOffset = 0): string {
+  const now = new Date();
+  now.setDate(now.getDate() + dayOffset);
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone || "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(now);
+  const byType = new Map<string, string>();
+  for (const part of parts) byType.set(part.type, part.value);
+  const year = byType.get("year") || "1970";
+  const month = byType.get("month") || "01";
+  const day = byType.get("day") || "01";
+  return `${year}-${month}-${day}`;
 }
 
 export default function KitchenPage() {
@@ -78,19 +90,20 @@ export default function KitchenPage() {
   const [loading, setLoading] = useState(true);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [licensed, setLicensed] = useState<boolean | null>(null);
+  const [timezone, setTimezone] = useState("America/New_York");
 
   const load = useCallback(async () => {
     if (licensed === false) {
       setLoading(false);
       return;
     }
-    const date = dateForMode(mode);
+    const date = dateInTimezone(timezone, mode === "tomorrow" ? 1 : 0);
     const res = await fetch(`/api/reservations?status=all&date=${date}`);
     const data = await res.json();
     const list = Array.isArray(data) ? data as Reservation[] : [];
     setReservations(list.filter(item => item.preOrder && item.preOrder.status !== "cancelled"));
     setLoading(false);
-  }, [mode, licensed]);
+  }, [mode, licensed, timezone]);
 
   useEffect(() => {
     Promise.all([
@@ -98,6 +111,7 @@ export default function KitchenPage() {
       fetch("/api/auth/me").then(r => (r.ok ? r.json() : null)).catch(() => null),
     ])
       .then(([settings, me]) => {
+        setTimezone(String(settings.timezone || "America/New_York"));
         const key = String(settings.license_expressdining || "").toUpperCase();
         const hasKey = /^RS-XDN-[A-Z0-9]{8}$/.test(key);
         const isAdmin = me?.role === "admin" || me?.role === "superadmin";

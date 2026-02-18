@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendSms } from "@/lib/sms";
 import { reorderActiveWaitlistPositions } from "@/lib/waitlist";
+import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 function fmt(t: string) { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`; }
 function twiml(msg: string) { return new NextResponse(`<?xml version="1.0" encoding="UTF-8"?><Response>${msg ? `<Message>${msg}</Message>` : ""}</Response>`, { headers: { "Content-Type": "text/xml" } }); }
@@ -14,12 +15,15 @@ export async function POST(req: NextRequest) {
   const normalizedFrom = normalizePhone(from);
   const last10 = normalizedFrom.replace(/\D/g, "").slice(-10);
 
+  const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
+
   await prisma.notificationLog.create({ data: { channel: "sms", recipient: from, messageType: "guest_reply", body, status: "received" } });
 
   const reservation = await prisma.reservation.findFirst({
     where: {
       status: { in: ["approved", "confirmed", "counter_offered"] },
-      date: { gte: new Date().toISOString().split("T")[0] },
+      date: { gte: today },
       OR: [
         { guestPhone: from },
         { guestPhone: normalizedFrom },

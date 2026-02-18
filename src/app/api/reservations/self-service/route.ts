@@ -7,6 +7,7 @@ import { releasePayment } from "@/lib/payments";
 import { sendEmail } from "@/lib/email";
 import { sendSms } from "@/lib/sms";
 import { notifyStaffCancellation } from "@/lib/staff-notifications";
+import { getRestaurantTimezone, restaurantDateTimeToUTC } from "@/lib/timezone";
 
 function digitsOnly(value: string): string {
   return String(value || "").replace(/\D/g, "");
@@ -16,10 +17,6 @@ function formatTime12(value: string): string {
   const [h, m] = String(value || "00:00").split(":").map(Number);
   if (!Number.isFinite(h) || !Number.isFinite(m)) return value;
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
-}
-
-function reservationDateTime(date: string, time: string): Date {
-  return new Date(`${date}T${time}:00`);
 }
 
 export async function POST(req: NextRequest) {
@@ -82,8 +79,9 @@ export async function POST(req: NextRequest) {
     const settings = await getSettings();
     const restaurantPhone = (await prisma.setting.findUnique({ where: { key: "phone" } }))?.value || "";
     const cutoffHours = Math.max(0, parseInt((await prisma.setting.findUnique({ where: { key: "selfServiceCutoffHours" } }))?.value || "2", 10) || 2);
+    const timezone = await getRestaurantTimezone();
     const now = new Date();
-    const cutoffAt = reservationDateTime(reservation.date, reservation.time).getTime() - cutoffHours * 60 * 60 * 1000;
+    const cutoffAt = restaurantDateTimeToUTC(reservation.date, reservation.time, timezone).getTime() - cutoffHours * 60 * 60 * 1000;
     if (Date.now() >= cutoffAt) {
       return NextResponse.json({
         error: `Modifications are no longer available for this reservation. Please call us${restaurantPhone ? ` at ${restaurantPhone}` : ""}.`,

@@ -6,6 +6,7 @@ import { generateCode } from "@/lib/codes";
 import { timeToMinutes, minutesToTime } from "@/lib/availability";
 import { linkGuestToReservation } from "@/lib/guest";
 import { isValidEmail, isValidPhone, sanitizeHtml, sanitizeString } from "@/lib/validate";
+import { getCurrentTimeInTimezone, getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 export async function POST(req: NextRequest) {
   let session;
@@ -29,8 +30,9 @@ export async function POST(req: NextRequest) {
   const duration = getDiningDuration(settings.diningDurations, partySize);
   const isWalkin = source === "walkin";
   const now = new Date();
-  const resDate = isWalkin ? now.toISOString().split("T")[0] : date;
-  const resTime = isWalkin ? `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}` : time;
+  const timezone = await getRestaurantTimezone();
+  const resDate = isWalkin ? getTodayInTimezone(timezone) : date;
+  const resTime = isWalkin ? getCurrentTimeInTimezone(timezone) : time;
 
   let code = generateCode();
   while (await prisma.reservation.findUnique({ where: { code } })) code = generateCode();

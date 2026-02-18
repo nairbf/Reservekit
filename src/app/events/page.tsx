@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
+import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 function formatTime12(value: string): string {
   const [h, m] = String(value || "00:00").split(":").map(Number);
@@ -54,7 +55,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function EventsPage() {
-  const today = new Date().toISOString().split("T")[0];
+  const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
 
   const [events, restaurantRow] = await Promise.all([
     prisma.event.findMany({

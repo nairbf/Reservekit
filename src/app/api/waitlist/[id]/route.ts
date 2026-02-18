@@ -7,11 +7,13 @@ import { generateCode } from "@/lib/codes";
 import { minutesToTime, timeToMinutes } from "@/lib/availability";
 import { reorderActiveWaitlistPositions } from "@/lib/waitlist";
 import { sendNotification } from "@/lib/send-notification";
+import { getCurrentTimeInTimezone, getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
-function currentDateTime() {
+async function currentDateTime() {
   const now = new Date();
-  const date = now.toISOString().split("T")[0];
-  const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const timezone = await getRestaurantTimezone();
+  const date = getTodayInTimezone(timezone);
+  const time = getCurrentTimeInTimezone(timezone);
   return { now, date, time };
 }
 
@@ -68,7 +70,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       const settings = await getSettings();
       const partySize = Math.max(1, entry.partySize);
       const duration = getDiningDuration(settings.diningDurations, partySize);
-      const { now: nowDt, date, time } = currentDateTime();
+      const { now: nowDt, date, time } = await currentDateTime();
       let code = generateCode();
       while (await prisma.reservation.findUnique({ where: { code } })) code = generateCode();
       reservation = await prisma.reservation.create({

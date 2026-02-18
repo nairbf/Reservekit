@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 export async function GET(req: NextRequest) {
   try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") || "pending";
   const date = searchParams.get("date");
+  const upcoming = searchParams.get("upcoming") === "true";
   const where: Record<string, unknown> = {};
   if (status !== "all") { where.status = status.includes(",") ? { in: status.split(",") } : status; }
-  if (date) where.date = date;
+  const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
+  if (date) {
+    where.date = date === "today" ? today : date;
+  } else if (upcoming) {
+    where.date = { gte: today };
+  }
 
   try {
     const reservations = await prisma.reservation.findMany({

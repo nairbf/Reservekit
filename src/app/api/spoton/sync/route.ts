@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { isModuleActive } from "@/lib/license";
 import { updateGuestStats } from "@/lib/guest";
 import { extractChecksFromOrders, getTableMapping, syncSpotOn, type SpotOnSyncResult, type SpotOnTableStatus } from "@/lib/spoton";
+import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 interface PosStatusSetting {
   orderId: string;
@@ -146,7 +147,8 @@ async function writeOpenCheckStatuses(mapping: Map<string, number>, openChecks: 
 }
 
 async function processClosedChecks(mapping: Map<string, number>, closedChecks: SpotOnTableStatus[], openStatusKeys: Set<string>) {
-  const today = new Date().toISOString().split("T")[0];
+  const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
   const now = new Date();
   const autoCompletedReservations: Array<{ reservationId: number; tableId: number; orderId: string }> = [];
 

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSettings, getEffectiveDepositForRequest } from "@/lib/settings";
+import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const date = searchParams.get("date") || new Date().toISOString().split("T")[0];
+  const timezone = await getRestaurantTimezone();
+  const date = searchParams.get("date") || getTodayInTimezone(timezone);
   const partySize = Math.max(1, parseInt(searchParams.get("partySize") || "2", 10) || 2);
   const settings = await getSettings();
   const deposit = getEffectiveDepositForRequest(settings, date, partySize);

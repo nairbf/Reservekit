@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
-
-function parseLocal(date: string, time: string) {
-  return new Date(`${date}T${time}:00`);
-}
+import { getRestaurantTimezone, getTodayInTimezone, restaurantDateTimeToUTC } from "@/lib/timezone";
 
 export async function GET() {
   try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
-  const today = new Date().toISOString().split("T")[0];
+  const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
   const tables = await prisma.restaurantTable.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } });
   const ids = tables.map(t => t.id);
 
@@ -34,7 +32,7 @@ export async function GET() {
     const arrived = list.filter(r => r.status === "arrived");
     const upcoming = list.filter(r => {
       if (!(r.status === "approved" || r.status === "confirmed")) return false;
-      const diffMin = (parseLocal(r.date, r.time).getTime() - now.getTime()) / 60000;
+      const diffMin = (restaurantDateTimeToUTC(r.date, r.time, timezone).getTime() - now.getTime()) / 60000;
       return diffMin >= 0 && diffMin <= 60;
     });
 

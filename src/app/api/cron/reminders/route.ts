@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { sendSms } from "@/lib/sms";
 import { smsReminder } from "@/lib/sms-templates";
 import { sendNotification } from "@/lib/send-notification";
+import { addDaysToDateString, getRestaurantTimezone, getTodayInTimezone, isWithinHours } from "@/lib/timezone";
 
 function formatTime12(value: string): string {
   const [h, m] = String(value || "00:00").split(":").map(Number);
@@ -23,15 +24,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowDate = tomorrow.toISOString().split("T")[0];
+  const timezone = await getRestaurantTimezone();
+  const todayDate = getTodayInTimezone(timezone);
+  const reminderHoursSetting = await prisma.setting.findUnique({ where: { key: "reminderLeadHours" } });
+  const reminderTimingSetting = await prisma.setting.findUnique({ where: { key: "emailReminderTiming" } });
+  const reminderHours = Math.max(
+    1,
+    parseInt(reminderHoursSetting?.value || reminderTimingSetting?.value || "24", 10) || 24,
+  );
+  const lookAheadDays = Math.max(1, Math.ceil(reminderHours / 24) + 1);
+  const endDate = addDaysToDateString(todayDate, lookAheadDays);
   const appUrl = process.env.APP_URL || "http://localhost:3000";
-  const restaurantName = (await prisma.setting.findUnique({ where: { key: "restaurantName" } }))?.value || "Restaurant";
 
   const rows = await prisma.reservation.findMany({
     where: {
-      date: tomorrowDate,
+      date: { gte: todayDate, lte: endDate },
       status: { in: ["approved", "confirmed"] },
       remindedAt: null,
     },
@@ -40,6 +47,8 @@ export async function GET(req: NextRequest) {
 
   let sent = 0;
   for (const reservation of rows) {
+    if (!isWithinHours(reservation.date, reservation.time, timezone, reminderHours)) continue;
+
     if (reservation.guestEmail) {
       await sendNotification({
         templateId: "reservation_reminder",
@@ -79,5 +88,11 @@ export async function GET(req: NextRequest) {
     sent += 1;
   }
 
-  return NextResponse.json({ ok: true, date: tomorrowDate, sent });
+  return NextResponse.json({
+    ok: true,
+    timezone,
+    today: todayDate,
+    reminderHours,
+    sent,
+  });
 }

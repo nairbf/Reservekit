@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession, requireAuth } from "@/lib/auth";
+import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 function slugify(input: string): string {
   return input
@@ -28,7 +29,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const slug = searchParams.get("slug");
   const session = await getSession();
-  const today = new Date().toISOString().split("T")[0];
+  const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
 
   if (slug) {
     const event = await prisma.event.findUnique({

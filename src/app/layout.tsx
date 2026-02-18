@@ -15,7 +15,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const faviconUrl = map.faviconUrl || "";
 
   return {
-    title: restaurantName,
+    title: {
+      default: restaurantName,
+      template: `%s — ${restaurantName}`,
+    },
     description: "Restaurant reservation system",
     icons: faviconUrl
       ? {

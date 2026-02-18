@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import type { Metadata } from "next";
 
 function formatTime12(value: string): string {
   const [h, m] = String(value || "00:00").split(":").map(Number);
@@ -11,6 +12,45 @@ function formatDate(value: string): string {
   const dt = new Date(`${value}T00:00:00`);
   if (Number.isNaN(dt.getTime())) return value;
   return dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const rows = await prisma.setting.findMany({
+    where: { key: { in: ["restaurantName", "slug", "heroImageUrl"] } },
+    select: { key: true, value: true },
+  });
+  const settings = Object.fromEntries(rows.map((row) => [row.key, row.value]));
+  const restaurantName = String(settings.restaurantName || "Restaurant");
+  const slug = String(settings.slug || "app").trim() || "app";
+  const image = String(settings.heroImageUrl || "");
+  const title = `Events — ${restaurantName}`;
+  const description = `Upcoming events at ${restaurantName}.`;
+  const url = `https://${slug}.reservesit.com/events`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "website",
+      ...(image ? { images: [{ url: image, alt: `${restaurantName} events` }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
+    alternates: {
+      canonical: url,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
 }
 
 export default async function EventsPage() {

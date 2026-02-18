@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getMenuFiles } from "@/lib/menu-files";
 import { MenuFileViewer } from "@/components/menu-file-viewer";
+import type { Metadata } from "next";
 
 function toSettingsMap(rows: Array<{ key: string; value: string }>): Record<string, string> {
   const map: Record<string, string> = {};
@@ -18,6 +19,45 @@ function isHexColor(value: string): boolean {
 }
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const rows = await prisma.setting.findMany({
+    where: { key: { in: ["restaurantName", "slug", "heroImageUrl"] } },
+    select: { key: true, value: true },
+  });
+  const settings = toSettingsMap(rows);
+  const restaurantName = settings.restaurantName || "Restaurant";
+  const slug = (settings.slug || "app").trim() || "app";
+  const image = settings.heroImageUrl || "";
+  const url = `https://${slug}.reservesit.com/menu`;
+  const title = `Menu — ${restaurantName}`;
+  const description = `Browse the menu at ${restaurantName}. View our latest dishes and offerings.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "website",
+      ...(image ? { images: [{ url: image, alt: `${restaurantName} menu` }] } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
+    alternates: {
+      canonical: url,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
 
 export default async function PublicMenuPage() {
   const [settingRows, uploadedFiles, categories] = await Promise.all([

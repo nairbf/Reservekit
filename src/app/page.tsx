@@ -6,6 +6,7 @@ import { MenuSection } from "@/components/landing/menu-section";
 import { Reveal } from "@/components/landing/reveal";
 import { prisma } from "@/lib/db";
 import { getMenuFiles } from "@/lib/menu-files";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,56 @@ function parseLandingSections(raw: string | undefined): LandingSection[] {
   }
 }
 
+export async function generateMetadata(): Promise<Metadata> {
+  const settingsRows = await prisma.setting.findMany({
+    where: {
+      key: {
+        in: ["restaurantName", "tagline", "description", "heroImageUrl", "slug"],
+      },
+    },
+    select: { key: true, value: true },
+  });
+  const settings = buildSettingMap(settingsRows);
+  const restaurantName = settings.restaurantName || "Restaurant";
+  const description =
+    settings.description ||
+    settings.tagline ||
+    `Welcome to ${restaurantName}. Make a reservation today.`;
+  const image = settings.heroImageUrl || "";
+  const slug = (settings.slug || "app").trim() || "app";
+  const url = `https://${slug}.reservesit.com`;
+
+  return {
+    title: restaurantName,
+    description,
+    openGraph: {
+      title: restaurantName,
+      description,
+      url,
+      siteName: restaurantName,
+      type: "website",
+      ...(image
+        ? {
+            images: [{ url: image, width: 1200, height: 630, alt: restaurantName }],
+          }
+        : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: restaurantName,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+    alternates: {
+      canonical: url,
+    },
+  };
+}
+
 export default async function HomePage() {
   const [settingRows, menuFiles, categoriesRaw, eventsRaw] = await Promise.all([
     prisma.setting.findMany({
@@ -168,6 +219,7 @@ export default async function HomePage() {
   const socialInstagram = settings.socialInstagram || "";
   const socialFacebook = settings.socialFacebook || "";
   const footerTagline = settings.footerTagline || "Join us for seasonal cuisine, thoughtful service, and a dining room built for memorable nights.";
+  const baseUrl = `https://${slug}.reservesit.com`;
 
   const primaryCtaText = settings.primaryCtaText || "Reserve a Table";
   const primaryCtaLink = settings.primaryCtaLink || reserveHref;
@@ -181,6 +233,25 @@ export default async function HomePage() {
   const menuPreviewEnabled = (settings.menuPreviewEnabled || "true") === "true";
   const eventsMaxCount = Math.max(1, Math.min(12, toInt(settings.eventsMaxCount, 4)));
   const eventsAutoHide = (settings.eventsAutoHideWhenEmpty || "true") === "true";
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Restaurant",
+    name: restaurantName,
+    description,
+    url: baseUrl,
+    telephone: phone || undefined,
+    email: contactEmail || undefined,
+    address: address
+      ? {
+          "@type": "PostalAddress",
+          streetAddress: address,
+        }
+      : undefined,
+    image: heroImageUrl || undefined,
+    acceptsReservations: "True",
+    menu: `${baseUrl}/menu`,
+  };
 
   function renderSection(section: LandingSection) {
     if (section.id === "hero") {
@@ -274,6 +345,10 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-stone-50 text-gray-900">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {sections.map((section) => (
         <div key={section.id}>{renderSection(section)}</div>
       ))}

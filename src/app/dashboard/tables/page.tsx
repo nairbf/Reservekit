@@ -98,8 +98,8 @@ export default function TablesPage() {
       )}
 
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-          <form onSubmit={addTable} className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <form onSubmit={addTable} className="h-full w-full overflow-y-auto bg-white p-4 sm:h-auto sm:max-w-md sm:rounded-xl sm:p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Add Table</h2>
               <button type="button" onClick={() => setShowForm(false)} className="h-11 w-11 rounded-lg border border-gray-200">✕</button>

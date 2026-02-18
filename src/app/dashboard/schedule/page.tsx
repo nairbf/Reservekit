@@ -478,46 +478,50 @@ export default function SchedulePage() {
             </label>
           </div>
 
-          {WEEKDAYS.map(day => {
-            const row = weeklySchedule[day.key];
-            return (
-              <div key={day.key} className="grid grid-cols-1 md:grid-cols-[160px_120px_1fr_1fr_1fr] gap-2 items-center rounded-lg border p-2">
-                <div className="font-medium text-sm">{day.label}</div>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={!row.isClosed}
-                    onChange={e => setWeeklySchedule(prev => ({ ...prev, [day.key]: { ...prev[day.key], isClosed: !e.target.checked } }))}
-                    className="h-4 w-4"
-                  />
-                  Open
-                </label>
-                <input
-                  type="time"
-                  value={row.openTime}
-                  onChange={e => setWeeklySchedule(prev => ({ ...prev, [day.key]: { ...prev[day.key], openTime: e.target.value } }))}
-                  disabled={row.isClosed}
-                  className="h-11 border rounded px-3 text-sm disabled:bg-gray-100"
-                />
-                <input
-                  type="time"
-                  value={row.closeTime}
-                  onChange={e => setWeeklySchedule(prev => ({ ...prev, [day.key]: { ...prev[day.key], closeTime: e.target.value } }))}
-                  disabled={row.isClosed}
-                  className="h-11 border rounded px-3 text-sm disabled:bg-gray-100"
-                />
-                <input
-                  type="number"
-                  min="1"
-                  value={row.maxCovers}
-                  onChange={e => setWeeklySchedule(prev => ({ ...prev, [day.key]: { ...prev[day.key], maxCovers: e.target.value } }))}
-                  disabled={row.isClosed}
-                  placeholder="Max covers"
-                  className="h-11 border rounded px-3 text-sm disabled:bg-gray-100"
-                />
-              </div>
-            );
-          })}
+          <div className="overflow-x-auto">
+            <div className="min-w-[760px] space-y-2">
+              {WEEKDAYS.map(day => {
+                const row = weeklySchedule[day.key];
+                return (
+                  <div key={day.key} className="grid grid-cols-[160px_120px_1fr_1fr_1fr] gap-2 items-center rounded-lg border p-2">
+                    <div className="font-medium text-sm">{day.label}</div>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={!row.isClosed}
+                        onChange={e => setWeeklySchedule(prev => ({ ...prev, [day.key]: { ...prev[day.key], isClosed: !e.target.checked } }))}
+                        className="h-4 w-4"
+                      />
+                      Open
+                    </label>
+                    <input
+                      type="time"
+                      value={row.openTime}
+                      onChange={e => setWeeklySchedule(prev => ({ ...prev, [day.key]: { ...prev[day.key], openTime: e.target.value } }))}
+                      disabled={row.isClosed}
+                      className="h-11 border rounded px-3 text-sm disabled:bg-gray-100"
+                    />
+                    <input
+                      type="time"
+                      value={row.closeTime}
+                      onChange={e => setWeeklySchedule(prev => ({ ...prev, [day.key]: { ...prev[day.key], closeTime: e.target.value } }))}
+                      disabled={row.isClosed}
+                      className="h-11 border rounded px-3 text-sm disabled:bg-gray-100"
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      value={row.maxCovers}
+                      onChange={e => setWeeklySchedule(prev => ({ ...prev, [day.key]: { ...prev[day.key], maxCovers: e.target.value } }))}
+                      disabled={row.isClosed}
+                      placeholder="Max covers"
+                      className="h-11 border rounded px-3 text-sm disabled:bg-gray-100"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
         {weeklyMessage && <p className="text-sm text-gray-700 mt-3">{weeklyMessage}</p>}
       </form>

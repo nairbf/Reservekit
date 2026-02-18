@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import ResponsiveTable from "@/components/responsive-table";
 
 type TicketStatus = "confirmed" | "checked_in" | "cancelled" | "refunded";
 
@@ -153,6 +154,47 @@ export default function EventsDashboardPage() {
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
   }, [detail, ticketQuery]);
+
+  const ticketRows = filteredTickets.map((ticket) => {
+    const statusLabel = ticket.status.replaceAll("_", " ");
+    const actionButton = ticket.status !== "checked_in"
+      ? (
+        <button
+          onClick={() => checkInTicket(ticket.code)}
+          className="h-11 rounded border border-green-300 px-3 text-xs text-green-700 transition-all duration-200"
+        >
+          Check In
+        </button>
+      )
+      : <span className="text-xs text-gray-500">Checked In</span>;
+
+    return {
+      key: ticket.id,
+      mobileTitle: ticket.code,
+      mobileSubtitle: `${ticket.guestName} • ${ticket.guestEmail}`,
+      mobileMeta: [`Qty ${ticket.quantity}`, statusLabel],
+      actions: actionButton,
+      cells: [
+        <div key="ticket">
+          <div className="font-mono font-semibold">{ticket.code}</div>
+          <div className="text-xs text-gray-500">Purchased {new Date(ticket.createdAt).toLocaleString()}</div>
+        </div>,
+        <div key="guest">
+          <div className="font-medium">{ticket.guestName}</div>
+          <div className="text-xs text-gray-500">{ticket.guestEmail}</div>
+          {ticket.guestPhone ? <div className="text-xs text-gray-500">{ticket.guestPhone}</div> : null}
+          <div className="text-xs text-gray-500">Qty: {ticket.quantity}</div>
+        </div>,
+        <div key="status">
+          <span className={`text-xs px-2 py-1 rounded-full ${ticketBadge(ticket.status)}`}>{statusLabel}</span>
+          {ticket.checkedInAt ? (
+            <div className="text-xs text-gray-500 mt-1">✓ Checked in at {new Date(ticket.checkedInAt).toLocaleTimeString()}</div>
+          ) : null}
+        </div>,
+        <div key="action" className="text-right">{actionButton}</div>,
+      ],
+    };
+  });
 
   async function createEvent(e: React.FormEvent) {
     e.preventDefault();
@@ -324,8 +366,8 @@ export default function EventsDashboardPage() {
                   <div className="text-xs text-gray-500">{event.soldTickets}/{event.maxTickets} sold · {formatCents(revenue)}</div>
                 </button>
                 <div className="mt-2 flex gap-2">
-                  <button onClick={() => copyShareLink(event)} className="h-8 px-2 rounded border border-gray-200 text-xs">Share Link</button>
-                  <button onClick={() => openQr(event)} className="h-8 px-2 rounded border border-gray-200 text-xs">View QR Code</button>
+                  <button onClick={() => copyShareLink(event)} className="h-11 px-3 rounded border border-gray-200 text-xs">Share Link</button>
+                  <button onClick={() => openQr(event)} className="h-11 px-3 rounded border border-gray-200 text-xs">View QR Code</button>
                 </div>
               </div>
             );
@@ -368,7 +410,7 @@ export default function EventsDashboardPage() {
                   <h3 className="font-semibold">Check-in</h3>
                   <button
                     onClick={() => setManualOpen(v => !v)}
-                    className="h-9 px-3 rounded border border-gray-200 text-sm"
+                    className="h-11 px-3 rounded border border-gray-200 text-sm"
                   >
                     {manualOpen ? "Close Manual Add" : "Add Ticket Manually"}
                   </button>
@@ -382,65 +424,25 @@ export default function EventsDashboardPage() {
                 />
 
                 {manualOpen && (
-                  <form onSubmit={addManualTicket} className="grid sm:grid-cols-2 gap-2 border rounded-lg p-3 bg-gray-50">
-                    <input required value={manualForm.guestName} onChange={e => setManualForm(prev => ({ ...prev, guestName: e.target.value }))} placeholder="Guest name" className="h-10 border rounded px-3" />
-                    <input required type="email" value={manualForm.guestEmail} onChange={e => setManualForm(prev => ({ ...prev, guestEmail: e.target.value }))} placeholder="Guest email" className="h-10 border rounded px-3" />
-                    <input value={manualForm.guestPhone} onChange={e => setManualForm(prev => ({ ...prev, guestPhone: e.target.value }))} placeholder="Guest phone" className="h-10 border rounded px-3" />
-                    <input value={manualForm.quantity} onChange={e => setManualForm(prev => ({ ...prev, quantity: e.target.value }))} placeholder="Quantity" type="number" min="1" max="10" className="h-10 border rounded px-3" />
+                  <form onSubmit={addManualTicket} className="grid gap-2 border rounded-lg p-3 bg-gray-50 sm:grid-cols-2">
+                    <input required value={manualForm.guestName} onChange={e => setManualForm(prev => ({ ...prev, guestName: e.target.value }))} placeholder="Guest name" className="h-11 border rounded px-3" />
+                    <input required type="email" value={manualForm.guestEmail} onChange={e => setManualForm(prev => ({ ...prev, guestEmail: e.target.value }))} placeholder="Guest email" className="h-11 border rounded px-3" />
+                    <input value={manualForm.guestPhone} onChange={e => setManualForm(prev => ({ ...prev, guestPhone: e.target.value }))} placeholder="Guest phone" className="h-11 border rounded px-3" />
+                    <input value={manualForm.quantity} onChange={e => setManualForm(prev => ({ ...prev, quantity: e.target.value }))} placeholder="Quantity" type="number" min="1" max="10" className="h-11 border rounded px-3" />
                     <label className="sm:col-span-2 text-sm flex items-center gap-2">
                       <input type="checkbox" checked={manualForm.paid} onChange={e => setManualForm(prev => ({ ...prev, paid: e.target.checked }))} className="h-4 w-4" />
                       Mark as paid
                     </label>
-                    <button type="submit" className="sm:col-span-2 h-10 rounded bg-blue-600 text-white text-sm font-medium">Save Ticket</button>
+                    <button type="submit" className="sm:col-span-2 h-11 rounded bg-blue-600 text-white text-sm font-medium">Save Ticket</button>
                   </form>
                 )}
               </div>
 
-              <div className="border rounded-lg overflow-hidden">
-                <div className="grid grid-cols-[1.3fr_1fr_0.8fr_0.8fr] bg-gray-50 border-b text-xs font-semibold text-gray-600 px-3 py-2">
-                  <div>Ticket</div>
-                  <div>Guest</div>
-                  <div>Status</div>
-                  <div className="text-right">Action</div>
-                </div>
-                <div className="max-h-[420px] overflow-auto divide-y">
-                  {filteredTickets.map(ticket => (
-                    <div key={ticket.id} className="px-3 py-2 grid grid-cols-[1.3fr_1fr_0.8fr_0.8fr] gap-2 items-center text-sm">
-                      <div>
-                        <div className="font-mono font-semibold">{ticket.code}</div>
-                        <div className="text-xs text-gray-500">Purchased {new Date(ticket.createdAt).toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="font-medium">{ticket.guestName}</div>
-                        <div className="text-xs text-gray-500">{ticket.guestEmail}</div>
-                        {ticket.guestPhone && <div className="text-xs text-gray-500">{ticket.guestPhone}</div>}
-                        <div className="text-xs text-gray-500">Qty: {ticket.quantity}</div>
-                      </div>
-                      <div>
-                        <span className={`text-xs px-2 py-1 rounded-full ${ticketBadge(ticket.status)}`}>{ticket.status.replaceAll("_", " ")}</span>
-                        {ticket.checkedInAt && (
-                          <div className="text-xs text-gray-500 mt-1">✓ Checked in at {new Date(ticket.checkedInAt).toLocaleTimeString()}</div>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        {ticket.status !== "checked_in" ? (
-                          <button
-                            onClick={() => checkInTicket(ticket.code)}
-                            className="h-9 px-3 rounded border border-green-300 text-green-700 text-xs transition-all duration-200"
-                          >
-                            Check In
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-500">Checked In</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {filteredTickets.length === 0 && (
-                    <div className="p-3 text-sm text-gray-500">No tickets found.</div>
-                  )}
-                </div>
-              </div>
+              <ResponsiveTable
+                headers={["Ticket", "Guest", "Status", "Action"]}
+                rows={ticketRows}
+                emptyMessage="No tickets found."
+              />
             </div>
           )}
         </div>
@@ -450,11 +452,11 @@ export default function EventsDashboardPage() {
       {copyFlash && <p className="text-sm text-green-700">{copyFlash}</p>}
 
       {qrOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setQrOpen(false)}>
-          <div className="bg-white rounded-xl p-4 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:px-4" onClick={() => setQrOpen(false)}>
+          <div className="h-full w-full overflow-y-auto bg-white p-4 sm:h-auto sm:max-w-sm sm:rounded-xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">QR Code · {qrTitle}</h3>
-              <button onClick={() => setQrOpen(false)} className="h-8 w-8 rounded border border-gray-200">✕</button>
+              <button onClick={() => setQrOpen(false)} className="h-11 w-11 rounded border border-gray-200">✕</button>
             </div>
             {qrDataUrl ? (
               <img src={qrDataUrl} alt="Event QR code" className="mx-auto h-72 w-72 max-w-full" />

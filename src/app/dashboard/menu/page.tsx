@@ -376,13 +376,13 @@ export default function MenuPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => shiftSort("category", category.id, category.sortOrder, "up")}
-              className="h-8 w-8 rounded border border-gray-200 text-xs"
+              className="h-11 w-11 rounded border border-gray-200 text-xs"
             >
               ↑
             </button>
             <button
               onClick={() => shiftSort("category", category.id, category.sortOrder, "down")}
-              className="h-8 w-8 rounded border border-gray-200 text-xs"
+              className="h-11 w-11 rounded border border-gray-200 text-xs"
             >
               ↓
             </button>
@@ -390,12 +390,12 @@ export default function MenuPage() {
               value={category.name}
               onChange={e => setCategories(prev => prev.map(c => (c.id === category.id ? { ...c, name: e.target.value } : c)))}
               onBlur={e => saveCategory(category, { name: e.target.value })}
-              className="h-10 border rounded px-3 font-semibold"
+              className="h-11 border rounded px-3 font-semibold"
             />
             <select
               value={category.type || "starter"}
               onChange={e => saveCategory(category, { type: e.target.value === "drink" ? "drink" : "starter" })}
-              className="h-10 border rounded px-2 text-sm"
+              className="h-11 border rounded px-2 text-sm"
             >
               <option value="starter">Starter</option>
               <option value="drink">Drink</option>
@@ -414,7 +414,7 @@ export default function MenuPage() {
             </label>
             <button
               onClick={() => deleteCategory(category)}
-              className="h-10 px-3 rounded border border-red-200 text-red-700 text-sm"
+              className="h-11 px-3 rounded border border-red-200 text-red-700 text-sm"
             >
               Delete
             </button>
@@ -444,18 +444,18 @@ export default function MenuPage() {
                   </label>
                   <button
                     onClick={() => shiftSort("item", item.id, item.sortOrder, "up", { categoryId: item.categoryId })}
-                    className="h-8 w-8 rounded border border-gray-200 text-xs"
+                    className="h-11 w-11 rounded border border-gray-200 text-xs"
                   >
                     ↑
                   </button>
                   <button
                     onClick={() => shiftSort("item", item.id, item.sortOrder, "down", { categoryId: item.categoryId })}
-                    className="h-8 w-8 rounded border border-gray-200 text-xs"
+                    className="h-11 w-11 rounded border border-gray-200 text-xs"
                   >
                     ↓
                   </button>
-                  <button onClick={() => editItem(item)} className="h-9 px-3 rounded border border-gray-200 text-xs">Edit</button>
-                  <button onClick={() => deleteItem(item)} className="h-9 px-3 rounded border border-red-200 text-red-700 text-xs">Delete</button>
+                  <button onClick={() => editItem(item)} className="h-11 px-3 rounded border border-gray-200 text-xs">Edit</button>
+                  <button onClick={() => deleteItem(item)} className="h-11 px-3 rounded border border-red-200 text-red-700 text-xs">Delete</button>
                 </div>
               </div>
             </div>
@@ -467,25 +467,25 @@ export default function MenuPage() {
             value={newItem.name}
             onChange={e => setNewItemState(category.id, { name: e.target.value })}
             placeholder="Item name"
-            className="h-10 border rounded px-3"
+            className="h-11 border rounded px-3"
           />
           <input
             value={newItem.description}
             onChange={e => setNewItemState(category.id, { description: e.target.value })}
             placeholder="Description"
-            className="h-10 border rounded px-3"
+            className="h-11 border rounded px-3"
           />
           <input
             value={newItem.price}
             onChange={e => setNewItemState(category.id, { price: e.target.value })}
             placeholder="Price (USD)"
-            className="h-10 border rounded px-3"
+            className="h-11 border rounded px-3"
           />
           <input
             value={newItem.sortOrder}
             onChange={e => setNewItemState(category.id, { sortOrder: e.target.value })}
             placeholder="Sort"
-            className="h-10 border rounded px-3"
+            className="h-11 border rounded px-3"
           />
           <div className="lg:col-span-2 flex flex-wrap items-center gap-2">
             {TAG_OPTIONS.map(tag => (
@@ -507,7 +507,7 @@ export default function MenuPage() {
           </div>
           <button
             onClick={() => createItem(category.id)}
-            className="h-10 px-3 rounded bg-blue-600 text-white text-sm font-medium sm:col-span-2 lg:col-span-6"
+            className="h-11 px-3 rounded bg-blue-600 text-white text-sm font-medium sm:col-span-2 lg:col-span-6"
           >
             Add Item
           </button>
@@ -591,11 +591,11 @@ export default function MenuPage() {
                   </span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <button onClick={() => moveMenuFile(index, "up")} className="h-8 px-2 rounded border border-gray-200 text-xs">↑</button>
-                  <button onClick={() => moveMenuFile(index, "down")} className="h-8 px-2 rounded border border-gray-200 text-xs">↓</button>
-                  <button onClick={() => renameMenuFile(file)} className="h-8 px-2 rounded border border-gray-200 text-xs">Rename</button>
-                  <a href={file.url} target="_blank" rel="noreferrer" className="h-8 px-2 rounded border border-gray-200 text-xs inline-flex items-center">Open</a>
-                  <button onClick={() => deleteMenuFile(file)} className="h-8 px-2 rounded border border-red-200 text-red-700 text-xs">Delete</button>
+                  <button onClick={() => moveMenuFile(index, "up")} className="h-11 px-3 rounded border border-gray-200 text-xs">↑</button>
+                  <button onClick={() => moveMenuFile(index, "down")} className="h-11 px-3 rounded border border-gray-200 text-xs">↓</button>
+                  <button onClick={() => renameMenuFile(file)} className="h-11 px-3 rounded border border-gray-200 text-xs">Rename</button>
+                  <a href={file.url} target="_blank" rel="noreferrer" className="h-11 px-3 rounded border border-gray-200 text-xs inline-flex items-center">Open</a>
+                  <button onClick={() => deleteMenuFile(file)} className="h-11 px-3 rounded border border-red-200 text-red-700 text-xs">Delete</button>
                 </div>
               </div>
             ))}

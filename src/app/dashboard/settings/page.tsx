@@ -448,28 +448,30 @@ export default function SettingsPage() {
           <button
             onClick={saveChanges}
             disabled={saving}
-            className="h-11 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white disabled:opacity-70"
+            className="h-11 w-full rounded-lg bg-blue-600 px-4 text-sm font-medium text-white disabled:opacity-70 sm:w-auto"
           >
             {saving ? "Saving..." : saved ? "✓ Saved" : "Save Changes"}
           </button>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {TABS.map((tab) => {
-          const active = tab.key === activeTab;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`min-w-[170px] rounded-xl border px-3 py-2 text-left transition-all ${active ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white"}`}
-            >
-              <div className={`text-sm font-semibold ${active ? "text-blue-700" : "text-gray-900"}`}>{tab.label}</div>
-              <div className="text-[11px] text-gray-500">{tab.description}</div>
-            </button>
-          );
-        })}
+      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        <div className="flex w-max gap-2 pb-1">
+          {TABS.map((tab) => {
+            const active = tab.key === activeTab;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`min-w-[170px] shrink-0 rounded-xl border px-3 py-2 text-left transition-all ${active ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white"}`}
+              >
+                <div className={`text-sm font-semibold ${active ? "text-blue-700" : "text-gray-900"}`}>{tab.label}</div>
+                <div className="text-[11px] text-gray-500">{tab.description}</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {activeTab === "restaurant" && (
@@ -838,12 +840,12 @@ export default function SettingsPage() {
                             </div>
                           </div>
 
-                          <div className="mt-4 flex flex-wrap gap-2">
+                          <div className="mt-4 grid gap-2 md:flex md:flex-wrap md:items-center">
                             <button
                               type="button"
                               onClick={() => previewTemplate(template.id)}
                               disabled={templateSaving === template.id}
-                              className="h-10 rounded-lg border border-gray-300 px-3 text-sm"
+                              className="h-11 rounded-lg border border-gray-300 px-3 text-sm"
                             >
                               Preview
                             </button>
@@ -852,24 +854,24 @@ export default function SettingsPage() {
                               value={testRecipient}
                               onChange={(event) => setTestRecipient(event.target.value)}
                               placeholder="Enter email address"
-                              className="h-10 w-64 rounded-lg border border-gray-300 px-3 text-sm"
+                              className="h-11 w-full rounded-lg border border-gray-300 px-3 text-sm md:w-64"
                             />
                             <button
                               type="button"
                               onClick={() => sendTestTemplate(template.id)}
                               disabled={templateTesting === template.id}
-                              className="h-10 rounded-lg border border-gray-300 px-3 text-sm"
+                              className="h-11 rounded-lg border border-gray-300 px-3 text-sm"
                             >
                               {templateTesting === template.id ? "Sending..." : "Send Test Email"}
                             </button>
-                            <span className="self-center text-xs text-gray-500">
+                            <span className="self-center text-xs text-gray-500 md:ml-1">
                               Test will be sent to: {testRecipient || currentUserEmail || "your account email"}
                             </span>
                             <button
                               type="button"
                               onClick={() => resetTemplate(template.id)}
                               disabled={templateSaving === template.id}
-                              className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-700"
+                              className="h-11 rounded-lg border border-red-200 px-3 text-sm text-red-700"
                             >
                               Reset to Default
                             </button>
@@ -877,7 +879,7 @@ export default function SettingsPage() {
                               type="button"
                               onClick={() => saveTemplate(template.id)}
                               disabled={templateSaving === template.id}
-                              className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white disabled:opacity-70"
+                              className="h-11 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white disabled:opacity-70"
                             >
                               {templateSaving === template.id ? "Saving..." : "Save"}
                             </button>
@@ -982,8 +984,8 @@ export default function SettingsPage() {
       )}
 
       {previewOpen && previewData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-3 py-6">
-          <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-xl bg-white shadow-xl">
+        <div className="fixed inset-0 z-50 bg-black/60 p-0 sm:flex sm:items-center sm:justify-center sm:px-3 sm:py-6">
+          <div className="h-full w-full overflow-hidden bg-white shadow-xl sm:max-h-[92vh] sm:max-w-6xl sm:rounded-xl">
             <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
               <div>
                 <div className="text-sm font-semibold text-gray-900">Email Preview</div>

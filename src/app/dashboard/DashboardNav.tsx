@@ -34,6 +34,8 @@ export default function DashboardNav({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [tabletMode, setTabletMode] = useState(false);
+  const [tabletHover, setTabletHover] = useState(false);
   const [restaurantName, setRestaurantName] = useState("ReserveSit");
 
   const pathname = usePathname();
@@ -50,6 +52,18 @@ export default function DashboardNav({
   useEffect(() => {
     const persisted = typeof window !== "undefined" ? window.localStorage.getItem(SIDEBAR_STORAGE_KEY) : null;
     if (persisted === "1") setCollapsed(true);
+  }, []);
+
+  useEffect(() => {
+    function syncTabletMode() {
+      if (typeof window === "undefined") return;
+      const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+      setTabletMode(isTablet);
+      if (!isTablet) setTabletHover(false);
+    }
+    syncTabletMode();
+    window.addEventListener("resize", syncTabletMode);
+    return () => window.removeEventListener("resize", syncTabletMode);
   }, []);
 
   useEffect(() => {
@@ -89,6 +103,8 @@ export default function DashboardNav({
     });
   }
 
+  const effectiveCollapsed = tabletMode ? !tabletHover : collapsed;
+
   return (
     <>
       <div className="md:hidden sticky top-0 z-40 h-14 bg-white border-b px-4 flex items-center justify-between">
@@ -123,6 +139,7 @@ export default function DashboardNav({
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={() => setMobileOpen(false)}
                   className={`h-11 px-3 rounded-lg flex items-center gap-3 text-sm font-medium transition-all duration-200 ${isActive(item.href) ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"}`}
                 >
                   <span className="w-7 h-7 rounded bg-gray-100 text-gray-600 text-[11px] font-semibold flex items-center justify-center">{item.icon}</span>
@@ -138,21 +155,31 @@ export default function DashboardNav({
         </div>
       )}
 
-      <aside className={`hidden md:flex md:flex-col border-r border-gray-200 bg-white transition-all duration-200 ${collapsed ? "w-20" : "w-72"}`}>
-        <div className={`h-16 border-b border-gray-200 px-3 ${collapsed ? "justify-center" : "justify-between"} flex items-center`}>
-          {!collapsed && (
+      <aside
+        onMouseEnter={() => {
+          if (tabletMode) setTabletHover(true);
+        }}
+        onMouseLeave={() => {
+          if (tabletMode) setTabletHover(false);
+        }}
+        className={`hidden md:flex md:flex-col border-r border-gray-200 bg-white transition-all duration-200 ${effectiveCollapsed ? "w-20" : "w-72"}`}
+      >
+        <div className={`h-16 border-b border-gray-200 px-3 ${effectiveCollapsed ? "justify-center" : "justify-between"} flex items-center`}>
+          {!effectiveCollapsed && (
             <div className="min-w-0">
               <div className="font-bold truncate">{restaurantName}</div>
               <div className="text-xs text-gray-500">Dashboard</div>
             </div>
           )}
-          <button
-            onClick={toggleCollapsed}
-            className="h-9 w-9 rounded-lg border border-gray-200 text-sm text-gray-700 transition-all duration-200"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? "→" : "←"}
-          </button>
+          {!tabletMode && (
+            <button
+              onClick={toggleCollapsed}
+              className="h-9 w-9 rounded-lg border border-gray-200 text-sm text-gray-700 transition-all duration-200"
+              title={effectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {effectiveCollapsed ? "→" : "←"}
+            </button>
+          )}
         </div>
 
         <nav className="flex-1 p-2 space-y-1 overflow-auto">
@@ -160,25 +187,25 @@ export default function DashboardNav({
             <Link
               key={item.href}
               href={item.href}
-              title={collapsed ? item.label : undefined}
-              className={`h-11 rounded-lg flex items-center transition-all duration-200 ${collapsed ? "justify-center" : "px-3 gap-3"} ${isActive(item.href) ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-blue-700 hover:bg-gray-50"}`}
+              title={effectiveCollapsed ? item.label : undefined}
+              className={`h-11 rounded-lg flex items-center transition-all duration-200 ${effectiveCollapsed ? "justify-center" : "px-3 gap-3"} ${isActive(item.href) ? "bg-blue-50 text-blue-700" : "text-gray-600 hover:text-blue-700 hover:bg-gray-50"}`}
             >
               <span className={`w-7 h-7 rounded text-[11px] font-semibold flex items-center justify-center ${isActive(item.href) ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}>
                 {item.icon}
               </span>
-              {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
+              {!effectiveCollapsed && <span className="text-sm font-medium">{item.label}</span>}
             </Link>
           ))}
         </nav>
 
         <div className="border-t border-gray-200 p-2 space-y-2">
-          {!collapsed && <div className="text-xs text-gray-500 truncate px-2">{email}</div>}
+          {!effectiveCollapsed && <div className="text-xs text-gray-500 truncate px-2">{email}</div>}
           <button
             onClick={logout}
-            title={collapsed ? "Logout" : undefined}
-            className={`h-10 rounded-lg border border-gray-200 text-gray-700 text-sm transition-all duration-200 ${collapsed ? "w-full" : "w-full"}`}
+            title={effectiveCollapsed ? "Logout" : undefined}
+            className="h-10 w-full rounded-lg border border-gray-200 text-gray-700 text-sm transition-all duration-200"
           >
-            {collapsed ? "⎋" : "Logout"}
+            {effectiveCollapsed ? "⎋" : "Logout"}
           </button>
         </div>
       </aside>

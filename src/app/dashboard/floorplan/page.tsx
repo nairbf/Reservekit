@@ -104,6 +104,7 @@ export default function FloorPlanPage() {
   const [licenseOk, setLicenseOk] = useState<boolean | null>(null);
   const [restaurantName, setRestaurantName] = useState("ReserveSit");
   const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "floorplan";
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -124,6 +125,16 @@ export default function FloorPlanPage() {
         if (s.restaurantName) setRestaurantName(s.restaurantName);
       })
       .catch(() => setLicenseOk(false));
+  }, []);
+
+  useEffect(() => {
+    function syncMobileState() {
+      if (typeof window === "undefined") return;
+      setIsMobile(window.innerWidth < 1024);
+    }
+    syncMobileState();
+    window.addEventListener("resize", syncMobileState);
+    return () => window.removeEventListener("resize", syncMobileState);
   }, []);
 
   function applyPendingPosition() {
@@ -339,6 +350,117 @@ export default function FloorPlanPage() {
   const selected = tables.find(t => t.id === selectedId) || null;
   const liveMap = useMemo(() => new Map(statusData.map(s => [s.table.id, s])), [statusData]);
 
+  function renderEditControls(target: TableItem) {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-3">
+          <label className="text-sm">Table Name
+            <input
+              type="text"
+              value={target.name}
+              onChange={e => setTables(prev => prev.map(t => t.id === target.id ? { ...t, name: e.target.value } : t))}
+              onBlur={e => {
+                const nextName = e.target.value.trim() || `T${target.id}`;
+                setTables(prev => prev.map(t => t.id === target.id ? { ...t, name: nextName } : t));
+                updateTable(target.id, { name: nextName });
+              }}
+              className="mt-1 h-11 w-full border rounded px-3 text-sm"
+            />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm">Min Capacity
+            <input
+              type="number"
+              min={1}
+              max={target.maxCapacity ?? 20}
+              value={target.minCapacity}
+              onChange={e => setTables(prev => prev.map(t => t.id === target.id ? { ...t, minCapacity: Number(e.target.value) } : t))}
+              onBlur={e => {
+                const raw = Number(e.target.value);
+                const nextMin = Math.max(1, Math.min(raw || 1, target.maxCapacity ?? 20));
+                setTables(prev => prev.map(t => t.id === target.id ? { ...t, minCapacity: nextMin } : t));
+                updateTable(target.id, { minCapacity: nextMin });
+              }}
+              className="mt-1 h-11 w-full border rounded px-3 text-sm"
+            />
+          </label>
+          <label className="text-sm">Max Capacity
+            <input
+              type="number"
+              min={target.minCapacity || 1}
+              max={20}
+              value={target.maxCapacity}
+              onChange={e => setTables(prev => prev.map(t => t.id === target.id ? { ...t, maxCapacity: Number(e.target.value) } : t))}
+              onBlur={e => {
+                const raw = Number(e.target.value);
+                const floor = target.minCapacity || 1;
+                const nextMax = Math.max(floor, Math.min(raw || floor, 20));
+                setTables(prev => prev.map(t => t.id === target.id ? { ...t, maxCapacity: nextMax } : t));
+                updateTable(target.id, { maxCapacity: nextMax });
+              }}
+              className="mt-1 h-11 w-full border rounded px-3 text-sm"
+            />
+          </label>
+        </div>
+
+        <div>
+          <div className="text-sm font-medium mb-2">Shape</div>
+          <div className="grid grid-cols-2 gap-2">
+            {(["round", "rect"] as const).map(s => (
+              <button
+                key={s}
+                onClick={() => updateTable(target.id, { shape: s })}
+                className={`h-11 rounded border text-sm transition-all duration-200 ${target.shape === s ? "border-blue-600 text-blue-600" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
+              >
+                {s === "round" ? "Round" : "Rect"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm">Width (%)
+            <input
+              type="number"
+              min={4}
+              max={30}
+              value={target.width ?? 8}
+              onChange={e => setTables(prev => prev.map(t => t.id === target.id ? { ...t, width: Number(e.target.value) } : t))}
+              onBlur={e => updateTable(target.id, { width: Number(e.target.value) })}
+              className="mt-1 h-11 w-full border rounded px-3 text-sm"
+            />
+          </label>
+          <label className="text-sm">Height (%)
+            <input
+              type="number"
+              min={4}
+              max={30}
+              value={target.height ?? 8}
+              onChange={e => setTables(prev => prev.map(t => t.id === target.id ? { ...t, height: Number(e.target.value) } : t))}
+              onBlur={e => updateTable(target.id, { height: Number(e.target.value) })}
+              className="mt-1 h-11 w-full border rounded px-3 text-sm"
+            />
+          </label>
+        </div>
+
+        <label className="text-sm">Rotation ({target.rotation ?? 0}°)
+          <input
+            type="range"
+            min={0}
+            max={360}
+            value={target.rotation ?? 0}
+            onChange={e => setTables(prev => prev.map(t => t.id === target.id ? { ...t, rotation: Number(e.target.value) } : t))}
+            className="mt-2 w-full"
+          />
+        </label>
+
+        <button onClick={() => removeTable(target.id)} className="h-11 w-full rounded bg-red-50 text-red-700 border border-red-200 text-sm transition-all duration-200">Delete Table</button>
+      </div>
+    );
+  }
+
   if (licenseOk === null) {
     return (
       <div className={`p-4 sm:p-6 ${showTourHighlight ? "rounded-2xl ring-2 ring-blue-300" : ""}`}>
@@ -387,7 +509,7 @@ export default function FloorPlanPage() {
           <div
             ref={containerRef}
             onClick={() => setSelectedId(null)}
-            className="relative w-full aspect-[3/2] border-2 border-dashed border-gray-200 rounded-xl bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.06)_1px,transparent_0)] [background-size:18px_18px] overflow-hidden touch-none"
+            className="relative w-full aspect-[3/2] border-2 border-dashed border-gray-200 rounded-xl bg-[radial-gradient(circle_at_1px_1px,rgba(0,0,0,0.06)_1px,transparent_0)] [background-size:18px_18px] overflow-hidden"
           >
             {loading && !initialLoadedRef.current && (
               <div className="absolute inset-0 flex items-center justify-center bg-white/70">
@@ -437,6 +559,7 @@ export default function FloorPlanPage() {
                     width: `${t.width ?? 8}%`,
                     height: `${t.height ?? 8}%`,
                     transform: `rotate(${t.rotation ?? 0}deg)`,
+                    touchAction: mode === "edit" ? "none" : "auto",
                   }}
                 >
                   {mode === "live" && pos && (
@@ -460,119 +583,14 @@ export default function FloorPlanPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+        <div className={`bg-white rounded-xl shadow p-4 sm:p-6 ${mode === "edit" && isMobile ? "hidden lg:block" : ""}`}>
           <h2 className="text-lg font-bold mb-3">{mode === "edit" ? "Edit Table" : "Legend"}</h2>
 
           {mode === "edit" ? (
             !selected ? (
               <p className="text-sm text-gray-500">Select a table to edit shape, size, or rotation.</p>
             ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-3">
-                  <label className="text-sm">Table Name
-                    <input
-                      type="text"
-                      value={selected.name}
-                      onChange={e => setTables(prev => prev.map(t => t.id === selected.id ? { ...t, name: e.target.value } : t))}
-                      onBlur={e => {
-                        const nextName = e.target.value.trim() || `T${selected.id}`;
-                        setTables(prev => prev.map(t => t.id === selected.id ? { ...t, name: nextName } : t));
-                        updateTable(selected.id, { name: nextName });
-                      }}
-                      className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                    />
-                  </label>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="text-sm">Min Capacity
-                    <input
-                      type="number"
-                      min={1}
-                      max={selected.maxCapacity ?? 20}
-                      value={selected.minCapacity}
-                      onChange={e => setTables(prev => prev.map(t => t.id === selected.id ? { ...t, minCapacity: Number(e.target.value) } : t))}
-                      onBlur={e => {
-                        const raw = Number(e.target.value);
-                        const nextMin = Math.max(1, Math.min(raw || 1, selected.maxCapacity ?? 20));
-                        setTables(prev => prev.map(t => t.id === selected.id ? { ...t, minCapacity: nextMin } : t));
-                        updateTable(selected.id, { minCapacity: nextMin });
-                      }}
-                      className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <label className="text-sm">Max Capacity
-                    <input
-                      type="number"
-                      min={selected.minCapacity || 1}
-                      max={20}
-                      value={selected.maxCapacity}
-                      onChange={e => setTables(prev => prev.map(t => t.id === selected.id ? { ...t, maxCapacity: Number(e.target.value) } : t))}
-                      onBlur={e => {
-                        const raw = Number(e.target.value);
-                        const floor = selected.minCapacity || 1;
-                        const nextMax = Math.max(floor, Math.min(raw || floor, 20));
-                        setTables(prev => prev.map(t => t.id === selected.id ? { ...t, maxCapacity: nextMax } : t));
-                        updateTable(selected.id, { maxCapacity: nextMax });
-                      }}
-                      className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                    />
-                  </label>
-                </div>
-
-                <div>
-                  <div className="text-sm font-medium mb-2">Shape</div>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["round", "rect"] as const).map(s => (
-                      <button
-                        key={s}
-                        onClick={() => updateTable(selected.id, { shape: s })}
-                        className={`h-11 sm:h-10 rounded border text-sm transition-all duration-200 ${selected.shape === s ? "border-blue-600 text-blue-600" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
-                      >
-                        {s === "round" ? "Round" : "Rect"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="text-sm">Width (%)
-                    <input
-                      type="number"
-                      min={4}
-                      max={30}
-                      value={selected.width ?? 8}
-                      onChange={e => setTables(prev => prev.map(t => t.id === selected.id ? { ...t, width: Number(e.target.value) } : t))}
-                      onBlur={e => updateTable(selected.id, { width: Number(e.target.value) })}
-                      className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                    />
-                  </label>
-                  <label className="text-sm">Height (%)
-                    <input
-                      type="number"
-                      min={4}
-                      max={30}
-                      value={selected.height ?? 8}
-                      onChange={e => setTables(prev => prev.map(t => t.id === selected.id ? { ...t, height: Number(e.target.value) } : t))}
-                      onBlur={e => updateTable(selected.id, { height: Number(e.target.value) })}
-                      className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                    />
-                  </label>
-                </div>
-
-                <label className="text-sm">Rotation ({selected.rotation ?? 0}°)
-                  <input
-                    type="range"
-                    min={0}
-                    max={360}
-                    value={selected.rotation ?? 0}
-                    onChange={e => setTables(prev => prev.map(t => t.id === selected.id ? { ...t, rotation: Number(e.target.value) } : t))}
-                    className="mt-2 w-full"
-                  />
-                </label>
-
-                <button onClick={() => removeTable(selected.id)} className="h-11 w-full rounded bg-red-50 text-red-700 border border-red-200 text-sm transition-all duration-200">Delete Table</button>
-              </div>
+              renderEditControls(selected)
             )
           ) : (
             <div className="space-y-2 text-sm">
@@ -589,9 +607,24 @@ export default function FloorPlanPage() {
         </div>
       </div>
 
+      {mode === "edit" && isMobile && selected && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/35 lg:hidden" onClick={() => setSelectedId(null)} />
+          <div className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-2xl border border-gray-200 bg-white p-4 shadow-2xl lg:hidden">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-lg font-bold">Edit Table</h2>
+              <button onClick={() => setSelectedId(null)} className="h-11 px-3 rounded border border-gray-200 text-sm">
+                Close
+              </button>
+            </div>
+            {renderEditControls(selected)}
+          </div>
+        </>
+      )}
+
       {detailsId && mode === "live" && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-lg p-5 w-full max-w-sm">
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="h-full w-full overflow-y-auto bg-white p-4 sm:h-auto sm:max-w-sm sm:rounded-xl sm:p-5">
             {(() => {
               const entry = liveMap.get(detailsId);
               const res = entry?.reservation || null;

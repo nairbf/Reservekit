@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 type PlanKey = "core" | "servicePro" | "fullSuite";
 type AddonKey = "sms" | "floorPlan" | "reporting" | "guestHistory" | "eventTicketing";
@@ -109,6 +110,7 @@ export default function PricingPage() {
   const [selectedAddons, setSelectedAddons] = useState<AddonKey[]>([]);
   const [hostingCycle, setHostingCycle] = useState<"monthly" | "annual">("monthly");
   const [useManagedHosting, setUseManagedHosting] = useState(true);
+  const [authState, setAuthState] = useState<"loading" | "authed" | "guest">("loading");
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
@@ -133,6 +135,27 @@ export default function PricingPage() {
     if (!useManagedHosting) return "No recurring hosting fee";
     return hostingCycle === "monthly" ? "$15/month after 14-day trial" : "$149/year after 14-day trial";
   }, [useManagedHosting, hostingCycle]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/auth/me")
+      .then((response) => {
+        if (!mounted) return;
+        setAuthState(response.ok ? "authed" : "guest");
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setAuthState("guest");
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  function domainCtaHref(interest: "domain-connect" | "domain-new") {
+    if (authState === "authed") return `/portal/domain?interest=${interest}`;
+    return `/demo?interest=${interest}`;
+  }
 
   function toggleAddon(key: AddonKey) {
     setSelectedAddons((prev) => {
@@ -308,6 +331,69 @@ export default function PricingPage() {
                   </p>
                 </button>
               </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-6">
+              <h2 className="text-2xl font-semibold text-slate-900">Your Online Presence</h2>
+              <p className="mt-2 text-sm text-slate-600">
+                Every plan includes a free branded booking page at yourname.reservesit.com. Want your own domain? We&apos;ll handle everything.
+              </p>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Free</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">Included with all plans</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-800">yourname.reservesit.com</p>
+                  <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
+                    <li>✓ SSL included</li>
+                    <li>✓ Mobile optimized</li>
+                    <li>✓ Instant setup</li>
+                  </ul>
+                  <span className="mt-5 inline-flex h-10 items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700">
+                    Current Plan
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Connect Your Domain</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">$30 one-time</p>
+                  <p className="mt-2 text-sm text-slate-700">Already have a domain? We configure DNS and SSL in about 24 hours.</p>
+                  <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
+                    <li>✓ DNS configuration</li>
+                    <li>✓ SSL certificate</li>
+                    <li>✓ Done in 24 hours</li>
+                  </ul>
+                  <Link
+                    href={domainCtaHref("domain-connect")}
+                    className="mt-5 inline-flex h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"
+                  >
+                    Get Started →
+                  </Link>
+                </div>
+
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">New Domain</p>
+                  <p className="mt-1 text-lg font-semibold text-slate-900">$99 one-time</p>
+                  <p className="mt-2 text-sm text-slate-700">Don&apos;t have a domain? We register and configure a new one for your restaurant.</p>
+                  <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
+                    <li>✓ 2-3 year registration</li>
+                    <li>✓ Full DNS setup</li>
+                    <li>✓ SSL certificate</li>
+                    <li>✓ Done in 48 hours</li>
+                  </ul>
+                  <Link
+                    href={domainCtaHref("domain-new")}
+                    className="mt-5 inline-flex h-10 items-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white"
+                  >
+                    Get Started →
+                  </Link>
+                </div>
+              </div>
+
+              <p className="mt-4 text-xs text-slate-500">
+                Domain registration prices may vary depending on domain name and availability. The $99 price covers most standard .com domains.
+                Premium or specialty domains may cost more and are always confirmed before purchase.
+              </p>
             </section>
           </div>
 

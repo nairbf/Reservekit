@@ -1105,7 +1105,7 @@ export default function ReserveWidgetClient({
         </div>
       )}
 
-      <div className="flex gap-3 mb-4">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="flex-1">
           <label className="block text-sm font-medium mb-1">Date</label>
           <input

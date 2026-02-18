@@ -407,14 +407,6 @@ export type EnumHealthStatusFieldUpdateOperationsInput = {
   set?: $Enums.HealthStatus
 }
 
-export type NullableIntFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type HealthCheckCreateWithoutRestaurantInput = {
   id?: string
   status: $Enums.HealthStatus

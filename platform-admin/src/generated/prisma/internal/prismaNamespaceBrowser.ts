@@ -110,6 +110,7 @@ export const RestaurantScalarFieldEnum = {
   stripeCustomerId: 'stripeCustomerId',
   stripeSubscriptionId: 'stripeSubscriptionId',
   monthlyHostingActive: 'monthlyHostingActive',
+  oneTimeRevenue: 'oneTimeRevenue',
   notes: 'notes',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'

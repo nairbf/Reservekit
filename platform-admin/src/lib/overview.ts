@@ -61,7 +61,7 @@ export async function getOverviewData() {
     byPlan[restaurant.plan] += 1;
     byStatus[restaurant.status] += 1;
 
-    oneTimeRevenue += PLAN_PRICE[restaurant.plan] || 0;
+    oneTimeRevenue += restaurant.oneTimeRevenue ?? (PLAN_PRICE[restaurant.plan] || 0);
     if (restaurant.monthlyHostingActive) monthlyRevenue += HOSTING_MONTHLY_PRICE;
 
     const health = latestHealth.get(restaurant.id);

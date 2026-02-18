@@ -28,10 +28,12 @@ export type AggregateRestaurant = {
 
 export type RestaurantAvgAggregateOutputType = {
   port: number | null
+  oneTimeRevenue: number | null
 }
 
 export type RestaurantSumAggregateOutputType = {
   port: number | null
+  oneTimeRevenue: number | null
 }
 
 export type RestaurantMinAggregateOutputType = {
@@ -61,6 +63,7 @@ export type RestaurantMinAggregateOutputType = {
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   monthlyHostingActive: boolean | null
+  oneTimeRevenue: number | null
   notes: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -93,6 +96,7 @@ export type RestaurantMaxAggregateOutputType = {
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   monthlyHostingActive: boolean | null
+  oneTimeRevenue: number | null
   notes: string | null
   createdAt: Date | null
   updatedAt: Date | null
@@ -125,6 +129,7 @@ export type RestaurantCountAggregateOutputType = {
   stripeCustomerId: number
   stripeSubscriptionId: number
   monthlyHostingActive: number
+  oneTimeRevenue: number
   notes: number
   createdAt: number
   updatedAt: number
@@ -134,10 +139,12 @@ export type RestaurantCountAggregateOutputType = {
 
 export type RestaurantAvgAggregateInputType = {
   port?: true
+  oneTimeRevenue?: true
 }
 
 export type RestaurantSumAggregateInputType = {
   port?: true
+  oneTimeRevenue?: true
 }
 
 export type RestaurantMinAggregateInputType = {
@@ -167,6 +174,7 @@ export type RestaurantMinAggregateInputType = {
   stripeCustomerId?: true
   stripeSubscriptionId?: true
   monthlyHostingActive?: true
+  oneTimeRevenue?: true
   notes?: true
   createdAt?: true
   updatedAt?: true
@@ -199,6 +207,7 @@ export type RestaurantMaxAggregateInputType = {
   stripeCustomerId?: true
   stripeSubscriptionId?: true
   monthlyHostingActive?: true
+  oneTimeRevenue?: true
   notes?: true
   createdAt?: true
   updatedAt?: true
@@ -231,6 +240,7 @@ export type RestaurantCountAggregateInputType = {
   stripeCustomerId?: true
   stripeSubscriptionId?: true
   monthlyHostingActive?: true
+  oneTimeRevenue?: true
   notes?: true
   createdAt?: true
   updatedAt?: true
@@ -350,6 +360,7 @@ export type RestaurantGroupByOutputType = {
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
   monthlyHostingActive: boolean
+  oneTimeRevenue: number | null
   notes: string | null
   createdAt: Date
   updatedAt: Date
@@ -405,6 +416,7 @@ export type RestaurantWhereInput = {
   stripeCustomerId?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   monthlyHostingActive?: Prisma.BoolFilter<"Restaurant"> | boolean
+  oneTimeRevenue?: Prisma.IntNullableFilter<"Restaurant"> | number | null
   notes?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Restaurant"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Restaurant"> | Date | string
@@ -439,6 +451,7 @@ export type RestaurantOrderByWithRelationInput = {
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
   monthlyHostingActive?: Prisma.SortOrder
+  oneTimeRevenue?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -476,6 +489,7 @@ export type RestaurantWhereUniqueInput = Prisma.AtLeast<{
   stripeCustomerId?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   monthlyHostingActive?: Prisma.BoolFilter<"Restaurant"> | boolean
+  oneTimeRevenue?: Prisma.IntNullableFilter<"Restaurant"> | number | null
   notes?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Restaurant"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Restaurant"> | Date | string
@@ -510,6 +524,7 @@ export type RestaurantOrderByWithAggregationInput = {
   stripeCustomerId?: Prisma.SortOrderInput | Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrderInput | Prisma.SortOrder
   monthlyHostingActive?: Prisma.SortOrder
+  oneTimeRevenue?: Prisma.SortOrderInput | Prisma.SortOrder
   notes?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -550,6 +565,7 @@ export type RestaurantScalarWhereWithAggregatesInput = {
   stripeCustomerId?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
   stripeSubscriptionId?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
   monthlyHostingActive?: Prisma.BoolWithAggregatesFilter<"Restaurant"> | boolean
+  oneTimeRevenue?: Prisma.IntNullableWithAggregatesFilter<"Restaurant"> | number | null
   notes?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Restaurant"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Restaurant"> | Date | string
@@ -582,6 +598,7 @@ export type RestaurantCreateInput = {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: number | null
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -616,6 +633,7 @@ export type RestaurantUncheckedCreateInput = {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: number | null
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -650,6 +668,7 @@ export type RestaurantUpdateInput = {
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -684,6 +703,7 @@ export type RestaurantUncheckedUpdateInput = {
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -718,6 +738,7 @@ export type RestaurantCreateManyInput = {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: number | null
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -750,6 +771,7 @@ export type RestaurantUpdateManyMutationInput = {
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -782,6 +804,7 @@ export type RestaurantUncheckedUpdateManyInput = {
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -814,6 +837,7 @@ export type RestaurantCountOrderByAggregateInput = {
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   monthlyHostingActive?: Prisma.SortOrder
+  oneTimeRevenue?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -821,6 +845,7 @@ export type RestaurantCountOrderByAggregateInput = {
 
 export type RestaurantAvgOrderByAggregateInput = {
   port?: Prisma.SortOrder
+  oneTimeRevenue?: Prisma.SortOrder
 }
 
 export type RestaurantMaxOrderByAggregateInput = {
@@ -850,6 +875,7 @@ export type RestaurantMaxOrderByAggregateInput = {
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   monthlyHostingActive?: Prisma.SortOrder
+  oneTimeRevenue?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -882,6 +908,7 @@ export type RestaurantMinOrderByAggregateInput = {
   stripeCustomerId?: Prisma.SortOrder
   stripeSubscriptionId?: Prisma.SortOrder
   monthlyHostingActive?: Prisma.SortOrder
+  oneTimeRevenue?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
@@ -889,6 +916,7 @@ export type RestaurantMinOrderByAggregateInput = {
 
 export type RestaurantSumOrderByAggregateInput = {
   port?: Prisma.SortOrder
+  oneTimeRevenue?: Prisma.SortOrder
 }
 
 export type RestaurantScalarRelationFilter = {
@@ -926,6 +954,14 @@ export type BoolFieldUpdateOperationsInput = {
 
 export type EnumHostingStatusFieldUpdateOperationsInput = {
   set?: $Enums.HostingStatus
+}
+
+export type NullableIntFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
 }
 
 export type RestaurantCreateNestedOneWithoutLicenseEventsInput = {
@@ -983,6 +1019,7 @@ export type RestaurantCreateWithoutLicenseEventsInput = {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: number | null
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1016,6 +1053,7 @@ export type RestaurantUncheckedCreateWithoutLicenseEventsInput = {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: number | null
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1065,6 +1103,7 @@ export type RestaurantUpdateWithoutLicenseEventsInput = {
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1098,6 +1137,7 @@ export type RestaurantUncheckedUpdateWithoutLicenseEventsInput = {
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1131,6 +1171,7 @@ export type RestaurantCreateWithoutHealthChecksInput = {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: number | null
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1164,6 +1205,7 @@ export type RestaurantUncheckedCreateWithoutHealthChecksInput = {
   stripeCustomerId?: string | null
   stripeSubscriptionId?: string | null
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: number | null
   notes?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
@@ -1213,6 +1255,7 @@ export type RestaurantUpdateWithoutHealthChecksInput = {
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1246,6 +1289,7 @@ export type RestaurantUncheckedUpdateWithoutHealthChecksInput = {
   stripeCustomerId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   stripeSubscriptionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   monthlyHostingActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  oneTimeRevenue?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1319,6 +1363,7 @@ export type RestaurantSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: boolean
   notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1354,6 +1399,7 @@ export type RestaurantSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: boolean
   notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1386,6 +1432,7 @@ export type RestaurantSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: boolean
   notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
@@ -1418,12 +1465,13 @@ export type RestaurantSelectScalar = {
   stripeCustomerId?: boolean
   stripeSubscriptionId?: boolean
   monthlyHostingActive?: boolean
+  oneTimeRevenue?: boolean
   notes?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type RestaurantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "name" | "domain" | "adminEmail" | "status" | "plan" | "port" | "dbPath" | "licenseKey" | "licenseExpiry" | "licenseActivatedAt" | "addonSms" | "addonFloorPlan" | "addonReporting" | "addonGuestHistory" | "addonEventTicketing" | "hosted" | "hostingStatus" | "ownerName" | "ownerEmail" | "ownerPhone" | "trialEndsAt" | "stripeCustomerId" | "stripeSubscriptionId" | "monthlyHostingActive" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["restaurant"]>
+export type RestaurantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "name" | "domain" | "adminEmail" | "status" | "plan" | "port" | "dbPath" | "licenseKey" | "licenseExpiry" | "licenseActivatedAt" | "addonSms" | "addonFloorPlan" | "addonReporting" | "addonGuestHistory" | "addonEventTicketing" | "hosted" | "hostingStatus" | "ownerName" | "ownerEmail" | "ownerPhone" | "trialEndsAt" | "stripeCustomerId" | "stripeSubscriptionId" | "monthlyHostingActive" | "oneTimeRevenue" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["restaurant"]>
 export type RestaurantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   licenseEvents?: boolean | Prisma.Restaurant$licenseEventsArgs<ExtArgs>
   healthChecks?: boolean | Prisma.Restaurant$healthChecksArgs<ExtArgs>
@@ -1465,6 +1513,7 @@ export type $RestaurantPayload<ExtArgs extends runtime.Types.Extensions.Internal
     stripeCustomerId: string | null
     stripeSubscriptionId: string | null
     monthlyHostingActive: boolean
+    oneTimeRevenue: number | null
     notes: string | null
     createdAt: Date
     updatedAt: Date
@@ -1919,6 +1968,7 @@ export interface RestaurantFieldRefs {
   readonly stripeCustomerId: Prisma.FieldRef<"Restaurant", 'String'>
   readonly stripeSubscriptionId: Prisma.FieldRef<"Restaurant", 'String'>
   readonly monthlyHostingActive: Prisma.FieldRef<"Restaurant", 'Boolean'>
+  readonly oneTimeRevenue: Prisma.FieldRef<"Restaurant", 'Int'>
   readonly notes: Prisma.FieldRef<"Restaurant", 'String'>
   readonly createdAt: Prisma.FieldRef<"Restaurant", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Restaurant", 'DateTime'>

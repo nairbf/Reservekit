@@ -8,7 +8,8 @@
     "start": "next start",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "prisma:seed-fix": "tsx prisma/seed-fix.ts"
   },
   "dependencies": {
     "@prisma/adapter-better-sqlite3": "^7.4.0",

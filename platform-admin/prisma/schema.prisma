@@ -98,6 +98,7 @@ model Restaurant {
   stripeCustomerId     String?
   stripeSubscriptionId String?
   monthlyHostingActive Boolean          @default(false)
+  oneTimeRevenue       Int?
   notes                String?
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt

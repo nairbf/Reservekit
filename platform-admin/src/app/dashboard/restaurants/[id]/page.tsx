@@ -42,6 +42,9 @@ const TIMEZONE_OPTIONS = [
 type AddonKey = (typeof ADDONS)[number]["key"];
 
 type SyncState = "" | "synced" | "failed";
+type TabKey = "Overview" | "Settings" | "Users" | "Emails" | "Activity";
+
+const TABS: TabKey[] = ["Overview", "Settings", "Users", "Emails", "Activity"];
 
 type RestaurantUser = {
   id: number;
@@ -161,6 +164,7 @@ export default function RestaurantDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState("");
+  const [activeTab, setActiveTab] = useState<TabKey>("Overview");
   const [showKey, setShowKey] = useState(false);
   const [syncStatus, setSyncStatus] = useState<Record<AddonKey, SyncState>>({
     addonSms: "",
@@ -224,6 +228,14 @@ export default function RestaurantDetailPage() {
   const canManage = useMemo(() => user.role === "ADMIN" || user.role === "SUPER_ADMIN", [user.role]);
   const canLoginAs = user.role === "SUPER_ADMIN";
   const healthLatest = restaurant?.healthChecks?.[0] || null;
+  const emailSummary = useMemo(() => {
+    const rows = restaurant?.emailSequences || [];
+    return {
+      queued: rows.filter((row) => row.status === "pending").length,
+      sent: rows.filter((row) => row.status === "sent").length,
+      failed: rows.filter((row) => row.status === "failed").length,
+    };
+  }, [restaurant?.emailSequences]);
 
   const load = useCallback(async () => {
     setError("");
@@ -749,7 +761,21 @@ export default function RestaurantDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">{restaurant.name}</h1>
-          <p className="text-sm text-slate-600">{restaurant.domain || `${restaurant.slug}.reservesit.com`}</p>
+          <p className="text-sm text-slate-600">
+            <a
+              href={`https://${restaurant.domain || `${restaurant.slug}.reservesit.com`}`}
+              target="_blank"
+              rel="noreferrer"
+              className="underline decoration-slate-300 underline-offset-2"
+            >
+              {restaurant.domain || `${restaurant.slug}.reservesit.com`}
+            </a>
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <RestaurantStatusBadge status={restaurant.status} />
+            <PlanBadge plan={restaurant.plan} />
+            {healthLatest ? <HealthStatusBadge status={healthLatest.status} /> : <span className="text-xs text-slate-500">No health checks</span>}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <a
@@ -761,11 +787,31 @@ export default function RestaurantDetailPage() {
             Open Site
           </a>
           <Link href="/dashboard/restaurants" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700">
-            Back
+            Back to Restaurants
           </Link>
         </div>
       </div>
 
+      <div className="overflow-x-auto border-b border-slate-200">
+        <div className="flex min-w-max gap-1">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`rounded-t-lg px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === tab
+                  ? "-mb-px border border-b-white border-slate-200 bg-white text-blue-600"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {activeTab === "Settings" ? (
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Restaurant Settings</h2>
@@ -1004,7 +1050,10 @@ export default function RestaurantDetailPage() {
           </div>
         ) : null}
       </section>
+      ) : null}
 
+      {activeTab === "Overview" ? (
+      <>
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div>
@@ -1236,7 +1285,10 @@ export default function RestaurantDetailPage() {
           </button>
         </section>
       </div>
+      </>
+      ) : null}
 
+      {activeTab === "Users" ? (
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -1407,7 +1459,9 @@ export default function RestaurantDetailPage() {
           </table>
         </div>
       </section>
+      ) : null}
 
+      {activeTab === "Emails" ? (
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -1424,6 +1478,12 @@ export default function RestaurantDetailPage() {
               {busy === "cancel-sequences" ? "Cancelling..." : "Cancel Remaining"}
             </button>
           ) : null}
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+          <span className="font-medium">{emailSummary.queued}</span> queued,{" "}
+          <span className="font-medium">{emailSummary.sent}</span> sent,{" "}
+          <span className="font-medium">{emailSummary.failed}</span> failed.
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -1481,7 +1541,9 @@ export default function RestaurantDetailPage() {
           </table>
         </div>
       </section>
+      ) : null}
 
+      {activeTab === "Overview" ? (
       <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-slate-900">Notes</h2>
         <textarea
@@ -1523,7 +1585,9 @@ export default function RestaurantDetailPage() {
           ) : null}
         </div>
       </section>
+      ) : null}
 
+      {activeTab === "Activity" ? (
       <div className="grid gap-4 xl:grid-cols-2">
         <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-200 px-4 py-3">
@@ -1588,6 +1652,7 @@ export default function RestaurantDetailPage() {
           </div>
         </section>
       </div>
+      ) : null}
     </div>
   );
 }

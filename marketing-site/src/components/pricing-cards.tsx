@@ -2,7 +2,7 @@ const plans = [
   {
     name: "Core",
     price: "$1,799",
-    href: "https://buy.stripe.com/PLACEHOLDER_CORE",
+    href: "/pricing",
     features: [
       "Booking widget",
       "Hostess dashboard",
@@ -14,7 +14,7 @@ const plans = [
   {
     name: "Service Pro",
     price: "$2,227",
-    href: "https://buy.stripe.com/PLACEHOLDER_PRO",
+    href: "/pricing",
     featured: true,
     features: [
       "Everything in Core",
@@ -27,7 +27,7 @@ const plans = [
   {
     name: "Full Suite",
     price: "$2,734",
-    href: "https://buy.stripe.com/PLACEHOLDER_FULL",
+    href: "/pricing",
     features: [
       "Everything in Service Pro",
       "Guest history + notes",
@@ -67,11 +67,9 @@ export function PricingCards() {
 
             <a
               href={plan.href}
-              target="_blank"
-              rel="noreferrer"
               className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-700"
             >
-              Buy Now
+              Configure Plan
             </a>
           </div>
         ))}
@@ -89,7 +87,7 @@ export function PricingCards() {
           ))}
         </div>
         <p className="mt-4 text-sm text-slate-700">
-          Managed hosting add-on: <strong>$15/month</strong> (monitoring, backups, and updates)
+          Managed hosting: <strong>$15/month</strong> or <strong>$149/year</strong> (monitoring, backups, updates, and a 14-day trial)
         </p>
       </div>
     </div>

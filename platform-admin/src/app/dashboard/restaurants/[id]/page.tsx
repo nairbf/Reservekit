@@ -1180,6 +1180,11 @@ export default function RestaurantDetailPage() {
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Owner Email</span>
               <input value={overview.ownerEmail} onChange={(e) => setOverview((p) => ({ ...p, ownerEmail: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />
             </label>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+              <label className="block text-xs font-medium text-slate-500">Portal Login Email</label>
+              <p className="mt-0.5 text-sm text-slate-700">{overview.ownerEmail || "Not set"}</p>
+              <p className="mt-0.5 text-xs text-slate-400">Used to log in at reservesit.com/login</p>
+            </div>
             <label className="block">
               <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Owner Phone</span>
               <input value={overview.ownerPhone} onChange={(e) => setOverview((p) => ({ ...p, ownerPhone: e.target.value }))} disabled={!canManage} className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm disabled:bg-slate-100" />

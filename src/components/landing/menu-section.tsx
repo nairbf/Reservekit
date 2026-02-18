@@ -24,6 +24,13 @@ interface MenuFileView {
   uploadedAt: string;
 }
 
+interface MenuGroup {
+  label: string;
+  count: number;
+  type: "pdf" | "image";
+  uploadedAt: string;
+}
+
 interface MenuSectionProps {
   categories: MenuCategoryView[];
   menuFiles: MenuFileView[];
@@ -41,8 +48,42 @@ function formatDate(value: string): string {
   return date.toLocaleDateString();
 }
 
+function normalizeLabel(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function groupMenuFiles(menuFiles: MenuFileView[]): MenuGroup[] {
+  const groups = new Map<string, { label: string; count: number; type: "pdf" | "image"; uploadedAt: string; firstIndex: number }>();
+
+  menuFiles.forEach((file, index) => {
+    const displayLabel = file.label.trim() || "Menu";
+    const key = normalizeLabel(displayLabel);
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, {
+        label: displayLabel,
+        count: 1,
+        type: file.type,
+        uploadedAt: file.uploadedAt,
+        firstIndex: index,
+      });
+      return;
+    }
+
+    existing.count += 1;
+    if (new Date(file.uploadedAt).getTime() > new Date(existing.uploadedAt).getTime()) {
+      existing.uploadedAt = file.uploadedAt;
+    }
+  });
+
+  return Array.from(groups.values())
+    .sort((a, b) => a.firstIndex - b.firstIndex)
+    .map(({ label, count, type, uploadedAt }) => ({ label, count, type, uploadedAt }));
+}
+
 export function MenuSection({ categories, menuFiles, accentColor, showPreview = true }: MenuSectionProps) {
   const usingUploads = menuFiles.length > 0;
+  const menuGroups = useMemo(() => groupMenuFiles(menuFiles), [menuFiles]);
 
   const firstCategory = categories[0]?.id ?? null;
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(firstCategory);
@@ -79,25 +120,22 @@ export function MenuSection({ categories, menuFiles, accentColor, showPreview = 
         </div>
       ) : usingUploads ? (
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {menuFiles.slice(0, 6).map((file) => (
-            <article key={file.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+          {menuGroups.slice(0, 6).map((group) => (
+            <article key={group.label.toLowerCase()} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-gray-900">{file.label}</h3>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${file.type === "pdf" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
-                  {file.type.toUpperCase()}
+                <h3 className="text-base font-semibold text-gray-900">{group.label}</h3>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${group.count > 1 ? "bg-emerald-100 text-emerald-700" : group.type === "pdf" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
+                  {group.count > 1 ? `${group.count} pages` : group.type.toUpperCase()}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-gray-500">Updated {formatDate(file.uploadedAt)}</p>
-              <div className="mt-4 flex gap-2">
-                <a href={file.url} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center rounded-lg border border-gray-200 px-3 text-xs text-gray-700">
-                  Preview
-                </a>
+              <p className="mt-2 text-xs text-gray-500">Updated {formatDate(group.uploadedAt)}</p>
+              <div className="mt-4">
                 <Link
                   href="/menu"
                   className="inline-flex h-9 items-center rounded-lg px-3 text-xs font-medium text-white"
                   style={{ backgroundColor: accentColor }}
                 >
-                  Open Menu
+                  View Menu
                 </Link>
               </div>
             </article>

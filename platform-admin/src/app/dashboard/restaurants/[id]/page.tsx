@@ -45,6 +45,14 @@ type SyncState = "" | "synced" | "failed";
 type TabKey = "Overview" | "Settings" | "Users" | "Emails" | "Activity";
 
 const TABS: TabKey[] = ["Overview", "Settings", "Users", "Emails", "Activity"];
+const EMAIL_TEMPLATES = [
+  { id: "welcome", label: "Welcome Email", description: "License key, login URL, getting started" },
+  { id: "setup_checkin", label: "Setup Check-in (24hr)", description: "How's your setup going?" },
+  { id: "tips", label: "5 Tips Email (7-day)", description: "Tips to get the most out of ReserveSit" },
+  { id: "custom", label: "Custom Email", description: "Write your own message" },
+] as const;
+
+type EmailTemplateId = (typeof EMAIL_TEMPLATES)[number]["id"];
 
 type RestaurantUser = {
   id: number;
@@ -153,6 +161,30 @@ function sequenceStatusClass(status: string) {
   return "bg-slate-50 text-slate-700 border-slate-200";
 }
 
+function buildTemplatePreview(templateId: Exclude<EmailTemplateId, "custom">, restaurant: RestaurantDetail) {
+  const ownerName = restaurant.ownerName || restaurant.ownerEmail?.split("@")[0] || "Owner";
+  const dashboardUrl = `https://${restaurant.domain || `${restaurant.slug}.reservesit.com`}/login`;
+
+  if (templateId === "welcome") {
+    return {
+      subject: `Welcome to ReserveSit, ${ownerName}!`,
+      body: `Hi ${ownerName},\n\nThank you for purchasing ReserveSit ${restaurant.plan} for ${restaurant.name}!`,
+    };
+  }
+
+  if (templateId === "setup_checkin") {
+    return {
+      subject: `How's your ReserveSit setup going, ${ownerName}?`,
+      body: `Hi ${ownerName},\n\nJust checking in — have you had a chance to set up ${restaurant.name} on ReserveSit?\n\nDashboard: ${dashboardUrl}`,
+    };
+  }
+
+  return {
+    subject: "5 tips to get the most out of ReserveSit",
+    body: `Hi ${ownerName},\n\nYou've had ${restaurant.name} on ReserveSit for a week now. Here are 5 tips to make the most of it.`,
+  };
+}
+
 export default function RestaurantDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
@@ -224,6 +256,10 @@ export default function RestaurantDetailPage() {
   const [editUserName, setEditUserName] = useState<Record<number, string>>({});
   const [editUserEmail, setEditUserEmail] = useState<Record<number, string>>({});
   const [resetPasswordValue, setResetPasswordValue] = useState<Record<number, string>>({});
+  const [selectedEmailTemplate, setSelectedEmailTemplate] = useState<EmailTemplateId>("welcome");
+  const [manualEmailTo, setManualEmailTo] = useState("");
+  const [manualEmailSubject, setManualEmailSubject] = useState("");
+  const [manualEmailBody, setManualEmailBody] = useState("");
 
   const canManage = useMemo(() => user.role === "ADMIN" || user.role === "SUPER_ADMIN", [user.role]);
   const canLoginAs = user.role === "SUPER_ADMIN";
@@ -236,6 +272,22 @@ export default function RestaurantDetailPage() {
       failed: rows.filter((row) => row.status === "failed").length,
     };
   }, [restaurant?.emailSequences]);
+
+  useEffect(() => {
+    if (!restaurant) return;
+    if (!manualEmailTo) {
+      setManualEmailTo(restaurant.ownerEmail || restaurant.adminEmail || "");
+    }
+  }, [restaurant, manualEmailTo]);
+
+  useEffect(() => {
+    if (!restaurant) return;
+    if (selectedEmailTemplate === "custom") return;
+
+    const preview = buildTemplatePreview(selectedEmailTemplate, restaurant);
+    setManualEmailSubject(preview.subject);
+    setManualEmailBody(preview.body);
+  }, [restaurant, selectedEmailTemplate]);
 
   const load = useCallback(async () => {
     setError("");
@@ -723,6 +775,56 @@ export default function RestaurantDetailPage() {
       await load();
     } catch (err) {
       showToast(err instanceof Error ? err.message : "Failed to cancel pending emails", "error");
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function sendManualEmail() {
+    if (!restaurant) return;
+    const to = manualEmailTo.trim();
+    if (!to) {
+      showToast("Recipient email is required.", "error");
+      return;
+    }
+
+    if (selectedEmailTemplate === "custom") {
+      if (!manualEmailSubject.trim()) {
+        showToast("Subject is required for custom emails.", "error");
+        return;
+      }
+      if (!manualEmailBody.trim()) {
+        showToast("Body is required for custom emails.", "error");
+        return;
+      }
+    }
+
+    setBusy("send-manual-email");
+    try {
+      const payload =
+        selectedEmailTemplate === "custom"
+          ? {
+              template: "custom",
+              to,
+              subject: manualEmailSubject.trim(),
+              body: manualEmailBody.trim(),
+            }
+          : {
+              template: selectedEmailTemplate,
+              to,
+            };
+
+      const res = await fetch(`/api/restaurants/${restaurant.id}/email-sequences`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const response = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(response?.error || "Failed to send email");
+      showToast("Email sent.", "success");
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed to send email", "error");
     } finally {
       setBusy("");
     }
@@ -1478,6 +1580,82 @@ export default function RestaurantDetailPage() {
               {busy === "cancel-sequences" ? "Cancelling..." : "Cancel Remaining"}
             </button>
           ) : null}
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-slate-200 p-4">
+          <h3 className="text-sm font-semibold text-slate-900">Send Email</h3>
+          <div className="flex flex-wrap gap-2">
+            {EMAIL_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => setSelectedEmailTemplate(template.id)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  selectedEmailTemplate === template.id
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-slate-300 bg-white text-slate-700"
+                }`}
+              >
+                {template.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500">
+            {EMAIL_TEMPLATES.find((template) => template.id === selectedEmailTemplate)?.description}
+          </p>
+
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">To</span>
+            <input
+              value={manualEmailTo}
+              onChange={(e) => setManualEmailTo(e.target.value)}
+              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+            />
+          </label>
+
+          {selectedEmailTemplate === "custom" ? (
+            <div className="space-y-3">
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Subject</span>
+                <input
+                  value={manualEmailSubject}
+                  onChange={(e) => setManualEmailSubject(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Body</span>
+                <textarea
+                  value={manualEmailBody}
+                  onChange={(e) => setManualEmailBody(e.target.value)}
+                  rows={6}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+              <div className="font-medium text-slate-900">{manualEmailSubject}</div>
+              <div className="mt-1 whitespace-pre-line text-slate-600">
+                {manualEmailBody
+                  .split("\n")
+                  .filter((line) => line.trim().length > 0)
+                  .slice(0, 2)
+                  .join("\n")}
+              </div>
+            </div>
+          )}
+
+          <div className="flex">
+            <button
+              type="button"
+              onClick={sendManualEmail}
+              disabled={busy === "send-manual-email"}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {busy === "send-manual-email" ? "Sending..." : "Send Now"}
+            </button>
+          </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">

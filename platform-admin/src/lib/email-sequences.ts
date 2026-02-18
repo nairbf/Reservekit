@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { prisma } from "@/lib/db";
 
-interface PurchaseInfo {
+export interface PurchaseInfo {
   restaurantId: string;
   ownerName: string;
   ownerEmail: string;
@@ -13,6 +13,7 @@ interface PurchaseInfo {
 }
 
 type SequenceStatus = "pending" | "sent" | "failed" | "cancelled";
+export type SequenceTemplateId = "welcome" | "setup_checkin" | "tips";
 
 const EMAIL_FROM = process.env.PLATFORM_EMAIL_FROM || "ReserveSit <reservations@reservesit.com>";
 
@@ -110,10 +111,40 @@ The ReserveSit Team
   },
 ] as const;
 
+const TEMPLATE_STEP_MAP: Record<SequenceTemplateId, number> = {
+  welcome: 0,
+  setup_checkin: 1,
+  tips: 2,
+};
+
 function getResendClient() {
   const key = process.env.RESEND_API_KEY?.trim();
   if (!key) return null;
   return new Resend(key);
+}
+
+export function getTemplateContent(templateId: SequenceTemplateId, info: PurchaseInfo): { subject: string; body: string; step: number } {
+  const step = TEMPLATE_STEP_MAP[templateId];
+  const template = PURCHASE_SEQUENCE[step];
+  return {
+    subject: template.subject(info),
+    body: template.body(info),
+    step,
+  };
+}
+
+export async function sendDirectEmail(input: { to: string; subject: string; body: string }) {
+  const resend = getResendClient();
+  if (!resend) {
+    throw new Error("RESEND_API_KEY is not configured");
+  }
+
+  await resend.emails.send({
+    from: EMAIL_FROM,
+    to: input.to,
+    subject: input.subject,
+    text: input.body,
+  });
 }
 
 export async function createPurchaseSequence(info: PurchaseInfo) {
@@ -151,21 +182,19 @@ export async function sendSequenceEvent(eventId: string) {
     return { status: "cancelled" as SequenceStatus };
   }
 
-  const resend = getResendClient();
-  if (!resend) {
+  try {
+    await sendDirectEmail({
+      to: event.emailTo,
+      subject: event.emailSubject,
+      body: event.emailBody,
+    });
+  } catch (error) {
     await prisma.emailSequenceEvent.update({
       where: { id: event.id },
       data: { status: "failed" },
     });
-    throw new Error("RESEND_API_KEY is not configured");
+    throw error;
   }
-
-  await resend.emails.send({
-    from: EMAIL_FROM,
-    to: event.emailTo,
-    subject: event.emailSubject,
-    text: event.emailBody,
-  });
 
   await prisma.emailSequenceEvent.update({
     where: { id: event.id },

@@ -11,6 +11,8 @@ interface SetupSettings {
   phone: string;
   address: string;
   timezone: string;
+  staffNotificationEmail: string;
+  contactEmail: string;
   openTime: string;
   closeTime: string;
   slotInterval: string;
@@ -20,11 +22,6 @@ interface SetupSettings {
   reserveHeading: string;
   reserveSubheading: string;
   reserveConfirmationMessage: string;
-  smtpHost: string;
-  smtpPort: string;
-  smtpUser: string;
-  smtpPass: string;
-  smtpFrom: string;
   depositsEnabled: string;
   depositAmount: string;
   depositMinParty: string;
@@ -52,11 +49,27 @@ const STEP_TITLES: Record<StepKey, string> = {
   5: "Mini Tutorial",
 };
 
+const TIMEZONE_OPTIONS = [
+  { value: "America/New_York", label: "America/New_York (Eastern)" },
+  { value: "America/Chicago", label: "America/Chicago (Central)" },
+  { value: "America/Denver", label: "America/Denver (Mountain)" },
+  { value: "America/Los_Angeles", label: "America/Los_Angeles (Pacific)" },
+  { value: "America/Anchorage", label: "America/Anchorage (Alaska)" },
+  { value: "Pacific/Honolulu", label: "Pacific/Honolulu (Hawaii)" },
+  { value: "America/Phoenix", label: "America/Phoenix (Arizona)" },
+  { value: "Europe/London", label: "Europe/London" },
+  { value: "Europe/Paris", label: "Europe/Paris" },
+  { value: "Asia/Tokyo", label: "Asia/Tokyo" },
+  { value: "Australia/Sydney", label: "Australia/Sydney" },
+] as const;
+
 const DEFAULTS: SetupSettings = {
   restaurantName: "My Restaurant",
   phone: "",
   address: "",
   timezone: "America/New_York",
+  staffNotificationEmail: "",
+  contactEmail: "",
   openTime: "17:00",
   closeTime: "22:00",
   slotInterval: "30",
@@ -66,11 +79,6 @@ const DEFAULTS: SetupSettings = {
   reserveHeading: "Reserve a Table",
   reserveSubheading: "Choose your date, time, and party size.",
   reserveConfirmationMessage: "We'll contact you shortly to confirm.",
-  smtpHost: "",
-  smtpPort: "587",
-  smtpUser: "",
-  smtpPass: "",
-  smtpFrom: "",
   depositsEnabled: "false",
   depositAmount: "0",
   depositMinParty: "2",
@@ -229,11 +237,19 @@ export default function SetupWizardPage() {
     }
     setSaving(true);
     try {
+      const notificationEmail = settings.staffNotificationEmail.trim();
       await saveSettings({
         restaurantName: settings.restaurantName.trim(),
         phone: settings.phone.trim(),
         address: settings.address.trim(),
         timezone: settings.timezone.trim() || "America/New_York",
+        staffNotificationEmail: notificationEmail,
+        contactEmail: settings.contactEmail.trim(),
+        replyToEmail: notificationEmail,
+        staffNotificationsEnabled: "true",
+        emailEnabled: "true",
+        emailSendConfirmations: "true",
+        emailSendReminders: "true",
         setupWizardStep: "2",
       });
       setMessage("Restaurant basics saved.");
@@ -334,11 +350,6 @@ export default function SetupWizardPage() {
     setSaving(true);
     try {
       await saveSettings({
-        smtpHost: settings.smtpHost.trim(),
-        smtpPort: settings.smtpPort.trim() || "587",
-        smtpUser: settings.smtpUser.trim(),
-        smtpPass: settings.smtpPass,
-        smtpFrom: settings.smtpFrom.trim(),
         reserveHeading: settings.reserveHeading.trim() || DEFAULTS.reserveHeading,
         reserveSubheading: settings.reserveSubheading.trim() || DEFAULTS.reserveSubheading,
         reserveConfirmationMessage: settings.reserveConfirmationMessage.trim() || DEFAULTS.reserveConfirmationMessage,
@@ -411,10 +422,37 @@ export default function SetupWizardPage() {
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Restaurant Name" value={settings.restaurantName} onChange={v => setField("restaurantName", v)} />
             <Field label="Phone" value={settings.phone} onChange={v => setField("phone", v)} placeholder="(555) 123-4567" />
+            <Field
+              label="Notification Email"
+              value={settings.staffNotificationEmail}
+              onChange={v => setField("staffNotificationEmail", v)}
+              placeholder="alerts@restaurant.com"
+              type="email"
+            />
+            <Field
+              label="Contact Email"
+              value={settings.contactEmail}
+              onChange={v => setField("contactEmail", v)}
+              placeholder="hello@restaurant.com"
+              type="email"
+            />
             <div className="sm:col-span-2">
               <Field label="Address" value={settings.address} onChange={v => setField("address", v)} />
             </div>
-            <Field label="Timezone" value={settings.timezone} onChange={v => setField("timezone", v)} placeholder="America/New_York" />
+            <div>
+              <label className="block text-sm font-medium mb-1">Timezone</label>
+              <select
+                value={settings.timezone}
+                onChange={e => setField("timezone", e.target.value)}
+                className="h-11 w-full border rounded px-3 text-sm"
+              >
+                {TIMEZONE_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="flex justify-end">
             <button disabled={saving} onClick={saveStepOne} className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200 disabled:opacity-60">
@@ -473,14 +511,14 @@ export default function SetupWizardPage() {
       {step === 4 && (
         <div className="bg-white rounded-xl border p-4 sm:p-6 space-y-4">
           <h2 className="font-semibold text-lg">Guest Communications</h2>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="SMTP Host" value={settings.smtpHost} onChange={v => setField("smtpHost", v)} placeholder="smtp.gmail.com" />
-            <Field label="SMTP Port" value={settings.smtpPort} onChange={v => setField("smtpPort", v)} placeholder="587" />
-            <Field label="SMTP User" value={settings.smtpUser} onChange={v => setField("smtpUser", v)} />
-            <Field label="SMTP Password" type="password" value={settings.smtpPass} onChange={v => setField("smtpPass", v)} />
-            <div className="sm:col-span-2">
-              <Field label="SMTP From Address" value={settings.smtpFrom} onChange={v => setField("smtpFrom", v)} />
-            </div>
+          <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            <div className="font-medium">Email Notifications</div>
+            <p className="mt-1">
+              Confirmation and reminder emails are sent automatically when guests make reservations. No setup needed — emails are handled by our platform.
+            </p>
+            <p className="mt-1">
+              You can customize email templates in Settings {"->"} Email Templates after setup.
+            </p>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
             <Field label="Reserve Heading" value={settings.reserveHeading} onChange={v => setField("reserveHeading", v)} />

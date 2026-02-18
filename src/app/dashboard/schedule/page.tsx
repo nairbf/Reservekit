@@ -480,6 +480,13 @@ export default function SchedulePage() {
 
           <div className="overflow-x-auto">
             <div className="min-w-[760px] space-y-2">
+              <div className="grid grid-cols-[160px_120px_1fr_1fr_1fr] gap-2 px-2 py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                <div>Day</div>
+                <div>Open/Closed</div>
+                <div>Start Time</div>
+                <div>End Time</div>
+                <div>Max Covers</div>
+              </div>
               {WEEKDAYS.map(day => {
                 const row = weeklySchedule[day.key];
                 return (

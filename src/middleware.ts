@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const PUBLIC_API_EXACT = new Set([
   "/api/auth/login",
   "/api/auth/admin-login",
+  "/api/auth/demo-login",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
   "/api/availability",
@@ -45,6 +46,20 @@ function withSecurityHeaders(response: NextResponse) {
 export function middleware(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
   const pathname = req.nextUrl.pathname;
+  const host = req.headers.get("host") || "";
+  const isDemoHost = host.includes("demo.reservesit.com");
+
+  // Auto-login for demo instance when unauthenticated.
+  if (isDemoHost && !token) {
+    if (pathname.startsWith("/dashboard") || pathname === "/login") {
+      const destination = `${req.nextUrl.pathname}${req.nextUrl.search}`;
+      const loginUrl = new URL(
+        `/api/auth/demo-login?redirect=${encodeURIComponent(destination)}`,
+        req.url,
+      );
+      return withSecurityHeaders(NextResponse.redirect(loginUrl));
+    }
+  }
 
   if (pathname.startsWith("/dashboard")) {
     if (!token) {
@@ -64,5 +79,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/:path*"],
+  matcher: ["/dashboard/:path*", "/api/:path*", "/login"],
 };

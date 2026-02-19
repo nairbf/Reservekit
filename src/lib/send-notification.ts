@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getAppUrl } from "@/lib/app-url";
 import { sendEmail, type EmailAttachment } from "@/lib/email";
 import { getTemplate, getSampleVariables, renderTemplate } from "@/lib/email-templates";
 
@@ -71,7 +72,7 @@ export async function sendNotification(options: SendNotificationOptions) {
 
   const template = await getTemplate(options.templateId);
 
-  const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = await getAppUrl();
   const vars = {
     ...getSampleVariables(),
     restaurantName: settings.restaurantName || "Restaurant",

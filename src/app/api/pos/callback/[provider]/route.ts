@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
+import { getAppUrlFromRequest } from "@/lib/app-url";
 import { prisma } from "@/lib/db";
 import { getAvailableProviders, getPosAdapter, isPosProvider, type PosProvider } from "@/lib/pos";
 
@@ -14,9 +15,7 @@ function credentialsKey(provider: PosProvider) {
 }
 
 function appBaseUrl(req: NextRequest) {
-  const fromEnv = (process.env.NEXT_PUBLIC_APP_URL || "").trim();
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-  return req.nextUrl.origin;
+  return getAppUrlFromRequest(req);
 }
 
 function providerIsAvailable(provider: PosProvider) {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAppUrlFromRequest } from "@/lib/app-url";
 import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
   const state = req.nextUrl.searchParams.get("state");
   const error = req.nextUrl.searchParams.get("error");
   const errorDescription = req.nextUrl.searchParams.get("error_description");
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://localhost:3001").replace(/\/$/, "");
+  const appUrl = getAppUrlFromRequest(req);
 
   if (error) {
     return redirectWithError(appUrl, errorDescription || error);

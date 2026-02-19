@@ -13,8 +13,8 @@ function safeRedirectPath(value: string | null): string {
 }
 
 export async function GET(request: NextRequest) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "";
-  if (!appUrl.includes("demo.reservesit.com")) {
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  if (!host.includes("demo.reservesit.com")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

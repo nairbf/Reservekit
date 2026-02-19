@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import { getAppUrl } from "@/lib/app-url";
 import { getEnabledFeatures } from "@/lib/features";
 import { PermissionsProvider } from "@/hooks/use-permissions";
 import DashboardNav from "./DashboardNav";
@@ -9,7 +10,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await getSession();
   if (!session) redirect("/login");
   const features = await getEnabledFeatures();
-  const isDemoEnv = (process.env.NEXT_PUBLIC_APP_URL || "").includes("demo");
+  const appUrl = await getAppUrl();
+  const isDemoEnv = appUrl.includes("demo.reservesit.com");
   const permissionList = Array.from(session.permissions);
   const canAccessAdmin = session.permissions.has("manage_staff");
   return (

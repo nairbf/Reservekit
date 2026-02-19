@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
+import { getAppUrlFromRequest } from "@/lib/app-url";
 import { createPaymentIntent } from "@/lib/payments";
 import { generateEventICS } from "@/lib/calendar";
 import { sendNotification } from "@/lib/send-notification";
@@ -233,7 +234,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     ticketCode: ticketCodes[0],
   });
 
-  const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrlFromRequest(req);
   await sendNotification({
     templateId: "event_ticket_confirmation",
     to: guestEmail,

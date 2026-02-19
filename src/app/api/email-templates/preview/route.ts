@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
+import { getAppUrlFromRequest } from "@/lib/app-url";
 import {
   getTemplate,
   getSampleVariables,
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
         .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value))
         .map(([key, value]) => [key, String(value)]),
     ),
+    getAppUrlFromRequest(req),
   );
 
   const rendered = renderTemplate(template, variables);

@@ -1,11 +1,12 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
+import { getAppUrlFromRequest } from "@/lib/app-url";
 import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     await requireAuth();
   } catch {
@@ -24,7 +25,7 @@ export async function GET(_req: NextRequest) {
     create: { key: "stripe_oauth_state", value: state },
   });
 
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://localhost:3001").replace(/\/$/, "");
+  const appUrl = getAppUrlFromRequest(req);
   const redirectUri = `${appUrl}/api/stripe/callback`;
 
   const params = new URLSearchParams({

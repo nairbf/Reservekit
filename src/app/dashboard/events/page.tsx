@@ -266,7 +266,7 @@ export default function EventsDashboardPage() {
   }
 
   function eventUrl(event: EventItem | EventDetail): string {
-    const base = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
+    const base = typeof window !== "undefined" ? window.location.origin : "";
     return `${base}/events/${event.slug}`;
   }
 

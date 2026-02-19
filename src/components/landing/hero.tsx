@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getAppUrl } from "@/lib/app-url";
 import { AnnouncementBanner } from "@/components/landing/announcement-banner";
 
 interface HeroProps {
@@ -17,7 +18,7 @@ interface HeroProps {
   accentColor: string;
 }
 
-export function Hero({
+export async function Hero({
   restaurantName,
   tagline,
   announcementText,
@@ -33,7 +34,8 @@ export function Hero({
 }: HeroProps) {
   const primaryHref = primaryCtaLink || reserveHref || "/reserve/reef";
   const secondaryHref = secondaryCtaLink || menuHref || "/menu";
-  const isDemoEnv = (process.env.NEXT_PUBLIC_APP_URL || "").includes("demo");
+  const appUrl = await getAppUrl();
+  const isDemoEnv = appUrl.includes("demo.reservesit.com");
 
   return (
     <>

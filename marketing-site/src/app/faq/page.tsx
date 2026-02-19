@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { FaqAccordion } from "@/components/faq-accordion";
+
+export const metadata: Metadata = {
+  title: "FAQ",
+  description: "Frequently asked questions about ReserveSit - pricing, setup, integrations, data ownership, and more.",
+};
 
 export default function FaqPage() {
   return (

@@ -860,8 +860,8 @@ export default function SettingsPage() {
         )}
       </div>
 
-      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <div className="flex w-max gap-2 pb-1">
+      <div className="-mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex flex-wrap gap-2">
           {TABS.map((tab) => {
             const active = tab.key === activeTab;
             return (
@@ -869,10 +869,10 @@ export default function SettingsPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
-                className={`min-w-[170px] shrink-0 rounded-xl border px-3 py-2 text-left transition-all ${active ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white"}`}
+                className={`flex-1 min-w-[140px] rounded-xl border px-3 py-2 text-left transition-all ${active ? "border-blue-300 bg-blue-50" : "border-gray-200 bg-white hover:border-gray-300"}`}
               >
                 <div className={`text-sm font-semibold ${active ? "text-blue-700" : "text-gray-900"}`}>{tab.label}</div>
-                <div className="text-[11px] text-gray-500">{tab.description}</div>
+                <div className="hidden text-[11px] text-gray-500 sm:block">{tab.description}</div>
               </button>
             );
           })}

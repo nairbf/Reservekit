@@ -235,7 +235,7 @@ export default function PricingPage() {
           </p>
 
           <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 sm:p-5">
-            <p className="font-semibold">OpenTable can run $3,000–$75,000/year for busy restaurants. ReserveSit charges once.</p>
+            <p className="font-semibold">OpenTable can run $3,000–$7,000/year for busy restaurants. ReserveSit charges once.</p>
             <p className="mt-1 text-rose-800">Keep your margins and keep ownership of your guest data.</p>
           </div>
         </section>

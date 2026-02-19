@@ -34,6 +34,24 @@ interface UploadedMenuFile {
   uploadedAt: string;
 }
 
+interface MenuFileGroup {
+  key: string;
+  label: string;
+  files: UploadedMenuFile[];
+  type: "pdf" | "image" | "mixed";
+  latestUploadedAt: string;
+  sortOrder: number;
+}
+
+function normalizeMenuLabel(label: string | null | undefined): string {
+  const trimmed = String(label || "").trim();
+  return trimmed || "Untitled";
+}
+
+function menuFileGroupKey(label: string | null | undefined): string {
+  return normalizeMenuLabel(label).toLowerCase();
+}
+
 function formatCents(cents: number): string {
   return `$${(Math.max(0, Math.trunc(cents)) / 100).toFixed(2)}`;
 }
@@ -54,6 +72,7 @@ export default function MenuPage() {
   const [expressEnabled, setExpressEnabled] = useState(false);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [menuFiles, setMenuFiles] = useState<UploadedMenuFile[]>([]);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -128,6 +147,50 @@ export default function MenuPage() {
     () => filtered.filter(category => category.type === "drink"),
     [filtered],
   );
+  const groupedMenuFiles = useMemo(() => {
+    const sortedFiles = [...menuFiles].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const groups = new Map<string, MenuFileGroup>();
+
+    for (const file of sortedFiles) {
+      const key = menuFileGroupKey(file.label);
+      const displayLabel = normalizeMenuLabel(file.label);
+      const existing = groups.get(key);
+
+      if (!existing) {
+        groups.set(key, {
+          key,
+          label: displayLabel,
+          files: [file],
+          type: file.type,
+          latestUploadedAt: file.uploadedAt,
+          sortOrder: file.order ?? 0,
+        });
+        continue;
+      }
+
+      const nextType: MenuFileGroup["type"] =
+        existing.type === file.type ? existing.type : "mixed";
+      const nextLatest =
+        new Date(file.uploadedAt).getTime() > new Date(existing.latestUploadedAt).getTime()
+          ? file.uploadedAt
+          : existing.latestUploadedAt;
+
+      groups.set(key, {
+        ...existing,
+        files: [...existing.files, file],
+        type: nextType,
+        latestUploadedAt: nextLatest,
+        sortOrder: Math.min(existing.sortOrder, file.order ?? 0),
+      });
+    }
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        files: [...group.files].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [menuFiles]);
 
   async function uploadMenuFile() {
     if (!uploadFile) {
@@ -178,26 +241,80 @@ export default function MenuPage() {
     await load();
   }
 
-  async function moveMenuFile(index: number, direction: "up" | "down") {
-    const nextIndex = direction === "up" ? index - 1 : index + 1;
-    if (nextIndex < 0 || nextIndex >= menuFiles.length) return;
-    const next = [...menuFiles];
-    const [entry] = next.splice(index, 1);
-    next.splice(nextIndex, 0, entry);
+  function toggleGroup(groupKey: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  }
+
+  async function moveMenuGroup(groupIndex: number, direction: "up" | "down") {
+    const nextIndex = direction === "up" ? groupIndex - 1 : groupIndex + 1;
+    if (nextIndex < 0 || nextIndex >= groupedMenuFiles.length) return;
+
+    const nextGroups = [...groupedMenuFiles];
+    const [entry] = nextGroups.splice(groupIndex, 1);
+    nextGroups.splice(nextIndex, 0, entry);
+
+    const next = nextGroups.flatMap((group) =>
+      group.files.map((file) => ({ ...file, label: group.label })),
+    );
     setMenuFiles(next);
     await saveMenuFileOrder(next);
   }
 
-  async function renameMenuFile(file: UploadedMenuFile) {
-    const nextLabel = prompt("Menu label:", file.label)?.trim();
+  async function renameMenuGroup(group: MenuFileGroup) {
+    const nextLabel = prompt("Menu label:", group.label)?.trim();
     if (!nextLabel) return;
-    const next = menuFiles.map((entry) => (entry.id === file.id ? { ...entry, label: nextLabel } : entry));
+
+    const next = menuFiles.map((entry) =>
+      menuFileGroupKey(entry.label) === group.key ? { ...entry, label: nextLabel } : entry,
+    );
     setMenuFiles(next);
+    setExpandedGroups((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(group.key)) {
+        updated.delete(group.key);
+        updated.add(menuFileGroupKey(nextLabel));
+      }
+      return updated;
+    });
     await saveMenuFileOrder(next);
+  }
+
+  async function deleteAllMenuFilesInGroup(group: MenuFileGroup) {
+    if (!confirm(`Delete all ${group.files.length} file(s) in "${group.label}"?`)) return;
+
+    const results = await Promise.all(
+      group.files.map((file) =>
+        fetch("/api/menu/upload", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: file.id }),
+        }),
+      ),
+    );
+
+    const failed = results.find((result) => !result.ok);
+    if (failed) {
+      const data = await failed.json().catch(() => ({}));
+      setMessage(data.error || "Could not delete all files in that menu group.");
+      return;
+    }
+
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      next.delete(group.key);
+      return next;
+    });
+    setMessage(`Deleted all files in "${group.label}".`);
+    await load();
   }
 
   async function deleteMenuFile(file: UploadedMenuFile) {
-    if (!confirm(`Delete "${file.label}"?`)) return;
+    if (!confirm(`Delete "${file.filename}"?`)) return;
     const res = await fetch("/api/menu/upload", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -578,27 +695,128 @@ export default function MenuPage() {
             No menu files uploaded yet.
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-3">
-            {menuFiles.map((file, index) => (
-              <div key={file.id} className="rounded-lg border border-gray-200 p-3 bg-gray-50">
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <div className="font-medium">{file.label}</div>
-                    <div className="text-xs text-gray-500">{file.type.toUpperCase()} · {new Date(file.uploadedAt).toLocaleDateString()}</div>
+          <div className="space-y-3">
+            {groupedMenuFiles.map((group, index) => {
+              const expanded = expandedGroups.has(group.key);
+              const typeLabel = group.type === "mixed" ? "MIXED" : group.type.toUpperCase();
+              const fileCountLabel = `${group.files.length} file${group.files.length === 1 ? "" : "s"}`;
+              return (
+                <div key={group.key} className="rounded-lg border border-gray-200 bg-gray-50">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.key)}
+                    className="w-full px-3 pt-3 text-left"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <div className="font-medium">{group.label}</div>
+                        <div className="text-xs text-gray-500">
+                          Last updated: {new Date(group.latestUploadedAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[11px] font-medium text-gray-700">
+                          {fileCountLabel}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            group.type === "pdf"
+                              ? "bg-red-100 text-red-700"
+                              : group.type === "image"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-purple-100 text-purple-700"
+                          }`}
+                        >
+                          {typeLabel}
+                        </span>
+                        <span className="text-sm text-gray-500">{expanded ? "▲" : "▼"}</span>
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="mt-3 flex flex-wrap gap-2 px-3 pb-3">
+                    <button
+                      onClick={() => moveMenuGroup(index, "up")}
+                      disabled={index === 0}
+                      className="h-11 px-3 rounded border border-gray-200 text-xs disabled:opacity-40"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      onClick={() => moveMenuGroup(index, "down")}
+                      disabled={index === groupedMenuFiles.length - 1}
+                      className="h-11 px-3 rounded border border-gray-200 text-xs disabled:opacity-40"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      onClick={() => renameMenuGroup(group)}
+                      className="h-11 px-3 rounded border border-gray-200 text-xs"
+                    >
+                      Rename
+                    </button>
+                    <button
+                      onClick={() => deleteAllMenuFilesInGroup(group)}
+                      className="h-11 px-3 rounded border border-red-200 text-red-700 text-xs"
+                    >
+                      Delete All
+                    </button>
                   </div>
-                  <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${file.type === "pdf" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
-                    {file.type.toUpperCase()}
-                  </span>
+
+                  <div
+                    className={`grid transition-all duration-200 ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="border-t border-gray-200 px-3 pb-3 pt-2 space-y-2">
+                        {group.files.map((file) => (
+                          <div
+                            key={file.id}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200 bg-white px-3 py-2"
+                          >
+                            <div className="flex min-w-0 items-center gap-3">
+                              {file.type === "image" ? (
+                                <img
+                                  src={file.url}
+                                  alt={file.filename}
+                                  className="h-12 w-12 rounded object-cover border border-gray-200"
+                                />
+                              ) : (
+                                <div className="flex h-12 w-12 items-center justify-center rounded border border-red-200 bg-red-50 text-xs font-semibold text-red-700">
+                                  PDF
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <div className="truncate text-sm font-medium">{file.filename}</div>
+                                <div className="text-xs text-gray-500">
+                                  {new Date(file.uploadedAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2">
+                              <a
+                                href={file.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="h-10 px-3 rounded border border-gray-200 text-xs inline-flex items-center"
+                              >
+                                Open
+                              </a>
+                              <button
+                                onClick={() => deleteMenuFile(file)}
+                                className="h-10 px-3 rounded border border-red-200 text-red-700 text-xs"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button onClick={() => moveMenuFile(index, "up")} className="h-11 px-3 rounded border border-gray-200 text-xs">↑</button>
-                  <button onClick={() => moveMenuFile(index, "down")} className="h-11 px-3 rounded border border-gray-200 text-xs">↓</button>
-                  <button onClick={() => renameMenuFile(file)} className="h-11 px-3 rounded border border-gray-200 text-xs">Rename</button>
-                  <a href={file.url} target="_blank" rel="noreferrer" className="h-11 px-3 rounded border border-gray-200 text-xs inline-flex items-center">Open</a>
-                  <button onClick={() => deleteMenuFile(file)} className="h-11 px-3 rounded border border-red-200 text-red-700 text-xs">Delete</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

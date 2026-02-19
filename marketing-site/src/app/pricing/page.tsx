@@ -68,6 +68,12 @@ const addons: Array<{ key: AddonKey; name: string; price: number; description: s
   { key: "eventTicketing", name: "Event Ticketing", price: 129, description: "Sell and manage paid events and special seatings." },
 ];
 
+const PLAN_INCLUDED_ADDONS: Record<PlanKey, AddonKey[]> = {
+  core: [],
+  servicePro: ["sms", "floorPlan", "reporting"],
+  fullSuite: ["sms", "floorPlan", "reporting", "guestHistory", "eventTicketing"],
+};
+
 const hosting = {
   none: { key: "none" as HostingKey, name: "Self-Hosted", price: 0, interval: "month", summary: "You handle hosting. We provide the code." },
   monthly: { key: "monthly" as HostingKey, name: "Managed Hosting", price: 15, interval: "month", summary: "We handle updates, backups, and monitoring." },
@@ -120,7 +126,19 @@ export default function PricingPage() {
   const [restaurantName, setRestaurantName] = useState("");
 
   const selectedPlan = useMemo(() => plans.find((item) => item.key === plan) || plans[0], [plan]);
-  const selectedAddonRows = useMemo(() => addons.filter((item) => selectedAddons.includes(item.key)), [selectedAddons]);
+  const includedAddonKeys = useMemo(() => new Set<AddonKey>(PLAN_INCLUDED_ADDONS[plan]), [plan]);
+  const billableSelectedAddons = useMemo(
+    () => selectedAddons.filter((addon) => !includedAddonKeys.has(addon)),
+    [includedAddonKeys, selectedAddons],
+  );
+  const selectedAddonRows = useMemo(
+    () => addons.filter((item) => billableSelectedAddons.includes(item.key)),
+    [billableSelectedAddons],
+  );
+  const includedAddonRows = useMemo(
+    () => addons.filter((item) => includedAddonKeys.has(item.key)),
+    [includedAddonKeys],
+  );
   const selectedHosting = useMemo(() => {
     if (!useManagedHosting) return hosting.none;
     return hosting[hostingCycle];
@@ -152,6 +170,13 @@ export default function PricingPage() {
     };
   }, []);
 
+  useEffect(() => {
+    setSelectedAddons((prev) => {
+      const normalized = prev.filter((addon) => !includedAddonKeys.has(addon));
+      return normalized.length === prev.length ? prev : normalized;
+    });
+  }, [includedAddonKeys]);
+
   function domainCtaHref(interest: "domain-connect" | "domain-new") {
     if (authState === "authed") return `/portal/domain?interest=${interest}`;
     return `/demo?interest=${interest}`;
@@ -159,6 +184,7 @@ export default function PricingPage() {
 
   function toggleAddon(key: AddonKey) {
     setSelectedAddons((prev) => {
+      if (includedAddonKeys.has(key)) return prev;
       if (prev.includes(key)) return prev.filter((item) => item !== key);
       return [...prev, key];
     });
@@ -175,7 +201,7 @@ export default function PricingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan,
-          addons: selectedAddons,
+          addons: billableSelectedAddons,
           hosting: useManagedHosting ? hostingCycle : "none",
           customerEmail,
           customerName,
@@ -209,7 +235,7 @@ export default function PricingPage() {
           </p>
 
           <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 sm:p-5">
-            <p className="font-semibold">OpenTable can run $3,000–$7,500/month for busy restaurants. ReserveSit charges once.</p>
+            <p className="font-semibold">OpenTable can run $3,000–$75,000/year for busy restaurants. ReserveSit charges once.</p>
             <p className="mt-1 text-rose-800">Keep your margins and keep ownership of your guest data.</p>
           </div>
         </section>
@@ -257,25 +283,49 @@ export default function PricingPage() {
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6">
               <h2 className="text-xl font-semibold text-slate-900">Add-on Builder</h2>
-              <p className="mt-1 text-sm text-slate-600">Start with any plan and add exactly what you need.</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Start with any plan and add exactly what you need. Included features are locked automatically.
+              </p>
+              {plan === "fullSuite" ? (
+                <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                  All add-ons are included in Full Suite.
+                </p>
+              ) : null}
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {addons.map((addon) => {
-                  const checked = selectedAddons.includes(addon.key);
+                  const includedByPlan = includedAddonKeys.has(addon.key);
+                  const checked = includedByPlan || billableSelectedAddons.includes(addon.key);
                   return (
                     <label
                       key={addon.key}
-                      className={`cursor-pointer rounded-xl border p-4 transition-all ${checked ? "border-blue-400 bg-blue-50" : "border-slate-200 bg-slate-50"}`}
+                      className={`rounded-xl border p-4 transition-all ${
+                        includedByPlan
+                          ? "border-slate-300 bg-slate-100"
+                          : checked
+                            ? "cursor-pointer border-blue-400 bg-blue-50"
+                            : "cursor-pointer border-slate-200 bg-slate-50"
+                      }`}
                     >
                       <div className="flex items-start gap-3">
                         <input
                           type="checkbox"
                           checked={checked}
+                          disabled={includedByPlan}
                           onChange={() => toggleAddon(addon.key)}
                           className="mt-1 h-4 w-4 rounded border-slate-300"
                         />
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">{addon.name}</p>
-                          <p className="text-sm font-semibold text-blue-700">{usd(addon.price)}</p>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {addon.name}
+                            {includedByPlan ? (
+                              <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[11px] font-semibold uppercase text-slate-700">
+                                Included
+                              </span>
+                            ) : null}
+                          </p>
+                          <p className={`text-sm font-semibold ${includedByPlan ? "text-slate-500" : "text-blue-700"}`}>
+                            {includedByPlan ? "Included" : usd(addon.price)}
+                          </p>
                           <p className="mt-1 text-xs text-slate-600">{addon.description}</p>
                         </div>
                       </div>
@@ -410,6 +460,13 @@ export default function PricingPage() {
                   <div key={addon.key} className="flex items-start justify-between gap-3">
                     <span className="text-slate-700">{addon.name}</span>
                     <span className="font-semibold text-slate-900">{usd(addon.price)}</span>
+                  </div>
+                ))}
+
+                {includedAddonRows.map((addon) => (
+                  <div key={`included-${addon.key}`} className="flex items-start justify-between gap-3">
+                    <span className="text-slate-600">{addon.name}</span>
+                    <span className="font-semibold text-slate-500">Included</span>
                   </div>
                 ))}
 

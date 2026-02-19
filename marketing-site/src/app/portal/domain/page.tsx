@@ -11,6 +11,16 @@ type User = {
   email: string;
 };
 
+type MePayload = {
+  user?: User;
+  restaurant?: {
+    slug?: string | null;
+    domain?: string | null;
+  } | null;
+  restaurantSlug?: string | null;
+  restaurantUrl?: string | null;
+};
+
 function slugify(value: string): string {
   const slug = value
     .toLowerCase()
@@ -29,6 +39,9 @@ function getPreferredType(interest: string | null): DomainRequestType | null {
 export default function DomainManagementPage() {
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
+  const [restaurantSlug, setRestaurantSlug] = useState<string | null>(null);
+  const [restaurantUrl, setRestaurantUrl] = useState<string | null>(null);
+  const [customDomain, setCustomDomain] = useState<string | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const [connectDomain, setConnectDomain] = useState("");
   const [registerDomain, setRegisterDomain] = useState("");
@@ -42,10 +55,28 @@ export default function DomainManagementPage() {
       try {
         const response = await fetch("/api/auth/me", { signal: controller.signal });
         if (!response.ok) return;
-        const payload = (await response.json()) as { user?: User };
+        const payload = (await response.json()) as MePayload;
+
         if (payload.user?.email) {
           setUser(payload.user);
         }
+
+        const apiSlug =
+          (typeof payload.restaurantSlug === "string" && payload.restaurantSlug.trim()) ||
+          (typeof payload.restaurant?.slug === "string" && payload.restaurant.slug.trim()) ||
+          "";
+
+        if (apiSlug) {
+          setRestaurantSlug(apiSlug);
+          setRestaurantUrl(
+            (typeof payload.restaurantUrl === "string" && payload.restaurantUrl.trim()) ||
+              `https://${apiSlug}.reservesit.com`,
+          );
+        }
+
+        const domainValue =
+          typeof payload.restaurant?.domain === "string" ? payload.restaurant.domain.trim() : "";
+        setCustomDomain(domainValue || null);
       } catch {
         // Ignore; AuthGuard controls access.
       } finally {
@@ -53,19 +84,20 @@ export default function DomainManagementPage() {
       }
     }
 
-    loadSession();
+    void loadSession();
     return () => controller.abort();
   }, []);
 
   const preferredType = getPreferredType(searchParams.get("interest"));
 
-  const restaurantSlug = useMemo(() => {
+  const fallbackSlug = useMemo(() => {
     if (user?.name) return slugify(user.name);
     if (user?.email) return slugify(user.email.split("@")[0] || "");
     return "your-restaurant";
   }, [user]);
 
-  const subdomainUrl = `https://${restaurantSlug}.reservesit.com`;
+  const resolvedSlug = restaurantSlug || fallbackSlug;
+  const resolvedSubdomainUrl = restaurantUrl || `https://${resolvedSlug}.reservesit.com`;
 
   async function submitRequest(type: DomainRequestType) {
     setMessage(null);
@@ -85,7 +117,7 @@ export default function DomainManagementPage() {
         body: JSON.stringify({
           type,
           domain,
-          restaurantSlug,
+          restaurantSlug: resolvedSlug,
         }),
       });
 
@@ -118,14 +150,33 @@ export default function DomainManagementPage() {
         <div className="mt-4 space-y-3 text-sm text-slate-700">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-base">🌐</span>
-            <span className="font-semibold">{restaurantSlug}.reservesit.com</span>
-            <a href={subdomainUrl} target="_blank" rel="noreferrer" className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700">
+            <span className="font-semibold">{resolvedSlug}.reservesit.com</span>
+            <a
+              href={resolvedSubdomainUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700"
+            >
               Visit Site
             </a>
           </div>
           <p>Status: <span className="font-semibold text-emerald-700">Active</span></p>
           <p>SSL: <span className="font-semibold text-emerald-700">Secured</span></p>
-          <p>Custom Domain: <span className="font-medium text-slate-500">Not configured</span></p>
+          {customDomain ? (
+            <p>
+              Custom Domain:{" "}
+              <a
+                href={`https://${customDomain}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-blue-700 underline"
+              >
+                {customDomain}
+              </a>
+            </p>
+          ) : (
+            <p>Custom Domain: <span className="font-medium text-slate-500">Not configured</span></p>
+          )}
           {loadingUser ? <p className="text-xs text-slate-400">Loading account details…</p> : null}
         </div>
       </section>
@@ -155,11 +206,11 @@ export default function DomainManagementPage() {
             <p className="mt-1 text-xs text-slate-500">Example: reservations.myrestaurant.com</p>
             <button
               type="button"
-              onClick={() => submitRequest("connect")}
+              onClick={() => void submitRequest("connect")}
               disabled={sendingType !== null}
               className="mt-4 h-11 w-full rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {sendingType === "connect" ? "Submitting..." : "Request Setup — $30"}
+              {sendingType === "connect" ? "Submitting..." : "Request Setup - $30"}
             </button>
           </div>
 
@@ -181,11 +232,11 @@ export default function DomainManagementPage() {
             <p className="mt-1 text-xs text-slate-500">Example: myrestaurant.com</p>
             <button
               type="button"
-              onClick={() => submitRequest("register")}
+              onClick={() => void submitRequest("register")}
               disabled={sendingType !== null}
               className="mt-4 h-11 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {sendingType === "register" ? "Submitting..." : "Check Availability & Request — $99"}
+              {sendingType === "register" ? "Submitting..." : "Check Availability & Request - $99"}
             </button>
           </div>
         </div>

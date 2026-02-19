@@ -1,22 +1,38 @@
 import { prisma } from "@/lib/db";
 
+const FEATURE_ALIASES: Record<string, string> = {
+  floor_plan: "floorplan",
+  floorPlan: "floorplan",
+};
+
+const FEATURE_KEYS = ["sms", "floorplan", "reporting", "guest_history", "event_ticketing"] as const;
+
+function normalizeFeature(feature: string) {
+  const value = String(feature || "").trim();
+  return FEATURE_ALIASES[value] || value;
+}
+
 export async function isFeatureEnabled(feature: string): Promise<boolean> {
-  const setting = await prisma.setting.findUnique({ where: { key: `feature_${feature}` } });
+  const normalized = normalizeFeature(feature);
+  const setting = await prisma.setting.findUnique({ where: { key: `feature_${normalized}` } });
   return setting?.value === "true";
 }
 
 export async function getEnabledFeatures(): Promise<Record<string, boolean>> {
-  const features = ["sms", "floorplan", "reporting", "guest_history", "event_ticketing"];
   const settings = await prisma.setting.findMany({
-    where: { key: { in: features.map((feature) => `feature_${feature}`) } },
+    where: { key: { in: FEATURE_KEYS.map((feature) => `feature_${feature}`) } },
   });
 
   const map = new Map(settings.map((row) => [row.key, row.value]));
   const result: Record<string, boolean> = {};
 
-  for (const feature of features) {
+  for (const feature of FEATURE_KEYS) {
     result[feature] = map.get(`feature_${feature}`) === "true";
   }
+
+  // Backward-compatible aliases used in older UI/builds.
+  result.floor_plan = result.floorplan;
+  result.floorPlan = result.floorplan;
 
   return result;
 }

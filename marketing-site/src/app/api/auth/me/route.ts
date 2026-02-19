@@ -22,9 +22,19 @@ export async function GET(req: NextRequest) {
 
       if (response.ok) {
         const restaurant = await response.json();
+        const restaurantSlug =
+          typeof restaurant?.slug === "string" && restaurant.slug.trim().length > 0
+            ? restaurant.slug
+            : null;
+        const restaurantUrl = restaurantSlug
+          ? `https://${restaurantSlug}.reservesit.com`
+          : null;
+
         return NextResponse.json({
           user: session,
           restaurant,
+          restaurantSlug,
+          restaurantUrl,
         });
       }
     } catch {
@@ -32,5 +42,5 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ user: session });
+  return NextResponse.json({ user: session, restaurantSlug: null, restaurantUrl: null });
 }

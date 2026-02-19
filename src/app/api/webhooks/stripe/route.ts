@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripeInstance, getStripeWebhookSecret } from "@/lib/stripe";
 
+// TODO: This root webhook is a placeholder. Actual purchase processing
+// happens in marketing-site/api/webhooks/stripe. This route handles
+// deposit/payment webhooks for individual restaurant instances.
 export async function POST(req: NextRequest) {
   const stripe = await getStripeInstance();
   const webhookSecret = await getStripeWebhookSecret();

@@ -71,6 +71,13 @@ model Reservation {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   notifications   NotificationLog[]
+
+  @@index([date, status])
+  @@index([date, time])
+  @@index([tableId, date])
+  @@index([status])
+  @@index([guestEmail])
+  @@index([guestPhone])
 }
 
 model Guest {
@@ -93,6 +100,8 @@ model Guest {
   reservations   Reservation[]
   waitlistEntries WaitlistEntry[]
   eventTickets   EventTicket[]
+
+  @@index([email])
 }
 
 model Setting {
@@ -155,6 +164,9 @@ model WaitlistEntry {
   guest         Guest?    @relation(fields: [guestId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@index([status, position])
+  @@index([status])
 }
 
 model Event {

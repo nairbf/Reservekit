@@ -22,3 +22,13 @@
   opacity: 1;
   transform: translateY(0);
 }
+
+.demo-nav-mobile-pad {
+  padding-bottom: 5.5rem;
+}
+
+@media (min-width: 640px) {
+  .demo-nav-mobile-pad {
+    padding-bottom: 0;
+  }
+}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { prisma } from "@/lib/db";
+import { DemoNav } from "@/components/demo-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className="bg-white text-gray-900">{children}</body>
+      <body className="bg-white text-gray-900">
+        {children}
+        <DemoNav />
+      </body>
     </html>
   );
 }

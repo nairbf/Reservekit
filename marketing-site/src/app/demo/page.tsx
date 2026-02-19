@@ -16,20 +16,20 @@ export default function DemoPage() {
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <a
-              href="https://demo.reservesit.com/reserve/demo"
+              href="https://demo.reservesit.com/dashboard"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-700"
             >
-              Open Guest Booking View →
+              Open Dashboard Demo →
             </a>
             <a
-              href="https://demo.reservesit.com/dashboard"
+              href="https://demo.reservesit.com/reserve/demo"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 transition-all duration-200 hover:bg-slate-100"
             >
-              Open Manager Dashboard →
+              Try Guest Booking View →
             </a>
           </div>
 

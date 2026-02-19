@@ -9,7 +9,7 @@ const links = [
   { href: "/#features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
   { href: "/faq", label: "FAQ" },
-  { href: "https://demo.reservesit.com", label: "Live Demo", external: true },
+  { href: "https://demo.reservesit.com/dashboard", label: "Live Demo", external: true },
   { href: "/login", label: "Login" },
 ];
 

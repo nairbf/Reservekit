@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getAppUrl } from "@/lib/app-url";
 import { getEnabledFeatures } from "@/lib/features";
 import { PermissionsProvider } from "@/hooks/use-permissions";
+import { DemoNav } from "@/components/demo-nav";
 import DashboardNav from "./DashboardNav";
 import SetupTourCoach from "./SetupTourCoach";
 
@@ -24,11 +25,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
       />
       <main className="flex-1 min-w-0 p-4 sm:p-6">
         {isDemoEnv ? (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-800">
-            Demo mode: data resets daily.{" "}
-            <a href="https://reservesit.com/pricing" className="font-semibold underline">
-              Get your own instance →
-            </a>
+          <div className="mb-4 overflow-hidden rounded-lg border border-amber-200">
+            <div className="bg-amber-50 px-4 py-2 text-center text-sm text-amber-800">
+              Demo mode: data resets daily.{" "}
+              <a href="https://reservesit.com/pricing" className="font-semibold underline">
+                Get your own instance →
+              </a>
+            </div>
+            <DemoNav />
           </div>
         ) : null}
         <div className="max-w-6xl mx-auto">

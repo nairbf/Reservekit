@@ -99,8 +99,10 @@ export default function AdminPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<Role>("host");
   const [newPermissions, setNewPermissions] = useState<PermissionKey[]>(() => asSortedPermissions(getRoleDefaultPermissions("host")));
+  const [showCreatePermissions, setShowCreatePermissions] = useState(false);
 
   const [permissionDrafts, setPermissionDrafts] = useState<Record<number, PermissionKey[]>>({});
+  const [showUserPermissions, setShowUserPermissions] = useState<Record<number, boolean>>({});
 
   const roleBadge: Record<Role, string> = useMemo(
     () => ({
@@ -190,6 +192,10 @@ export default function AdminPage() {
       next.add("view_dashboard");
       return { ...prev, [userId]: asSortedPermissions(next).filter((entry) => availablePermissions.includes(entry)) };
     });
+  }
+
+  function toggleUserPermissionsPanel(userId: number) {
+    setShowUserPermissions((prev) => ({ ...prev, [userId]: !prev[userId] }));
   }
 
   async function createUser(e: React.FormEvent) {
@@ -308,37 +314,57 @@ export default function AdminPage() {
           </div>
 
           <div className="rounded-lg border p-3 space-y-3">
-            {Object.entries(permissionSections).map(([category, keys]) => (
-              <div key={category}>
-                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{category}</div>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {keys.map((key) => {
-                    const permission = ALL_PERMISSIONS.find((entry) => entry.key === key);
-                    if (!permission) return null;
-                    const defaults = getRoleDefaultPermissions(newRole);
-                    const isDefault = defaults.has(key);
-                    const checked = newPermissions.includes(key);
-                    const disabled = key === "view_dashboard" || newRole === "admin" || newRole === "superadmin";
-                    return (
-                      <label key={key} className="flex items-start gap-2 rounded border p-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleCreatePermission(key)}
-                          disabled={disabled}
-                          className="mt-0.5 h-4 w-4"
-                        />
-                        <span>
-                          <span className="font-medium">{permission.label}</span>
-                          {isDefault ? <span className="ml-2 text-xs text-gray-500">(default)</span> : null}
-                          {permission.description ? <span className="block text-xs text-gray-500">{permission.description}</span> : null}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
+            <button
+              type="button"
+              onClick={() => setShowCreatePermissions((prev) => !prev)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <span>Custom Permissions</span>
+              <span className="flex items-center gap-2 text-gray-500">
+                <span className="text-xs">{showCreatePermissions ? "Hide" : "Show"} permission overrides</span>
+                <span className="text-lg">{showCreatePermissions ? "▲" : "▼"}</span>
+              </span>
+            </button>
+            {!showCreatePermissions && (
+              <p className="text-xs text-gray-400 mt-1 ml-1">
+                Using default permissions for selected role. Click to customize.
+              </p>
+            )}
+            {showCreatePermissions && (
+              <div className="space-y-3">
+                {Object.entries(permissionSections).map(([category, keys]) => (
+                  <div key={category}>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{category}</div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {keys.map((key) => {
+                        const permission = ALL_PERMISSIONS.find((entry) => entry.key === key);
+                        if (!permission) return null;
+                        const defaults = getRoleDefaultPermissions(newRole);
+                        const isDefault = defaults.has(key);
+                        const checked = newPermissions.includes(key);
+                        const disabled = key === "view_dashboard" || newRole === "admin" || newRole === "superadmin";
+                        return (
+                          <label key={key} className="flex items-start gap-2 rounded border p-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleCreatePermission(key)}
+                              disabled={disabled}
+                              className="mt-0.5 h-4 w-4"
+                            />
+                            <span>
+                              <span className="font-medium">{permission.label}</span>
+                              {isDefault ? <span className="ml-2 text-xs text-gray-500">(default)</span> : null}
+                              {permission.description ? <span className="block text-xs text-gray-500">{permission.description}</span> : null}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
 
           <button disabled={creating} className="h-11 w-full rounded bg-blue-600 text-white text-sm font-medium transition-all duration-200 disabled:opacity-60">
@@ -402,52 +428,74 @@ export default function AdminPage() {
                 </div>
 
                 <div className="mt-4 rounded-lg border p-3 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold">Permissions</h3>
-                    {canEditOverrides ? (
-                      <button
-                        type="button"
-                        onClick={() => saveUserPermissions(user)}
-                        disabled={savingPermissions === user.id}
-                        className="h-9 rounded bg-blue-600 px-3 text-xs font-medium text-white disabled:opacity-60"
-                      >
-                        {savingPermissions === user.id ? "Saving..." : "Save Permissions"}
-                      </button>
-                    ) : (
-                      <span className="text-xs text-gray-500">Admin roles always have full access.</span>
-                    )}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleUserPermissionsPanel(user.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    <span>Permissions</span>
+                    <span className="flex items-center gap-2 text-gray-500">
+                      <span className="text-xs">{showUserPermissions[user.id] ? "Hide" : "Show"} permission overrides</span>
+                      <span className="text-lg">{showUserPermissions[user.id] ? "▲" : "▼"}</span>
+                    </span>
+                  </button>
 
-                  {Object.entries(permissionSections).map(([category, keys]) => (
-                    <div key={`${user.id}-${category}`}>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{category}</div>
-                      <div className="grid gap-2 md:grid-cols-2">
-                        {keys.map((key) => {
-                          const permission = ALL_PERMISSIONS.find((entry) => entry.key === key);
-                          if (!permission) return null;
-                          const isDefault = defaults.has(key);
-                          const checked = selected.includes(key);
-                          const disabled = key === "view_dashboard" || !canEditOverrides;
-                          return (
-                            <label key={`${user.id}-${key}`} className="flex items-start gap-2 rounded border p-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                disabled={disabled}
-                                onChange={() => toggleUserPermission(user.id, key)}
-                                className="mt-0.5 h-4 w-4"
-                              />
-                              <span>
-                                <span className="font-medium">{permission.label}</span>
-                                {isDefault ? <span className="ml-2 text-xs text-gray-500">(default)</span> : null}
-                                {permission.description ? <span className="block text-xs text-gray-500">{permission.description}</span> : null}
-                              </span>
-                            </label>
-                          );
-                        })}
+                  {!showUserPermissions[user.id] && (
+                    <p className="text-xs text-gray-400 mt-1 ml-1">
+                      Using saved permissions for this user. Expand to view or edit.
+                    </p>
+                  )}
+
+                  {showUserPermissions[user.id] && (
+                    <>
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-sm font-semibold">Permissions</h3>
+                        {canEditOverrides ? (
+                          <button
+                            type="button"
+                            onClick={() => saveUserPermissions(user)}
+                            disabled={savingPermissions === user.id}
+                            className="h-9 rounded bg-blue-600 px-3 text-xs font-medium text-white disabled:opacity-60"
+                          >
+                            {savingPermissions === user.id ? "Saving..." : "Save Permissions"}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-500">Admin roles always have full access.</span>
+                        )}
                       </div>
-                    </div>
-                  ))}
+
+                      {Object.entries(permissionSections).map(([category, keys]) => (
+                        <div key={`${user.id}-${category}`}>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">{category}</div>
+                          <div className="grid gap-2 md:grid-cols-2">
+                            {keys.map((key) => {
+                              const permission = ALL_PERMISSIONS.find((entry) => entry.key === key);
+                              if (!permission) return null;
+                              const isDefault = defaults.has(key);
+                              const checked = selected.includes(key);
+                              const disabled = key === "view_dashboard" || !canEditOverrides;
+                              return (
+                                <label key={`${user.id}-${key}`} className="flex items-start gap-2 rounded border p-2 text-sm">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    disabled={disabled}
+                                    onChange={() => toggleUserPermission(user.id, key)}
+                                    className="mt-0.5 h-4 w-4"
+                                  />
+                                  <span>
+                                    <span className="font-medium">{permission.label}</span>
+                                    {isDefault ? <span className="ml-2 text-xs text-gray-500">(default)</span> : null}
+                                    {permission.description ? <span className="block text-xs text-gray-500">{permission.description}</span> : null}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
             );

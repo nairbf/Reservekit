@@ -29,6 +29,21 @@ type Row = {
     responseTimeMs: number | null;
     checkedAt: string;
   } | null;
+  provisionStatus?: string | null;
+  generatedPassword?: string | null;
+};
+
+type ProvisionResponse = {
+  id: string;
+  name: string;
+  slug: string;
+  url: string;
+  ownerEmail: string;
+  password: string;
+  licenseKey: string;
+  plan: RestaurantPlan;
+  port: number;
+  provisionStatus: string;
 };
 
 function addonCount(row: Row) {
@@ -41,6 +56,16 @@ function addonCount(row: Row) {
   ].filter(Boolean).length;
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export default function RestaurantsPage() {
   const user = useSessionUser();
   const { showToast } = useToast();
@@ -51,6 +76,23 @@ export default function RestaurantsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionBusy, setActionBusy] = useState("");
+  const [showProvisionForm, setShowProvisionForm] = useState(false);
+  const [provisioning, setProvisioning] = useState(false);
+  const [provisionName, setProvisionName] = useState("");
+  const [provisionSlug, setProvisionSlug] = useState("");
+  const [slugEdited, setSlugEdited] = useState(false);
+  const [provisionOwnerEmail, setProvisionOwnerEmail] = useState("");
+  const [provisionPlan, setProvisionPlan] = useState<RestaurantPlan>("CORE");
+  const [provisionPort, setProvisionPort] = useState("3003");
+  const [provisionError, setProvisionError] = useState("");
+  const [provisionSuccess, setProvisionSuccess] = useState<ProvisionResponse | null>(null);
+  const [retryPayload, setRetryPayload] = useState<{
+    name: string;
+    slug: string;
+    ownerEmail: string;
+    plan: RestaurantPlan;
+    port: number;
+  } | null>(null);
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
@@ -79,6 +121,110 @@ export default function RestaurantsPage() {
   useEffect(() => {
     void load();
   }, [query]);
+
+  useEffect(() => {
+    if (slugEdited) return;
+    setProvisionSlug(slugify(provisionName));
+  }, [provisionName, slugEdited]);
+
+  async function loadNextPort() {
+    try {
+      const res = await fetch("/api/restaurants/next-port", { cache: "no-store" });
+      if (!res.ok) return;
+      const payload = (await res.json()) as { port?: number };
+      if (payload?.port) {
+        setProvisionPort(String(payload.port));
+      }
+    } catch {
+      // Ignore helper failures. The form still accepts manual entry.
+    }
+  }
+
+  useEffect(() => {
+    if (!showProvisionForm) return;
+    void loadNextPort();
+  }, [showProvisionForm]);
+
+  function resetProvisionForm() {
+    setProvisionName("");
+    setProvisionSlug("");
+    setSlugEdited(false);
+    setProvisionOwnerEmail("");
+    setProvisionPlan("CORE");
+    setProvisionPort("3003");
+  }
+
+  async function provisionRestaurant(override?: {
+    name: string;
+    slug: string;
+    ownerEmail: string;
+    plan: RestaurantPlan;
+    port: number;
+  }) {
+    const payload = override || {
+      name: provisionName.trim(),
+      slug: slugify(provisionSlug.trim()),
+      ownerEmail: provisionOwnerEmail.trim().toLowerCase(),
+      plan: provisionPlan,
+      port: Number(provisionPort),
+    };
+
+    if (!payload.name || !payload.slug || !payload.ownerEmail || !payload.port) {
+      setProvisionError("Name, slug, owner email, and port are required.");
+      setRetryPayload(payload);
+      return;
+    }
+
+    if (!/^[a-z0-9-]+$/.test(payload.slug)) {
+      setProvisionError("Slug must be lowercase letters, numbers, and hyphens only.");
+      setRetryPayload(payload);
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.ownerEmail)) {
+      setProvisionError("Owner email is invalid.");
+      setRetryPayload(payload);
+      return;
+    }
+
+    if (!Number.isInteger(payload.port) || payload.port < 3003 || payload.port > 9999) {
+      setProvisionError("Port must be between 3003 and 9999.");
+      setRetryPayload(payload);
+      return;
+    }
+
+    setProvisioning(true);
+    setProvisionError("");
+    setProvisionSuccess(null);
+    setRetryPayload(payload);
+    try {
+      const res = await fetch("/api/restaurants/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const response = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(response?.error || response?.details || "Provisioning failed");
+      }
+
+      const restaurant = response?.restaurant as ProvisionResponse;
+      if (!restaurant) throw new Error("Provisioning completed but response payload is missing.");
+
+      setProvisionSuccess(restaurant);
+      setRetryPayload(null);
+      setShowProvisionForm(false);
+      resetProvisionForm();
+      showToast("Restaurant provisioned.", "success");
+      await load();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Provisioning failed";
+      setProvisionError(message);
+      showToast(message, "error");
+    } finally {
+      setProvisioning(false);
+    }
+  }
 
   async function quickToggleStatus(row: Row) {
     const nextStatus = row.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
@@ -109,13 +255,137 @@ export default function RestaurantsPage() {
           <h1 className="text-2xl font-semibold text-slate-900">Restaurants</h1>
           <p className="text-sm text-slate-600">Manage plans, licenses, add-ons, and hosted instances.</p>
         </div>
-        <Link
-          href="/dashboard/restaurants/new"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-slate-700"
-        >
-          Add Restaurant
-        </Link>
+        {canManage ? (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setShowProvisionForm((prev) => !prev);
+                setProvisionError("");
+              }}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-slate-700"
+            >
+              {showProvisionForm ? "Cancel" : "New Restaurant"}
+            </button>
+            <Link
+              href="/dashboard/restaurants/new"
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700"
+            >
+              Advanced Form
+            </Link>
+          </div>
+        ) : null}
       </div>
+
+      {provisionSuccess ? (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <div className="font-semibold">Restaurant provisioned successfully.</div>
+          <div className="mt-1">URL: <a className="underline" href={provisionSuccess.url} target="_blank" rel="noreferrer">{provisionSuccess.url}</a></div>
+          <div>Login: {provisionSuccess.ownerEmail} / <span className="font-mono">{provisionSuccess.password}</span></div>
+          <div className="mt-1 text-xs text-emerald-800">License: {provisionSuccess.licenseKey}</div>
+        </div>
+      ) : null}
+
+      {provisionError ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <div className="font-semibold">Provisioning failed</div>
+          <div className="mt-1">{provisionError}</div>
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => void provisionRestaurant(retryPayload || undefined)}
+              disabled={provisioning}
+              className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+            >
+              {provisioning ? "Retrying..." : "Retry"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {showProvisionForm && canManage ? (
+        <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-base font-semibold text-slate-900">Provision New Restaurant</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Restaurant Name</span>
+              <input
+                value={provisionName}
+                onChange={(e) => setProvisionName(e.target.value)}
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                placeholder="The Reef"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Slug</span>
+              <input
+                value={provisionSlug}
+                onChange={(e) => {
+                  setSlugEdited(true);
+                  setProvisionSlug(e.target.value.toLowerCase());
+                }}
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                placeholder="the-reef"
+              />
+              <span className="mt-1 block text-xs text-slate-500">Lowercase letters, numbers, and hyphens only.</span>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Owner Email</span>
+              <input
+                type="email"
+                value={provisionOwnerEmail}
+                onChange={(e) => setProvisionOwnerEmail(e.target.value)}
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                placeholder="owner@restaurant.com"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Plan</span>
+              <select
+                value={provisionPlan}
+                onChange={(e) => setProvisionPlan(e.target.value as RestaurantPlan)}
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+              >
+                <option value="CORE">Core</option>
+                <option value="SERVICE_PRO">Service Pro</option>
+                <option value="FULL_SUITE">Full Suite</option>
+              </select>
+            </label>
+            <label className="block md:max-w-xs">
+              <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">Port</span>
+              <input
+                type="number"
+                min={3003}
+                max={9999}
+                value={provisionPort}
+                onChange={(e) => setProvisionPort(e.target.value)}
+                className="h-11 w-full rounded-lg border border-slate-300 px-3 text-sm"
+              />
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void provisionRestaurant()}
+              disabled={provisioning}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {provisioning ? "Provisioning..." : "Provision Restaurant"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowProvisionForm(false);
+                setProvisionError("");
+              }}
+              disabled={provisioning}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+            >
+              Cancel
+            </button>
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 md:grid-cols-4">
         <input

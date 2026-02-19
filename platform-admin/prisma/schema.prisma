@@ -78,6 +78,9 @@ model Restaurant {
   domain               String?
   adminEmail           String
   status               RestaurantStatus @default(ACTIVE)
+  provisionStatus      String           @default("active")
+  provisionLog         String?
+  generatedPassword    String?
   plan                 RestaurantPlan   @default(CORE)
   port                 Int              @unique
   dbPath               String

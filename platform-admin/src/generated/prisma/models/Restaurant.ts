@@ -43,6 +43,9 @@ export type RestaurantMinAggregateOutputType = {
   domain: string | null
   adminEmail: string | null
   status: $Enums.RestaurantStatus | null
+  provisionStatus: string | null
+  provisionLog: string | null
+  generatedPassword: string | null
   plan: $Enums.RestaurantPlan | null
   port: number | null
   dbPath: string | null
@@ -76,6 +79,9 @@ export type RestaurantMaxAggregateOutputType = {
   domain: string | null
   adminEmail: string | null
   status: $Enums.RestaurantStatus | null
+  provisionStatus: string | null
+  provisionLog: string | null
+  generatedPassword: string | null
   plan: $Enums.RestaurantPlan | null
   port: number | null
   dbPath: string | null
@@ -109,6 +115,9 @@ export type RestaurantCountAggregateOutputType = {
   domain: number
   adminEmail: number
   status: number
+  provisionStatus: number
+  provisionLog: number
+  generatedPassword: number
   plan: number
   port: number
   dbPath: number
@@ -154,6 +163,9 @@ export type RestaurantMinAggregateInputType = {
   domain?: true
   adminEmail?: true
   status?: true
+  provisionStatus?: true
+  provisionLog?: true
+  generatedPassword?: true
   plan?: true
   port?: true
   dbPath?: true
@@ -187,6 +199,9 @@ export type RestaurantMaxAggregateInputType = {
   domain?: true
   adminEmail?: true
   status?: true
+  provisionStatus?: true
+  provisionLog?: true
+  generatedPassword?: true
   plan?: true
   port?: true
   dbPath?: true
@@ -220,6 +235,9 @@ export type RestaurantCountAggregateInputType = {
   domain?: true
   adminEmail?: true
   status?: true
+  provisionStatus?: true
+  provisionLog?: true
+  generatedPassword?: true
   plan?: true
   port?: true
   dbPath?: true
@@ -340,6 +358,9 @@ export type RestaurantGroupByOutputType = {
   domain: string | null
   adminEmail: string
   status: $Enums.RestaurantStatus
+  provisionStatus: string
+  provisionLog: string | null
+  generatedPassword: string | null
   plan: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -396,6 +417,9 @@ export type RestaurantWhereInput = {
   domain?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   adminEmail?: Prisma.StringFilter<"Restaurant"> | string
   status?: Prisma.EnumRestaurantStatusFilter<"Restaurant"> | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFilter<"Restaurant"> | string
+  provisionLog?: Prisma.StringNullableFilter<"Restaurant"> | string | null
+  generatedPassword?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   plan?: Prisma.EnumRestaurantPlanFilter<"Restaurant"> | $Enums.RestaurantPlan
   port?: Prisma.IntFilter<"Restaurant"> | number
   dbPath?: Prisma.StringFilter<"Restaurant"> | string
@@ -432,6 +456,9 @@ export type RestaurantOrderByWithRelationInput = {
   domain?: Prisma.SortOrderInput | Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  provisionStatus?: Prisma.SortOrder
+  provisionLog?: Prisma.SortOrderInput | Prisma.SortOrder
+  generatedPassword?: Prisma.SortOrderInput | Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
@@ -473,6 +500,9 @@ export type RestaurantWhereUniqueInput = Prisma.AtLeast<{
   domain?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   adminEmail?: Prisma.StringFilter<"Restaurant"> | string
   status?: Prisma.EnumRestaurantStatusFilter<"Restaurant"> | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFilter<"Restaurant"> | string
+  provisionLog?: Prisma.StringNullableFilter<"Restaurant"> | string | null
+  generatedPassword?: Prisma.StringNullableFilter<"Restaurant"> | string | null
   plan?: Prisma.EnumRestaurantPlanFilter<"Restaurant"> | $Enums.RestaurantPlan
   dbPath?: Prisma.StringFilter<"Restaurant"> | string
   licenseExpiry?: Prisma.DateTimeNullableFilter<"Restaurant"> | Date | string | null
@@ -507,6 +537,9 @@ export type RestaurantOrderByWithAggregationInput = {
   domain?: Prisma.SortOrderInput | Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  provisionStatus?: Prisma.SortOrder
+  provisionLog?: Prisma.SortOrderInput | Prisma.SortOrder
+  generatedPassword?: Prisma.SortOrderInput | Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
@@ -548,6 +581,9 @@ export type RestaurantScalarWhereWithAggregatesInput = {
   domain?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
   adminEmail?: Prisma.StringWithAggregatesFilter<"Restaurant"> | string
   status?: Prisma.EnumRestaurantStatusWithAggregatesFilter<"Restaurant"> | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringWithAggregatesFilter<"Restaurant"> | string
+  provisionLog?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
+  generatedPassword?: Prisma.StringNullableWithAggregatesFilter<"Restaurant"> | string | null
   plan?: Prisma.EnumRestaurantPlanWithAggregatesFilter<"Restaurant"> | $Enums.RestaurantPlan
   port?: Prisma.IntWithAggregatesFilter<"Restaurant"> | number
   dbPath?: Prisma.StringWithAggregatesFilter<"Restaurant"> | string
@@ -581,6 +617,9 @@ export type RestaurantCreateInput = {
   domain?: string | null
   adminEmail: string
   status?: $Enums.RestaurantStatus
+  provisionStatus?: string
+  provisionLog?: string | null
+  generatedPassword?: string | null
   plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -617,6 +656,9 @@ export type RestaurantUncheckedCreateInput = {
   domain?: string | null
   adminEmail: string
   status?: $Enums.RestaurantStatus
+  provisionStatus?: string
+  provisionLog?: string | null
+  generatedPassword?: string | null
   plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -653,6 +695,9 @@ export type RestaurantUpdateInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -689,6 +734,9 @@ export type RestaurantUncheckedUpdateInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -725,6 +773,9 @@ export type RestaurantCreateManyInput = {
   domain?: string | null
   adminEmail: string
   status?: $Enums.RestaurantStatus
+  provisionStatus?: string
+  provisionLog?: string | null
+  generatedPassword?: string | null
   plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -758,6 +809,9 @@ export type RestaurantUpdateManyMutationInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -791,6 +845,9 @@ export type RestaurantUncheckedUpdateManyInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -824,6 +881,9 @@ export type RestaurantCountOrderByAggregateInput = {
   domain?: Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  provisionStatus?: Prisma.SortOrder
+  provisionLog?: Prisma.SortOrder
+  generatedPassword?: Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
@@ -862,6 +922,9 @@ export type RestaurantMaxOrderByAggregateInput = {
   domain?: Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  provisionStatus?: Prisma.SortOrder
+  provisionLog?: Prisma.SortOrder
+  generatedPassword?: Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
@@ -895,6 +958,9 @@ export type RestaurantMinOrderByAggregateInput = {
   domain?: Prisma.SortOrder
   adminEmail?: Prisma.SortOrder
   status?: Prisma.SortOrder
+  provisionStatus?: Prisma.SortOrder
+  provisionLog?: Prisma.SortOrder
+  generatedPassword?: Prisma.SortOrder
   plan?: Prisma.SortOrder
   port?: Prisma.SortOrder
   dbPath?: Prisma.SortOrder
@@ -1020,6 +1086,9 @@ export type RestaurantCreateWithoutLicenseEventsInput = {
   domain?: string | null
   adminEmail: string
   status?: $Enums.RestaurantStatus
+  provisionStatus?: string
+  provisionLog?: string | null
+  generatedPassword?: string | null
   plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -1055,6 +1124,9 @@ export type RestaurantUncheckedCreateWithoutLicenseEventsInput = {
   domain?: string | null
   adminEmail: string
   status?: $Enums.RestaurantStatus
+  provisionStatus?: string
+  provisionLog?: string | null
+  generatedPassword?: string | null
   plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -1106,6 +1178,9 @@ export type RestaurantUpdateWithoutLicenseEventsInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1141,6 +1216,9 @@ export type RestaurantUncheckedUpdateWithoutLicenseEventsInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1176,6 +1254,9 @@ export type RestaurantCreateWithoutHealthChecksInput = {
   domain?: string | null
   adminEmail: string
   status?: $Enums.RestaurantStatus
+  provisionStatus?: string
+  provisionLog?: string | null
+  generatedPassword?: string | null
   plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -1211,6 +1292,9 @@ export type RestaurantUncheckedCreateWithoutHealthChecksInput = {
   domain?: string | null
   adminEmail: string
   status?: $Enums.RestaurantStatus
+  provisionStatus?: string
+  provisionLog?: string | null
+  generatedPassword?: string | null
   plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -1262,6 +1346,9 @@ export type RestaurantUpdateWithoutHealthChecksInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1297,6 +1384,9 @@ export type RestaurantUncheckedUpdateWithoutHealthChecksInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1332,6 +1422,9 @@ export type RestaurantCreateWithoutEmailSequencesInput = {
   domain?: string | null
   adminEmail: string
   status?: $Enums.RestaurantStatus
+  provisionStatus?: string
+  provisionLog?: string | null
+  generatedPassword?: string | null
   plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -1367,6 +1460,9 @@ export type RestaurantUncheckedCreateWithoutEmailSequencesInput = {
   domain?: string | null
   adminEmail: string
   status?: $Enums.RestaurantStatus
+  provisionStatus?: string
+  provisionLog?: string | null
+  generatedPassword?: string | null
   plan?: $Enums.RestaurantPlan
   port: number
   dbPath: string
@@ -1418,6 +1514,9 @@ export type RestaurantUpdateWithoutEmailSequencesInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1453,6 +1552,9 @@ export type RestaurantUncheckedUpdateWithoutEmailSequencesInput = {
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   adminEmail?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.EnumRestaurantStatusFieldUpdateOperationsInput | $Enums.RestaurantStatus
+  provisionStatus?: Prisma.StringFieldUpdateOperationsInput | string
+  provisionLog?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  generatedPassword?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   plan?: Prisma.EnumRestaurantPlanFieldUpdateOperationsInput | $Enums.RestaurantPlan
   port?: Prisma.IntFieldUpdateOperationsInput | number
   dbPath?: Prisma.StringFieldUpdateOperationsInput | string
@@ -1537,6 +1639,9 @@ export type RestaurantSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   domain?: boolean
   adminEmail?: boolean
   status?: boolean
+  provisionStatus?: boolean
+  provisionLog?: boolean
+  generatedPassword?: boolean
   plan?: boolean
   port?: boolean
   dbPath?: boolean
@@ -1574,6 +1679,9 @@ export type RestaurantSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   domain?: boolean
   adminEmail?: boolean
   status?: boolean
+  provisionStatus?: boolean
+  provisionLog?: boolean
+  generatedPassword?: boolean
   plan?: boolean
   port?: boolean
   dbPath?: boolean
@@ -1607,6 +1715,9 @@ export type RestaurantSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   domain?: boolean
   adminEmail?: boolean
   status?: boolean
+  provisionStatus?: boolean
+  provisionLog?: boolean
+  generatedPassword?: boolean
   plan?: boolean
   port?: boolean
   dbPath?: boolean
@@ -1640,6 +1751,9 @@ export type RestaurantSelectScalar = {
   domain?: boolean
   adminEmail?: boolean
   status?: boolean
+  provisionStatus?: boolean
+  provisionLog?: boolean
+  generatedPassword?: boolean
   plan?: boolean
   port?: boolean
   dbPath?: boolean
@@ -1666,7 +1780,7 @@ export type RestaurantSelectScalar = {
   updatedAt?: boolean
 }
 
-export type RestaurantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "name" | "domain" | "adminEmail" | "status" | "plan" | "port" | "dbPath" | "licenseKey" | "licenseExpiry" | "licenseActivatedAt" | "addonSms" | "addonFloorPlan" | "addonReporting" | "addonGuestHistory" | "addonEventTicketing" | "hosted" | "hostingStatus" | "ownerName" | "ownerEmail" | "ownerPhone" | "trialEndsAt" | "stripeCustomerId" | "stripeSubscriptionId" | "monthlyHostingActive" | "oneTimeRevenue" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["restaurant"]>
+export type RestaurantOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "slug" | "name" | "domain" | "adminEmail" | "status" | "provisionStatus" | "provisionLog" | "generatedPassword" | "plan" | "port" | "dbPath" | "licenseKey" | "licenseExpiry" | "licenseActivatedAt" | "addonSms" | "addonFloorPlan" | "addonReporting" | "addonGuestHistory" | "addonEventTicketing" | "hosted" | "hostingStatus" | "ownerName" | "ownerEmail" | "ownerPhone" | "trialEndsAt" | "stripeCustomerId" | "stripeSubscriptionId" | "monthlyHostingActive" | "oneTimeRevenue" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["restaurant"]>
 export type RestaurantInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   licenseEvents?: boolean | Prisma.Restaurant$licenseEventsArgs<ExtArgs>
   healthChecks?: boolean | Prisma.Restaurant$healthChecksArgs<ExtArgs>
@@ -1690,6 +1804,9 @@ export type $RestaurantPayload<ExtArgs extends runtime.Types.Extensions.Internal
     domain: string | null
     adminEmail: string
     status: $Enums.RestaurantStatus
+    provisionStatus: string
+    provisionLog: string | null
+    generatedPassword: string | null
     plan: $Enums.RestaurantPlan
     port: number
     dbPath: string
@@ -2146,6 +2263,9 @@ export interface RestaurantFieldRefs {
   readonly domain: Prisma.FieldRef<"Restaurant", 'String'>
   readonly adminEmail: Prisma.FieldRef<"Restaurant", 'String'>
   readonly status: Prisma.FieldRef<"Restaurant", 'RestaurantStatus'>
+  readonly provisionStatus: Prisma.FieldRef<"Restaurant", 'String'>
+  readonly provisionLog: Prisma.FieldRef<"Restaurant", 'String'>
+  readonly generatedPassword: Prisma.FieldRef<"Restaurant", 'String'>
   readonly plan: Prisma.FieldRef<"Restaurant", 'RestaurantPlan'>
   readonly port: Prisma.FieldRef<"Restaurant", 'Int'>
   readonly dbPath: Prisma.FieldRef<"Restaurant", 'String'>

@@ -112,6 +112,9 @@ type RestaurantDetail = {
   ownerEmail: string | null;
   ownerPhone: string | null;
   status: RestaurantStatus;
+  provisionStatus: string;
+  provisionLog: string | null;
+  generatedPassword: string | null;
   plan: RestaurantPlan;
   hosted: boolean;
   hostingStatus: HostingStatus;
@@ -161,6 +164,14 @@ function sequenceStatusClass(status: string) {
   return "bg-slate-50 text-slate-700 border-slate-200";
 }
 
+function provisionStatusClass(status: string) {
+  const normalized = status.toLowerCase();
+  if (normalized === "active") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (normalized === "provisioning") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (normalized === "failed") return "border-rose-200 bg-rose-50 text-rose-700";
+  return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
 function buildTemplatePreview(templateId: Exclude<EmailTemplateId, "custom">, restaurant: RestaurantDetail) {
   const ownerName = restaurant.ownerName || restaurant.ownerEmail?.split("@")[0] || "Owner";
   const dashboardUrl = `https://${restaurant.domain || `${restaurant.slug}.reservesit.com`}/login`;
@@ -198,6 +209,7 @@ export default function RestaurantDetailPage() {
   const [busy, setBusy] = useState("");
   const [activeTab, setActiveTab] = useState<TabKey>("Overview");
   const [showKey, setShowKey] = useState(false);
+  const [showProvisionLog, setShowProvisionLog] = useState(false);
   const [syncStatus, setSyncStatus] = useState<Record<AddonKey, SyncState>>({
     addonSms: "",
     addonFloorPlan: "",
@@ -830,6 +842,29 @@ export default function RestaurantDetailPage() {
     }
   }
 
+  async function reprovisionRestaurant() {
+    if (!restaurant) return;
+    if (!window.confirm("Run provisioning again for this restaurant?")) return;
+
+    setBusy("reprovision");
+    try {
+      const res = await fetch("/api/restaurants/provision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restaurantId: restaurant.id }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || payload?.details || "Re-provision failed");
+      showToast("Restaurant re-provisioned.", "success");
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Re-provision failed", "error");
+      await load();
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function deleteRestaurant() {
     if (!restaurant) return;
     if (!window.confirm(`Delete ${restaurant.name}? This is destructive.`)) return;
@@ -875,6 +910,9 @@ export default function RestaurantDetailPage() {
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <RestaurantStatusBadge status={restaurant.status} />
+            <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${provisionStatusClass(restaurant.provisionStatus)}`}>
+              Provision: {restaurant.provisionStatus || "unknown"}
+            </span>
             <PlanBadge plan={restaurant.plan} />
             {healthLatest ? <HealthStatusBadge status={healthLatest.status} /> : <span className="text-xs text-slate-500">No health checks</span>}
           </div>
@@ -1392,6 +1430,63 @@ export default function RestaurantDetailPage() {
           </button>
         </section>
       </div>
+
+      <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Provisioning</h2>
+            <p className="text-sm text-slate-600">Deployment status and setup script output.</p>
+          </div>
+          <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${provisionStatusClass(restaurant.provisionStatus)}`}>
+            {restaurant.provisionStatus || "unknown"}
+          </span>
+        </div>
+
+        {restaurant.generatedPassword ? (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+            <div className="font-semibold">Generated password</div>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="font-mono">{restaurant.generatedPassword}</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(restaurant.generatedPassword || "");
+                  showToast("Password copied.", "success");
+                }}
+                className="rounded border border-emerald-300 bg-white px-2 py-1 text-xs font-semibold text-emerald-800"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap gap-2">
+          {canManage && restaurant.provisionStatus.toLowerCase() === "failed" ? (
+            <button
+              type="button"
+              onClick={reprovisionRestaurant}
+              disabled={busy === "reprovision"}
+              className="rounded-lg border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-800 disabled:opacity-60"
+            >
+              {busy === "reprovision" ? "Re-provisioning..." : "Re-provision"}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => setShowProvisionLog((prev) => !prev)}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+          >
+            {showProvisionLog ? "Hide Provision Log" : "Show Provision Log"}
+          </button>
+        </div>
+
+        {showProvisionLog ? (
+          <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+            {restaurant.provisionLog || "No provision log available."}
+          </pre>
+        ) : null}
+      </section>
       </>
       ) : null}
 

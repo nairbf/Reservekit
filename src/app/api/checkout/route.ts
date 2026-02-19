@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getStripeInstance } from "@/lib/stripe";
 
 const PRODUCTS: Record<string, { name: string; price: number }> = {
   core: { name: "ReserveSit Core", price: 179900 },
@@ -10,10 +11,8 @@ const PRODUCTS: Record<string, { name: string; price: number }> = {
 };
 
 export async function POST(req: NextRequest) {
-  if (!process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
-
-  const Stripe = (await import("stripe")).default;
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const stripe = await getStripeInstance();
+  if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
   const { items, email } = await req.json();
 
   const lineItems = (items as string[]).filter(id => PRODUCTS[id]).map(id => ({

@@ -5,6 +5,7 @@ import { createPaymentIntent } from "@/lib/payments";
 import { generateEventICS } from "@/lib/calendar";
 import { sendNotification } from "@/lib/send-notification";
 import { checkReservationRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { getStripeInstance, getStripeSecretKey } from "@/lib/stripe";
 
 function normalizePhone(value: string): string {
   return String(value || "").replace(/\D/g, "").trim();
@@ -32,9 +33,8 @@ async function uniqueTicketCode(tx: Parameters<Parameters<typeof prisma.$transac
 }
 
 async function stripePaymentStatus(paymentIntentId: string) {
-  if (!process.env.STRIPE_SECRET_KEY) throw new Error("Stripe not configured");
-  const Stripe = (await import("stripe")).default;
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const stripe = await getStripeInstance();
+  if (!stripe) throw new Error("Stripe not configured");
   return stripe.paymentIntents.retrieve(paymentIntentId);
 }
 
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: "Guest name and email are required" }, { status: 400 });
   }
 
-  const stripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY);
+  const stripeConfigured = Boolean(await getStripeSecretKey());
   const requiresStripePayment = !manual && event.ticketPrice > 0 && stripeConfigured;
 
   if (requiresStripePayment && !paymentIntentId) {

@@ -128,9 +128,7 @@ function categorySection(type?: string | null): "starter" | "drink" {
   return String(type || "starter").toLowerCase() === "drink" ? "drink" : "starter";
 }
 
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  : null;
+const defaultStripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 
 function PaymentCardStep({
   amountCents,
@@ -321,6 +319,7 @@ export default function ReserveWidgetClient({
   const [expressClientSecret, setExpressClientSecret] = useState("");
   const [expressPreOrderId, setExpressPreOrderId] = useState<number | null>(null);
   const [expressSubmitted, setExpressSubmitted] = useState<PreOrderRecord | null>(null);
+  const [stripePublishableKey, setStripePublishableKey] = useState(defaultStripePublishableKey);
 
   const isDark = theme === "dark";
   const primary = getAccent(accent);
@@ -352,6 +351,10 @@ export default function ReserveWidgetClient({
   const expressSubtotal = useMemo(
     () => expressLines.reduce((sum, line) => sum + line.price * line.quantity, 0),
     [expressLines],
+  );
+  const stripePromise = useMemo(
+    () => (stripePublishableKey ? loadStripe(stripePublishableKey) : null),
+    [stripePublishableKey],
   );
 
   useEffect(() => {
@@ -685,10 +688,16 @@ export default function ReserveWidgetClient({
     setPaymentProcessing(false);
 
     let liveDeposit = availabilityDeposit;
+    let effectiveStripePromise = stripePromise;
     try {
       const depositConfigRes = await fetch(`/api/payments/deposit-config?date=${encodeURIComponent(date)}&partySize=${partySize}`);
       if (depositConfigRes.ok) {
         const cfg = await depositConfigRes.json();
+        const nextPublishable = String(cfg.stripePublishableKey || "").trim();
+        if (nextPublishable && nextPublishable !== stripePublishableKey) {
+          setStripePublishableKey(nextPublishable);
+          effectiveStripePromise = loadStripe(nextPublishable);
+        }
         liveDeposit = {
           required: Boolean(cfg.required),
           amount: Number(cfg.amount || 0),
@@ -703,7 +712,7 @@ export default function ReserveWidgetClient({
       // Keep the previously loaded deposit config.
     }
 
-    if (liveDeposit.required && !stripePromise) {
+    if (liveDeposit.required && !effectiveStripePromise) {
       setError("Card checkout is not configured right now. Please call the restaurant to book this request.");
       return;
     }

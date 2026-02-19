@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSettings, getEffectiveDepositForRequest } from "@/lib/settings";
+import { getStripePublishableKey } from "@/lib/stripe";
 import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 export async function GET(req: NextRequest) {
@@ -9,6 +10,7 @@ export async function GET(req: NextRequest) {
   const partySize = Math.max(1, parseInt(searchParams.get("partySize") || "2", 10) || 2);
   const settings = await getSettings();
   const deposit = getEffectiveDepositForRequest(settings, date, partySize);
+  const publishableKey = await getStripePublishableKey();
 
   return NextResponse.json({
     enabled: settings.depositEnabled,
@@ -19,5 +21,6 @@ export async function GET(req: NextRequest) {
     message: deposit.message,
     source: deposit.source,
     label: deposit.label,
+    stripePublishableKey: publishableKey,
   });
 }

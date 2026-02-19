@@ -243,6 +243,9 @@ export default function SettingsPage() {
   const [spotOnMappingRows, setSpotOnMappingRows] = useState<SpotOnMappingRow[]>([
     { rowId: makeSpotOnMappingRowId(), reservekitTableId: "", spotOnTable: "" },
   ]);
+  const [showStripeSecretKey, setShowStripeSecretKey] = useState(false);
+  const [stripeTestStatus, setStripeTestStatus] = useState<"idle" | "testing" | "connected" | "invalid">("idle");
+  const [stripeTestMessage, setStripeTestMessage] = useState("");
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [testRecipient, setTestRecipient] = useState("");
   const [clockMs, setClockMs] = useState(() => Date.now());
@@ -308,6 +311,10 @@ export default function SettingsPage() {
 
   function setField(key: string, value: string) {
     setSettings((previous) => ({ ...previous, [key]: value }));
+    if (key === "stripePublishableKey" || key === "stripeSecretKey" || key === "stripeWebhookSecret") {
+      setStripeTestStatus("idle");
+      setStripeTestMessage("");
+    }
     setSaved(false);
   }
 
@@ -319,6 +326,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
+      await loadSettings();
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1800);
     } finally {
@@ -624,6 +632,42 @@ export default function SettingsPage() {
     }
   }
 
+  async function testStripeConnection() {
+    setStripeTestStatus("testing");
+    setStripeTestMessage("");
+    try {
+      await savePartial({
+        stripePublishableKey: (settings.stripePublishableKey || "").trim(),
+        stripeSecretKey: (settings.stripeSecretKey || "").trim(),
+        stripeWebhookSecret: (settings.stripeWebhookSecret || "").trim(),
+      });
+      const response = await fetch("/api/payments/test-connection", { method: "POST" });
+      const data = (await response.json().catch(() => ({}))) as {
+        connected?: boolean;
+        accountId?: string;
+        businessName?: string | null;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to test Stripe connection.");
+      }
+
+      if (data.connected) {
+        setStripeTestStatus("connected");
+        const label = data.businessName || data.accountId || "Stripe";
+        setStripeTestMessage(`Connected to ${label}.`);
+      } else {
+        setStripeTestStatus("invalid");
+        setStripeTestMessage(data.error || "Invalid Stripe key.");
+      }
+      await loadSettings();
+    } catch (error) {
+      setStripeTestStatus("invalid");
+      setStripeTestMessage(error instanceof Error ? error.message : "Unable to test Stripe connection.");
+    }
+  }
+
   async function validateNow() {
     setLicenseBusy(true);
     setLicenseMessage("");
@@ -832,6 +876,10 @@ export default function SettingsPage() {
     if (raw.length <= 8) return "••••••••";
     return `${raw.slice(0, 2)}••••••${raw.slice(-2)}`;
   }, [settings.spotonApiKey]);
+  const stripePublishableConfigured = Boolean((settings.stripePublishableKey || "").trim());
+  const stripeSecretConfigured = Boolean((settings.stripeSecretKey || "").trim());
+  const stripeConfigured = stripePublishableConfigured && stripeSecretConfigured;
+  const depositsEnabled = (settings.depositEnabled || settings.depositsEnabled) === "true";
 
   if (loading) {
     return (
@@ -942,11 +990,115 @@ export default function SettingsPage() {
           </Section>
 
           <Section title="Deposits & No-Show Protection">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h3 className="text-sm font-semibold text-gray-900">Payment Processing</h3>
+              <p className="mt-1 text-sm text-gray-600">
+                Connect your Stripe account to accept deposits and card holds from guests.
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Don&apos;t have a Stripe account? Create one at{" "}
+                <a className="text-blue-700 underline" href="https://stripe.com" target="_blank" rel="noreferrer">
+                  stripe.com
+                </a>{" "}
+                — it takes about 10 minutes.
+              </p>
+
+              <div className="mt-4 grid gap-3">
+                <div>
+                  <Label>Stripe Publishable Key</Label>
+                  <input
+                    type="text"
+                    value={settings.stripePublishableKey || ""}
+                    onChange={(event) => setField("stripePublishableKey", event.target.value)}
+                    placeholder="pk_live_..."
+                    className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <Label>Stripe Secret Key</Label>
+                  <div className="flex gap-2">
+                    <input
+                      type={showStripeSecretKey ? "text" : "password"}
+                      value={settings.stripeSecretKey || ""}
+                      onChange={(event) => setField("stripeSecretKey", event.target.value)}
+                      placeholder="sk_live_..."
+                      className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowStripeSecretKey((value) => !value)}
+                      className="h-11 rounded-lg border border-gray-200 px-3 text-sm"
+                    >
+                      {showStripeSecretKey ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Stripe Webhook Secret (optional)</Label>
+                  <input
+                    type="password"
+                    value={settings.stripeWebhookSecret || ""}
+                    onChange={(event) => setField("stripeWebhookSecret", event.target.value)}
+                    placeholder="whsec_..."
+                    className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {!stripeConfigured ? (
+                  <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                    ⚠ Not configured
+                  </span>
+                ) : stripeTestStatus === "connected" ? (
+                  <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    ✓ Connected
+                  </span>
+                ) : stripeTestStatus === "invalid" ? (
+                  <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                    ✗ Invalid
+                  </span>
+                ) : (
+                  <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                    ⚠ Not verified
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  onClick={testStripeConnection}
+                  disabled={stripeTestStatus === "testing"}
+                  className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
+                >
+                  {stripeTestStatus === "testing" ? "Testing..." : "Test Connection"}
+                </button>
+              </div>
+
+              {stripeTestMessage ? (
+                <p className={`mt-2 text-sm ${stripeTestStatus === "invalid" ? "text-red-600" : "text-emerald-700"}`}>
+                  {stripeTestMessage}
+                </p>
+              ) : null}
+            </div>
+
+            {depositsEnabled && !stripeConfigured ? (
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                ⚠ Deposits are enabled but Stripe is not configured. Guests will not be charged.
+              </div>
+            ) : null}
+
             <label className="mb-4 flex items-center gap-2 text-sm font-medium">
               <input
                 type="checkbox"
-                checked={(settings.depositEnabled || settings.depositsEnabled) === "true"}
+                checked={depositsEnabled}
                 onChange={(event) => {
+                  if (event.target.checked && !stripeConfigured) {
+                    setStripeTestStatus("invalid");
+                    setStripeTestMessage("Configure Stripe keys before enabling deposits.");
+                    return;
+                  }
                   const value = event.target.checked ? "true" : "false";
                   setField("depositEnabled", value);
                   setField("depositsEnabled", value);
@@ -956,7 +1108,7 @@ export default function SettingsPage() {
               Enable deposits / card holds
             </label>
 
-            {(settings.depositEnabled || settings.depositsEnabled) === "true" && (
+            {depositsEnabled && (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Deposit Type</Label>

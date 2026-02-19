@@ -76,6 +76,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[PAYMENT CREATE INTENT ERROR]", err);
+    if (err instanceof Error && err.message === "Stripe not configured") {
+      return NextResponse.json({ error: "Stripe is not configured" }, { status: 400 });
+    }
     return NextResponse.json({ error: "Unable to create payment intent" }, { status: 500 });
   }
 }

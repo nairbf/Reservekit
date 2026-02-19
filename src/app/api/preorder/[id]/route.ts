@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { createPaymentIntent, refundPayment } from "@/lib/payments";
+import { getStripeInstance } from "@/lib/stripe";
 import {
   digitsOnly,
   getExpressDiningConfig,
@@ -79,9 +80,9 @@ function signatureFromLines(lines: Array<{ menuItemId: number; guestLabel: strin
 }
 
 async function getStripeClient() {
-  if (!process.env.STRIPE_SECRET_KEY) throw new Error("Stripe not configured");
-  const Stripe = (await import("stripe")).default;
-  return new Stripe(process.env.STRIPE_SECRET_KEY);
+  const stripe = await getStripeInstance();
+  if (!stripe) throw new Error("Stripe not configured");
+  return stripe;
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

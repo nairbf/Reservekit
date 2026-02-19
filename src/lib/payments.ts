@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { getSettings } from "./settings";
+import { getStripeInstance } from "./stripe";
 
 export type ReservationPaymentType = "hold" | "deposit";
 
@@ -11,10 +12,9 @@ interface CreatePaymentIntentParams {
 }
 
 async function getStripeClient() {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) throw new Error("Stripe not configured");
-  const Stripe = (await import("stripe")).default;
-  return new Stripe(secret);
+  const stripe = await getStripeInstance();
+  if (!stripe) throw new Error("Stripe not configured");
+  return stripe;
 }
 
 export async function createPaymentIntent({

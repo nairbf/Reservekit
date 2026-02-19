@@ -35,9 +35,7 @@ export interface AppSettings {
   depositMinPartySize: number;
   noshowChargeEnabled: boolean;
   noshowChargeAmount: number;
-  depositsEnabled: boolean;
   depositAmount: number;
-  depositMinParty: number;
   depositMessage: string;
   reserveHeading: string;
   reserveSubheading: string;
@@ -178,7 +176,7 @@ export async function getSettings(): Promise<AppSettings> {
   const maxCoversPerSlot = toInt(map.maxCoversPerSlot, 40);
   const depositMessage = map.depositMessage || "A refundable deposit may be required to hold your table.";
   const depositAmount = Math.max(0, toInt(map.depositAmount, 0));
-  const depositMinParty = Math.max(1, toInt(map.depositMinPartySize ?? map.depositMinParty, 2));
+  const depositMinPartySize = Math.max(1, toInt(map.depositMinPartySize ?? map.depositMinParty, 2));
   const depositEnabled = map.depositEnabled ? map.depositEnabled === "true" : map.depositsEnabled === "true";
   const depositType = map.depositType === "deposit" ? "deposit" : "hold";
   const noshowChargeEnabled = map.noshowChargeEnabled === "true";
@@ -199,12 +197,10 @@ export async function getSettings(): Promise<AppSettings> {
     diningDurations: parseJson<Record<string, number>>(map.diningDurations, {}),
     depositEnabled,
     depositType,
-    depositMinPartySize: depositMinParty,
+    depositMinPartySize,
     noshowChargeEnabled,
     noshowChargeAmount,
-    depositsEnabled: depositEnabled,
     depositAmount,
-    depositMinParty,
     depositMessage,
     reserveHeading: map.reserveHeading || "Reserve a Table",
     reserveSubheading: map.reserveSubheading || "Choose your date, time, and party size.",
@@ -219,7 +215,7 @@ export async function getSettings(): Promise<AppSettings> {
     weeklySchedule: parseWeeklySchedule(map.weeklySchedule, weeklyFallback),
     specialDepositRules: parseSpecialDepositRules(map.specialDepositRules, {
       amount: depositAmount,
-      minParty: depositMinParty,
+      minParty: depositMinPartySize,
       message: depositMessage,
     }),
     expressDiningEnabled: map.expressDiningEnabled === "true",

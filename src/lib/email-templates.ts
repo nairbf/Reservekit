@@ -265,7 +265,7 @@ export function renderTemplate(
 }
 
 export function getSampleVariables(extra?: Record<string, string>, baseUrl?: string): Record<string, string> {
-  const appUrl = String(baseUrl || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = String(baseUrl || "http://localhost:3000").replace(/\/$/, "");
   return {
     restaurantName: "The Reef Restaurant",
     restaurantPhone: "(555) 123-4567",

@@ -71,10 +71,10 @@ export default async function ReserveWidget() {
       loyaltyProgramName={settings.loyaltyProgramName}
       loyaltyOptInMessage={settings.loyaltyOptInMessage}
       loyaltyOptInLabel={settings.loyaltyOptInLabel}
-      depositsEnabled={settings.depositsEnabled}
+      depositsEnabled={settings.depositEnabled}
       depositType={settings.depositType}
       depositAmount={settings.depositAmount}
-      depositMinParty={settings.depositMinParty}
+      depositMinParty={settings.depositMinPartySize}
       depositMessage={settings.depositMessage}
       expressDiningEnabled={settings.expressDiningEnabled}
       expressDiningMessage={settings.expressDiningMessage}

@@ -26,15 +26,21 @@ export async function GET(req: NextRequest) {
 
   const timezone = await getRestaurantTimezone();
   const todayDate = getTodayInTimezone(timezone);
-  const reminderHoursSetting = await prisma.setting.findUnique({ where: { key: "reminderLeadHours" } });
-  const reminderTimingSetting = await prisma.setting.findUnique({ where: { key: "emailReminderTiming" } });
+  const reminderRows = await prisma.setting.findMany({
+    where: { key: { in: ["reminderLeadHours", "emailReminderTiming"] } },
+  });
+  const reminderMap: Record<string, string> = {};
+  for (const row of reminderRows) reminderMap[row.key] = row.value;
   const reminderHours = Math.max(
     1,
-    parseInt(reminderHoursSetting?.value || reminderTimingSetting?.value || "24", 10) || 24,
+    parseInt(reminderMap.reminderLeadHours || reminderMap.emailReminderTiming || "24", 10) || 24,
   );
   const lookAheadDays = Math.max(1, Math.ceil(reminderHours / 24) + 1);
   const endDate = addDaysToDateString(todayDate, lookAheadDays);
-  const appUrl = process.env.APP_URL || "http://localhost:3000";
+  const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  if (!process.env.APP_URL) {
+    console.warn("APP_URL not set — email links may use incorrect domain");
+  }
 
   const rows = await prisma.reservation.findMany({
     where: {
@@ -72,7 +78,7 @@ export async function GET(req: NextRequest) {
         partySize: reservation.partySize,
         date: reservation.date,
         time: reservation.time,
-      });
+      }, appUrl);
       await sendSms({
         to: reservation.guestPhone,
         body: smsBody,

@@ -18,13 +18,13 @@ function formatTime12(value: string): string {
 
 async function getStaffNotificationConfig() {
   const rows = await prisma.setting.findMany({
-    where: { key: { in: ["staffNotificationEmail", "staffNotificationsEnabled", "largePartyThreshold"] } },
+    where: { key: { in: ["staffNotificationEmail", "emailStaffNotification", "staffNotificationsEnabled", "largePartyThreshold"] } },
   });
   const map: Record<string, string> = {};
   for (const row of rows) map[row.key] = row.value;
   return {
     enabled: map.staffNotificationsEnabled === "true",
-    email: String(map.staffNotificationEmail || "").trim(),
+    email: String(map.staffNotificationEmail || map.emailStaffNotification || "").trim(),
     largePartyThreshold: Math.max(1, parseInt(map.largePartyThreshold || "6", 10) || 6),
   };
 }

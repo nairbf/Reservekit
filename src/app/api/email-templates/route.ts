@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requirePermission } from "@/lib/auth";
 import { getAllTemplates, getTemplate, type TemplateData } from "@/lib/email-templates";
 
 function normalizeTemplatePatch(input: Record<string, unknown>): Partial<TemplateData> {
@@ -27,9 +27,9 @@ export async function GET() {
 
 export async function PUT(req: NextRequest) {
   try {
-    await requireAuth();
+    await requirePermission("manage_settings");
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = (await req.json()) as Record<string, unknown>;

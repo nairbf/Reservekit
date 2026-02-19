@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getClientIp, getRateLimitResponse, rateLimit } from "@/lib/rate-limit";
 
 function digitsOnly(value: string): string {
   return String(value || "").replace(/\D/g, "");
 }
 
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req);
+  const limit = rateLimit("reservation-lookup", ip, 10, 60_000);
+  if (!limit.allowed) return getRateLimitResponse();
+
   const { searchParams } = new URL(req.url);
   const code = String(searchParams.get("code") || "").trim().toUpperCase();
   const phone = digitsOnly(searchParams.get("phone") || "");

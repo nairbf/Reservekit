@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAppUrlFromRequest } from "@/lib/app-url";
 import { getAvailableSlots, minutesToTime, timeToMinutes } from "@/lib/availability";
 import { getDiningDuration, getSettings } from "@/lib/settings";
 import { notifyCancelled } from "@/lib/notifications";
 import { releasePayment } from "@/lib/payments";
 import { sendEmail } from "@/lib/email";
+import { getClientIp, getRateLimitResponse, rateLimit } from "@/lib/rate-limit";
 import { sendSms } from "@/lib/sms";
 import { notifyStaffCancellation } from "@/lib/staff-notifications";
 import { getRestaurantTimezone, restaurantDateTimeToUTC } from "@/lib/timezone";
@@ -20,6 +22,11 @@ function formatTime12(value: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const limit = rateLimit("reservation-self-service", ip, 10, 60_000);
+  if (!limit.allowed) return getRateLimitResponse();
+
+  const appUrl = getAppUrlFromRequest(req);
   const body = await req.json();
   const code = String(body?.code || "").trim().toUpperCase();
   const phone = digitsOnly(body?.phone || "");
@@ -66,7 +73,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    notifyCancelled(updated).catch(console.error);
+    notifyCancelled(updated, appUrl).catch(console.error);
     notifyStaffCancellation(updated).catch(console.error);
     return NextResponse.json({ ok: true, reservation: updated });
   }
@@ -121,7 +128,6 @@ export async function POST(req: NextRequest) {
       include: { table: true },
     });
 
-    const appUrl = process.env.APP_URL || "http://localhost:3000";
     const manageLink = `${appUrl}/reservation/manage`;
     const message = `Your reservation has been updated to ${updated.date} at ${formatTime12(updated.time)} for party of ${updated.partySize}.\nRef: ${updated.code}\nManage your reservation: ${manageLink}`;
 

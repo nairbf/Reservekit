@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { getSettings, getDiningDuration } from "@/lib/settings";
 import { generateCode } from "@/lib/codes";
 import { timeToMinutes, minutesToTime } from "@/lib/availability";
@@ -10,7 +10,7 @@ import { getCurrentTimeInTimezone, getRestaurantTimezone, getTodayInTimezone } f
 
 export async function POST(req: NextRequest) {
   let session;
-  try { session = await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  try { session = await requirePermission("manage_reservations"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
   const body = await req.json();
   const guestName = sanitizeString(body?.guestName, 120);
   const guestPhone = sanitizeString(body?.guestPhone, 32);

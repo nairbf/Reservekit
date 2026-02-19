@@ -15,20 +15,21 @@ function formatDateLabel(value: string) {
   if (Number.isNaN(dt.getTime())) return value;
   return dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
-function manageLink(code: string) { const appUrl = process.env.APP_URL || "http://localhost:3000"; return `${appUrl}/reservation/manage?code=${encodeURIComponent(code)}`; }
-function preorderLink(code: string) { const appUrl = process.env.APP_URL || "http://localhost:3000"; return `${appUrl}/preorder/${code}`; }
+function normalizeAppUrl(appUrl: string) { return String(appUrl || "http://localhost:3000").replace(/\/$/, ""); }
+function manageLink(code: string, appUrl: string) { return `${normalizeAppUrl(appUrl)}/reservation/manage?code=${encodeURIComponent(code)}`; }
+function preorderLink(code: string, appUrl: string) { return `${normalizeAppUrl(appUrl)}/preorder/${code}`; }
 
-async function expressDiningEmailLine(reservationId: number, code: string) {
+async function expressDiningEmailLine(reservationId: number, code: string, appUrl: string) {
   const settings = await getSettings();
   if (!settings.expressDiningEnabled) return "";
   const preOrder = await prisma.preOrder.findUnique({ where: { reservationId } });
   if (preOrder && preOrder.status !== "cancelled") {
     return "\nYour starters & drinks are confirmed! We'll have them ready when you arrive.";
   }
-  return `\nPre-order your starters & drinks: ${preorderLink(code)}`;
+  return `\nPre-order your starters & drinks: ${preorderLink(code, appUrl)}`;
 }
 
-export async function notifyRequestReceived(r: Res) {
+export async function notifyRequestReceived(r: Res, appUrl: string) {
   if (r.guestEmail) {
     await sendNotification({
       templateId: "reservation_request_received",
@@ -41,16 +42,16 @@ export async function notifyRequestReceived(r: Res) {
         time: fmt(r.time),
         partySize: String(r.partySize),
         confirmationCode: r.code,
-        manageUrl: manageLink(r.code),
+        manageUrl: manageLink(r.code, appUrl),
       },
     });
   }
-  if (r.guestPhone) { const body = await smsT.smsRequestReceived(r); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "request_received" }); }
+  if (r.guestPhone) { const body = await smsT.smsRequestReceived(r, appUrl); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "request_received" }); }
 }
 
-export async function notifyApproved(r: Res) {
+export async function notifyApproved(r: Res, appUrl: string) {
   if (r.guestEmail) {
-    const expressLine = await expressDiningEmailLine(r.id, r.code);
+    const expressLine = await expressDiningEmailLine(r.id, r.code, appUrl);
     let attachments: Array<{ filename: string; content: string; contentType: string }> = [];
     try {
       const ics = await generateICS({
@@ -78,20 +79,20 @@ export async function notifyApproved(r: Res) {
         time: fmt(r.time),
         partySize: String(r.partySize),
         confirmationCode: r.code,
-        manageUrl: manageLink(r.code),
+        manageUrl: manageLink(r.code, appUrl),
         preOrderLine: expressLine.trim(),
       },
     });
   }
-  if (r.guestPhone) { const body = await smsT.smsApproved(r); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "approved" }); }
+  if (r.guestPhone) { const body = await smsT.smsApproved(r, appUrl); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "approved" }); }
 }
 
-export async function notifyDeclined(r: Res) {
-  if (r.guestEmail) { const n = await rname(); await sendEmail({ to: r.guestEmail, subject: `Reservation update — ${n}`, body: `Hi ${r.guestName},\n\nWe're unable to accommodate ${r.date} at ${fmt(r.time)}.\nPlease try another date or call us.\n\nManage your reservation: ${manageLink(r.code)}\n\n— ${n}`, reservationId: r.id, messageType: "declined" }); }
-  if (r.guestPhone) { const body = await smsT.smsDeclined(r); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "declined" }); }
+export async function notifyDeclined(r: Res, appUrl: string) {
+  if (r.guestEmail) { const n = await rname(); await sendEmail({ to: r.guestEmail, subject: `Reservation update — ${n}`, body: `Hi ${r.guestName},\n\nWe're unable to accommodate ${r.date} at ${fmt(r.time)}.\nPlease try another date or call us.\n\nManage your reservation: ${manageLink(r.code, appUrl)}\n\n— ${n}`, reservationId: r.id, messageType: "declined" }); }
+  if (r.guestPhone) { const body = await smsT.smsDeclined(r, appUrl); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "declined" }); }
 }
 
-export async function notifyCancelled(r: Res) {
+export async function notifyCancelled(r: Res, appUrl: string) {
   if (r.guestEmail) {
     await sendNotification({
       templateId: "reservation_cancelled",
@@ -104,9 +105,9 @@ export async function notifyCancelled(r: Res) {
         time: fmt(r.time),
         partySize: String(r.partySize),
         confirmationCode: r.code,
-        manageUrl: manageLink(r.code),
+        manageUrl: manageLink(r.code, appUrl),
       },
     });
   }
-  if (r.guestPhone) { const body = await smsT.smsCancelled(r); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "cancelled" }); }
+  if (r.guestPhone) { const body = await smsT.smsCancelled(r, appUrl); await sendSms({ to: r.guestPhone, body, reservationId: r.id, messageType: "cancelled" }); }
 }

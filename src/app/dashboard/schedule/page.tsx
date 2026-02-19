@@ -191,7 +191,7 @@ export default function SchedulePage() {
     const loadedLastSeatingBuffer = String(settings.lastSeatingBufferMin || "90");
     const depositMessage = settings.depositMessage || "A refundable deposit may be required to hold your table.";
     const depositAmount = settings.depositAmount || "0";
-    const depositMinParty = settings.depositMinParty || "2";
+    const depositMinParty = settings.depositMinPartySize || settings.depositMinParty || "2";
 
     setOverrides(Array.isArray(overrideData) ? overrideData : []);
     setWeeklySchedule(parseWeeklySchedule(settings.weeklySchedule, createDefaultWeekly(openTime, closeTime, maxCovers)));

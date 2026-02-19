@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { getAppUrlFromRequest } from "@/lib/app-url";
 import { timeToMinutes, minutesToTime } from "@/lib/availability";
 import { notifyApproved, notifyDeclined, notifyCancelled } from "@/lib/notifications";
 import { updateGuestStats } from "@/lib/guest";
@@ -8,16 +9,38 @@ import { getSettings } from "@/lib/settings";
 import { chargeNoShow, releasePayment } from "@/lib/payments";
 import { sendEmail } from "@/lib/email";
 import { sendSms } from "@/lib/sms";
+import type { PermissionKey } from "@/lib/permissions";
 
 function formatMoneyCents(cents: number): string {
   return `$${(Math.max(0, cents) / 100).toFixed(2)}`;
 }
 
+function permissionForAction(action: string): PermissionKey | null {
+  switch (action) {
+    case "arrive":
+    case "seat":
+    case "complete":
+      return "checkin_guests";
+    case "approve":
+    case "decline":
+    case "counter":
+    case "noshow":
+    case "cancel":
+      return "manage_reservations";
+    default:
+      return null;
+  }
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
-  const { id } = await params;
   const body = await req.json();
-  const { action } = body;
+  const action = String(body?.action || "").toLowerCase();
+  const neededPermission = permissionForAction(action);
+  if (!neededPermission) return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });
+  try { await requirePermission(neededPermission); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
+
+  const appUrl = getAppUrlFromRequest(req);
+  const { id } = await params;
   const reservation = await prisma.reservation.findUnique({
     where: { id: parseInt(id) },
     include: { payment: true },
@@ -84,7 +107,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const charged = await chargeNoShow(updated.id);
         if (charged.ok) {
           const amount = charged.chargedAmount ?? Math.max(0, settings.noshowChargeAmount || updated.payment.amount || 0);
-          const appUrl = process.env.APP_URL || "http://localhost:3000";
           const msg = `You were marked as a no-show for your reservation on ${updated.date}. A charge of ${formatMoneyCents(amount)} has been applied to your card.\nManage your reservation: ${appUrl}/reservation/manage`;
           if (updated.guestEmail) {
             await sendEmail({
@@ -109,8 +131,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       console.error("[NOSHOW CHARGE ERROR]", err);
     }
   }
-  if (action === "approve") notifyApproved(updated).catch(console.error);
-  if (action === "decline") notifyDeclined(updated).catch(console.error);
-  if (action === "cancel") notifyCancelled(updated).catch(console.error);
+  if (action === "approve") notifyApproved(updated, appUrl).catch(console.error);
+  if (action === "decline") notifyDeclined(updated, appUrl).catch(console.error);
+  if (action === "cancel") notifyCancelled(updated, appUrl).catch(console.error);
   return NextResponse.json(updated);
 }

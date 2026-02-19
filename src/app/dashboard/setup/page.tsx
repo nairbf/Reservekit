@@ -22,9 +22,9 @@ interface SetupSettings {
   reserveHeading: string;
   reserveSubheading: string;
   reserveConfirmationMessage: string;
-  depositsEnabled: string;
+  depositEnabled: string;
   depositAmount: string;
-  depositMinParty: string;
+  depositMinPartySize: string;
   depositMessage: string;
 }
 
@@ -79,9 +79,9 @@ const DEFAULTS: SetupSettings = {
   reserveHeading: "Reserve a Table",
   reserveSubheading: "Choose your date, time, and party size.",
   reserveConfirmationMessage: "We'll contact you shortly to confirm.",
-  depositsEnabled: "false",
+  depositEnabled: "false",
   depositAmount: "0",
-  depositMinParty: "2",
+  depositMinPartySize: "2",
   depositMessage: "A refundable deposit may be required to hold your table.",
 };
 
@@ -203,9 +203,14 @@ export default function SetupWizardPage() {
         }
         const loadedStep = parseInt(String(loadedSettings.setupWizardStep || "1"), 10);
         if (Number.isFinite(loadedStep) && loadedStep >= 1 && loadedStep <= 5) setStep(loadedStep as StepKey);
+        const mergedSettings = {
+          ...loadedSettings,
+          depositEnabled: String(loadedSettings.depositEnabled || loadedSettings.depositsEnabled || DEFAULTS.depositEnabled),
+          depositMinPartySize: String(loadedSettings.depositMinPartySize || loadedSettings.depositMinParty || DEFAULTS.depositMinPartySize),
+        };
         setSettings({
           ...DEFAULTS,
-          ...Object.fromEntries(Object.entries(loadedSettings).map(([k, v]) => [k, String(v)])),
+          ...Object.fromEntries(Object.entries(mergedSettings).map(([k, v]) => [k, String(v)])),
         });
         setTables(Array.isArray(loadedTables) ? loadedTables : []);
       })
@@ -346,23 +351,23 @@ export default function SetupWizardPage() {
 
   async function saveStepFour() {
     const depositAmount = Math.max(0, Number(settings.depositAmount || "0"));
-    const depositMinParty = Math.max(1, Number(settings.depositMinParty || "2"));
+    const depositMinPartySize = Math.max(1, Number(settings.depositMinPartySize || "2"));
     setSaving(true);
     try {
       await saveSettings({
         reserveHeading: settings.reserveHeading.trim() || DEFAULTS.reserveHeading,
         reserveSubheading: settings.reserveSubheading.trim() || DEFAULTS.reserveSubheading,
         reserveConfirmationMessage: settings.reserveConfirmationMessage.trim() || DEFAULTS.reserveConfirmationMessage,
-        depositsEnabled: settings.depositsEnabled === "true" ? "true" : "false",
+        depositEnabled: settings.depositEnabled === "true" ? "true" : "false",
         depositAmount: String(depositAmount),
-        depositMinParty: String(depositMinParty),
+        depositMinPartySize: String(depositMinPartySize),
         depositMessage: settings.depositMessage.trim() || DEFAULTS.depositMessage,
         setupWizardStep: "5",
       });
       setSettings(prev => ({
         ...prev,
         depositAmount: String(depositAmount),
-        depositMinParty: String(depositMinParty),
+        depositMinPartySize: String(depositMinPartySize),
       }));
       setMessage("Guest communication settings saved.");
       await goTo(5);
@@ -529,13 +534,13 @@ export default function SetupWizardPage() {
           </div>
           <div className="rounded-lg border border-gray-200 p-3 space-y-3">
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={settings.depositsEnabled === "true"} onChange={e => setField("depositsEnabled", e.target.checked ? "true" : "false")} className="h-4 w-4" />
+              <input type="checkbox" checked={settings.depositEnabled === "true"} onChange={e => setField("depositEnabled", e.target.checked ? "true" : "false")} className="h-4 w-4" />
               Enable deposits by default
             </label>
-            {settings.depositsEnabled === "true" && (
+            {settings.depositEnabled === "true" && (
               <div className="grid sm:grid-cols-2 gap-4">
                 <Field label="Deposit Amount (USD)" type="number" value={settings.depositAmount} onChange={v => setField("depositAmount", v)} />
-                <Field label="Apply at Party Size" type="number" value={settings.depositMinParty} onChange={v => setField("depositMinParty", v)} />
+                <Field label="Apply at Party Size" type="number" value={settings.depositMinPartySize} onChange={v => setField("depositMinPartySize", v)} />
                 <div className="sm:col-span-2">
                   <Field label="Deposit Message" value={settings.depositMessage} onChange={v => setField("depositMessage", v)} />
                 </div>

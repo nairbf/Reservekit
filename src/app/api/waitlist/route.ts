@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/auth";
 import { estimateWaitMinutes, getTodaysWaitlist, reorderActiveWaitlistPositions } from "@/lib/waitlist";
 import { sendNotification } from "@/lib/send-notification";
-import { checkWaitlistRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { getClientIp, getRateLimitResponse, rateLimit } from "@/lib/rate-limit";
 import { isValidEmail, isValidPhone, sanitizeHtml, sanitizeString } from "@/lib/validate";
 
 function normalizePhone(value: string): string {
@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const limit = checkWaitlistRate(ip);
-  if (!limit.allowed) return tooManyRequests(limit.resetAt);
+  const limit = rateLimit("waitlist-join", ip, 5, 60_000);
+  if (!limit.allowed) return getRateLimitResponse();
 
   const body = await req.json();
   const guestName = sanitizeString(body?.guestName, 120);

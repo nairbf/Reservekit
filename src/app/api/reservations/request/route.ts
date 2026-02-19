@@ -7,13 +7,15 @@ import { notifyRequestReceived } from "@/lib/notifications";
 import { linkGuestToReservation } from "@/lib/guest";
 import { saveLoyaltyConsent } from "@/lib/loyalty";
 import { notifyStaffLargeParty, notifyStaffNewRequest } from "@/lib/staff-notifications";
-import { checkReservationRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
+import { getAppUrlFromRequest } from "@/lib/app-url";
+import { getClientIp, getRateLimitResponse, rateLimit } from "@/lib/rate-limit";
 import { isValidEmail, isValidPhone, sanitizeHtml, sanitizeString } from "@/lib/validate";
 
 export async function POST(req: NextRequest) {
   const ip = getClientIp(req);
-  const limit = checkReservationRate(ip);
-  if (!limit.allowed) return tooManyRequests(limit.resetAt);
+  const limit = rateLimit("reservation-request", ip, 5, 60_000);
+  if (!limit.allowed) return getRateLimitResponse();
+  const appUrl = getAppUrlFromRequest(req);
 
   const body = await req.json();
   const guestName = sanitizeString(body?.guestName, 120);
@@ -63,7 +65,7 @@ export async function POST(req: NextRequest) {
     saveLoyaltyConsent(guestPhone, loyaltyOptIn, "reservation_request").catch(console.error);
   }
   linkGuestToReservation(reservation.id).catch(console.error);
-  notifyRequestReceived(reservation).catch(console.error);
+  notifyRequestReceived(reservation, appUrl).catch(console.error);
   notifyStaffNewRequest(reservation).catch(console.error);
   notifyStaffLargeParty(reservation).catch(console.error);
   return NextResponse.json({

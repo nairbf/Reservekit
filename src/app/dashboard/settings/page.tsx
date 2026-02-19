@@ -155,10 +155,8 @@ const SETTINGS_WRITE_KEYS = new Set([
   "cancellationPolicy",
   "selfServiceCutoffHours",
   "depositEnabled",
-  "depositsEnabled",
   "depositType",
   "depositAmount",
-  "depositMinParty",
   "depositMinPartySize",
   "depositMessage",
   "specialDepositRules",
@@ -168,11 +166,8 @@ const SETTINGS_WRITE_KEYS = new Set([
   "emailSendConfirmations",
   "emailSendReminders",
   "emailSendWaitlist",
-  "emailReminderTiming",
   "reminderLeadHours",
-  "emailReplyTo",
   "replyToEmail",
-  "emailStaffNotification",
   "staffNotificationEmail",
   "staffNotificationsEnabled",
   "largePartyThreshold",
@@ -1022,6 +1017,9 @@ export default function SettingsPage() {
   const stripeSecretConfigured = Boolean((settings.stripeSecretKey || "").trim());
   const stripeConfigured = stripePublishableConfigured && stripeSecretConfigured;
   const depositsEnabled = (settings.depositEnabled || settings.depositsEnabled) === "true";
+  const replyToEmail = settings.replyToEmail || settings.emailReplyTo || settings.contactEmail || "";
+  const staffNotificationEmail = settings.staffNotificationEmail || settings.emailStaffNotification || "";
+  const reminderLeadHours = settings.reminderLeadHours || settings.emailReminderTiming || "24";
 
   if (!canManageSettings) return <AccessDenied />;
 
@@ -1286,7 +1284,6 @@ export default function SettingsPage() {
                   }
                   const value = event.target.checked ? "true" : "false";
                   setField("depositEnabled", value);
-                  setField("depositsEnabled", value);
                 }}
                 className="h-4 w-4"
               />
@@ -1311,10 +1308,7 @@ export default function SettingsPage() {
                   label="Apply at Party Size >="
                   type="number"
                   value={settings.depositMinPartySize || settings.depositMinParty || "2"}
-                  onChange={(v) => {
-                    setField("depositMinPartySize", v);
-                    setField("depositMinParty", v);
-                  }}
+                  onChange={(v) => setField("depositMinPartySize", v)}
                 />
                 <div className="sm:col-span-2">
                   <Label>Deposit Message</Label>
@@ -1365,10 +1359,10 @@ export default function SettingsPage() {
               <p>
                 Replies go to:{" "}
                 <span className="font-semibold">
-                  {settings.emailReplyTo || settings.contactEmail || "Not configured"}
+                  {replyToEmail || "Not configured"}
                 </span>
               </p>
-              {!settings.emailReplyTo && !settings.contactEmail && (
+              {!replyToEmail && (
                 <p className="text-xs text-blue-800">
                   Set a reply-to address below so guest replies go to your inbox.
                 </p>
@@ -1380,17 +1374,14 @@ export default function SettingsPage() {
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <Field
                 label="Reply-to Email"
-                value={settings.emailReplyTo || settings.contactEmail || ""}
-                onChange={(v) => setField("emailReplyTo", v)}
+                value={replyToEmail}
+                onChange={(v) => setField("replyToEmail", v)}
                 placeholder="hello@restaurant.com"
               />
               <Field
                 label="Staff Notification Email"
-                value={settings.emailStaffNotification || settings.staffNotificationEmail || ""}
-                onChange={(v) => {
-                  setField("emailStaffNotification", v);
-                  setField("staffNotificationEmail", v);
-                }}
+                value={staffNotificationEmail}
+                onChange={(v) => setField("staffNotificationEmail", v)}
                 placeholder="manager@restaurant.com"
               />
             </div>
@@ -1456,11 +1447,8 @@ export default function SettingsPage() {
             <div className="mt-4 max-w-xs">
               <Label>Reminder Timing</Label>
               <select
-                value={settings.emailReminderTiming || settings.reminderLeadHours || "24"}
-                onChange={(event) => {
-                  setField("emailReminderTiming", event.target.value);
-                  setField("reminderLeadHours", event.target.value);
-                }}
+                value={reminderLeadHours}
+                onChange={(event) => setField("reminderLeadHours", event.target.value)}
                 className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
               >
                 <option value="2">2 hours before</option>

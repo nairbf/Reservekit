@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAppUrlFromRequest } from "@/lib/app-url";
 import { createPasswordResetToken } from "@/lib/auth";
 import { sendNotification } from "@/lib/send-notification";
 import { checkPasswordResetRate, getClientIp, tooManyRequests } from "@/lib/rate-limit";
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     email: user.email,
     passwordHash: user.passwordHash,
   });
-  const appUrl = process.env.APP_URL || req.nextUrl.origin || "http://localhost:3000";
+  const appUrl = getAppUrlFromRequest(req);
   const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
 
   await sendNotification({

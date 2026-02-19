@@ -4,7 +4,11 @@ import { getStripeInstance, getStripeWebhookSecret } from "@/lib/stripe";
 export async function POST(req: NextRequest) {
   const stripe = await getStripeInstance();
   const webhookSecret = await getStripeWebhookSecret();
-  if (!stripe || !webhookSecret) return NextResponse.json({ error: "Not configured" }, { status: 400 });
+  if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
+  if (!webhookSecret) {
+    console.error("STRIPE_WEBHOOK_SECRET is not configured — rejecting webhook");
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+  }
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
   if (!sig) return NextResponse.json({ error: "Missing signature" }, { status: 400 });

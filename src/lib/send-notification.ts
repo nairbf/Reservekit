@@ -50,6 +50,7 @@ export async function sendNotification(options: SendNotificationOptions) {
           "logoUrl",
           "phone",
           "contactEmail",
+          "replyToEmail",
           "emailReplyTo",
           "address",
           "slug",
@@ -64,6 +65,7 @@ export async function sendNotification(options: SendNotificationOptions) {
 
   const settings: Record<string, string> = {};
   for (const row of settingsRows) settings[row.key] = row.value;
+  const replyToEmail = settings.replyToEmail || settings.emailReplyTo || "";
 
   if (!options.force && shouldSkipByTemplate(options.templateId, settings)) {
     console.log(`[EMAIL SKIP] Template ${options.templateId} disabled by settings.`);
@@ -77,7 +79,7 @@ export async function sendNotification(options: SendNotificationOptions) {
     ...getSampleVariables(),
     restaurantName: settings.restaurantName || "Restaurant",
     restaurantPhone: settings.phone || "",
-    restaurantEmail: settings.emailReplyTo || settings.contactEmail || "",
+    restaurantEmail: replyToEmail || settings.contactEmail || "",
     restaurantAddress: settings.address || "",
     accentColor: settings.accentColor || "#1e3a5f",
     logoUrl: settings.logoUrl || "",
@@ -92,7 +94,7 @@ export async function sendNotification(options: SendNotificationOptions) {
     to: recipient,
     subject,
     html,
-    replyTo: settings.emailReplyTo || settings.contactEmail || undefined,
+    replyTo: replyToEmail || settings.contactEmail || undefined,
     slug: settings.slug || undefined,
     reservationId: options.reservationId,
     messageType: options.messageType || options.templateId,

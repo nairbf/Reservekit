@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
-import { getSession, isMasterAdminEmail } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { getEnabledFeatures } from "@/lib/features";
+import { PermissionsProvider } from "@/hooks/use-permissions";
 import DashboardNav from "./DashboardNav";
 import SetupTourCoach from "./SetupTourCoach";
 
@@ -9,11 +10,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!session) redirect("/login");
   const features = await getEnabledFeatures();
   const isDemoEnv = (process.env.NEXT_PUBLIC_APP_URL || "").includes("demo");
+  const permissionList = Array.from(session.permissions);
+  const canAccessAdmin = session.permissions.has("manage_staff");
   return (
     <div className="min-h-screen bg-gray-50 md:flex">
       <DashboardNav
         email={session.email}
-        canAccessAdmin={isMasterAdminEmail(session.email)}
+        canAccessAdmin={canAccessAdmin}
+        permissions={permissionList}
         features={features}
       />
       <main className="flex-1 min-w-0 p-4 sm:p-6">
@@ -25,7 +29,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </a>
           </div>
         ) : null}
-        <div className="max-w-6xl mx-auto">{children}</div>
+        <div className="max-w-6xl mx-auto">
+          <PermissionsProvider permissions={permissionList}>{children}</PermissionsProvider>
+        </div>
       </main>
       <SetupTourCoach />
     </div>

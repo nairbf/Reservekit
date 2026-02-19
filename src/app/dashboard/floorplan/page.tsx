@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 interface TableItem {
   id: number;
@@ -91,6 +93,7 @@ function formatTime12(value: string): string {
 }
 
 export default function FloorPlanPage() {
+  const canManageTables = useHasPermission("manage_tables");
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<"live" | "edit">("live");
   const [tables, setTables] = useState<TableItem[]>([]);
@@ -114,6 +117,8 @@ export default function FloorPlanPage() {
   const rafRef = useRef<number | null>(null);
   const suppressClickRef = useRef(false);
   const initialLoadedRef = useRef(false);
+
+  if (!canManageTables) return <AccessDenied />;
 
   useEffect(() => { tablesRef.current = tables; }, [tables]);
 

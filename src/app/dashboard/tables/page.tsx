@@ -1,16 +1,21 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 interface TableItem { id: number; name: string; section: string | null; minCapacity: number; maxCapacity: number }
 
 export default function TablesPage() {
+  const canManageTables = useHasPermission("manage_tables");
   const searchParams = useSearchParams();
   const [tables, setTables] = useState<TableItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", section: "", minCapacity: 1, maxCapacity: 4 });
   const [loaded, setLoaded] = useState(false);
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "tables";
+
+  if (!canManageTables) return <AccessDenied />;
 
   const load = useCallback(async () => {
     setTables(await (await fetch("/api/tables")).json());

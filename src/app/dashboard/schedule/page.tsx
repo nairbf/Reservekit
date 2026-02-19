@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 type WeekdayKey = "sun" | "mon" | "tue" | "wed" | "thu" | "fri" | "sat";
 
@@ -147,6 +149,7 @@ function fmtDateLabel(date: string): string {
 }
 
 export default function SchedulePage() {
+  const canManageSchedule = useHasPermission("manage_schedule");
   const [overrides, setOverrides] = useState<Override[]>([]);
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklyScheduleForm>(createDefaultWeekly("17:00", "22:00", "40"));
   const [specialDepositRules, setSpecialDepositRules] = useState<Record<string, SpecialDepositRule>>({});
@@ -175,6 +178,8 @@ export default function SchedulePage() {
   const [lastSeatingBufferMin, setLastSeatingBufferMin] = useState("90");
   const [weeklyMessage, setWeeklyMessage] = useState("");
   const [specialMessage, setSpecialMessage] = useState("");
+
+  if (!canManageSchedule) return <AccessDenied />;
 
   async function load() {
     const [overrideRes, settingsRes] = await Promise.all([fetch("/api/day-overrides"), fetch("/api/settings")]);

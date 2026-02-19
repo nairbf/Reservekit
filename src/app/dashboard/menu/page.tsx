@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 type CategoryType = "starter" | "drink";
 
@@ -80,6 +82,7 @@ function normalizeTags(tags: string[]): string {
 const TAG_OPTIONS = ["GF", "V", "VG", "DF", "N"];
 
 export default function MenuPage() {
+  const canManageMenu = useHasPermission("manage_menu");
   const [loading, setLoading] = useState(true);
   const [licensed, setLicensed] = useState<boolean | null>(null);
   const [expressEnabled, setExpressEnabled] = useState(false);
@@ -103,6 +106,8 @@ export default function MenuPage() {
     dietaryTags: string[];
     sortOrder: string;
   }>>({});
+
+  if (!canManageMenu) return <AccessDenied />;
 
   async function load() {
     const [settingsRes, meRes, categoriesRes, menuFilesRes, posSyncRes] = await Promise.all([

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { addDaysToDateString, getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 function isIsoDate(value: string): boolean {
@@ -8,7 +8,7 @@ function isIsoDate(value: string): boolean {
 }
 
 export async function GET(req: NextRequest) {
-  try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  try { await requirePermission("view_reports"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
   const { searchParams } = new URL(req.url);
   const timezone = await getRestaurantTimezone();
   const today = getTodayInTimezone(timezone);

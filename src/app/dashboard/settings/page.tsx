@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AccessDenied from "@/components/access-denied";
 import LandingBuilder from "@/components/landing-builder";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 type SettingsTab = "restaurant" | "reservations" | "notifications" | "integrations" | "license";
 
@@ -204,6 +206,7 @@ function makeSpotOnMappingRowId() {
 }
 
 export default function SettingsPage() {
+  const canManageSettings = useHasPermission("manage_settings");
   const [activeTab, setActiveTab] = useState<SettingsTab>("restaurant");
   const [settings, setSettings] = useState<SettingsMap>({});
   const [loading, setLoading] = useState(true);
@@ -880,6 +883,8 @@ export default function SettingsPage() {
   const stripeSecretConfigured = Boolean((settings.stripeSecretKey || "").trim());
   const stripeConfigured = stripePublishableConfigured && stripeSecretConfigured;
   const depositsEnabled = (settings.depositEnabled || settings.depositsEnabled) === "true";
+
+  if (!canManageSettings) return <AccessDenied />;
 
   if (loading) {
     return (

@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 interface Guest {
   id: number;
@@ -31,11 +33,14 @@ function styleForGuest(guest: Guest) {
 }
 
 export default function GuestsPage() {
+  const canViewGuests = useHasPermission("view_guests");
   const [licenseOk, setLicenseOk] = useState<boolean | null>(null);
   const [search, setSearch] = useState("");
   const [debounced, setDebounced] = useState("");
   const [guests, setGuests] = useState<Guest[]>([]);
   const [loading, setLoading] = useState(true);
+
+  if (!canViewGuests) return <AccessDenied />;
 
   useEffect(() => {
     fetch("/api/settings")

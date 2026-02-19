@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 
 function parseId(id: string): number | null {
   const n = Number(id);
@@ -10,9 +10,9 @@ function parseId(id: string): number | null {
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    await requirePermission("manage_menu");
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const { id } = await params;
   const categoryId = parseId(id);
@@ -35,9 +35,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth();
+    await requirePermission("manage_menu");
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const { id } = await params;
   const categoryId = parseId(id);

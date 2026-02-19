@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requirePermission } from "@/lib/auth";
 import { getExpressDiningConfig } from "@/lib/preorder";
 
 export async function GET(req: NextRequest) {
@@ -57,9 +57,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth();
+    await requirePermission("manage_menu");
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = await req.json();

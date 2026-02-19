@@ -2,10 +2,24 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
+import { getUserPermissions, type PermissionKey } from "./permissions";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 const MASTER_ADMIN_EMAIL = (process.env.MASTER_ADMIN_EMAIL || "admin@restaurant.com").toLowerCase();
 const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "admin123";
+
+interface JwtPayload {
+  userId: number;
+  email: string;
+  role: string;
+}
+
+export interface Session {
+  userId: number;
+  email: string;
+  role: string;
+  permissions: Set<PermissionKey>;
+}
 
 async function ensureBootstrapAdmin() {
   const masterAdmin = await prisma.user.findUnique({ where: { email: MASTER_ADMIN_EMAIL } });
@@ -75,7 +89,25 @@ export async function getSession() {
   const token = cookieStore.get("token")?.value;
   if (!token) return null;
   try {
-    return jwt.verify(token, JWT_SECRET) as { userId: number; email: string; role: string };
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        permissions: true,
+        isActive: true,
+      },
+    });
+    if (!user || !user.isActive) return null;
+
+    return {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      permissions: getUserPermissions(user.role, user.permissions),
+    } satisfies Session;
   } catch {
     return null;
   }
@@ -90,6 +122,12 @@ export async function requireAuth() {
 export async function requireSuperAdmin() {
   const session = await requireAuth();
   if (session.role !== "superadmin") throw new Error("Forbidden");
+  return session;
+}
+
+export async function requirePermission(permission: PermissionKey) {
+  const session = await requireAuth();
+  if (!session.permissions.has(permission)) throw new Error("Forbidden");
   return session;
 }
 

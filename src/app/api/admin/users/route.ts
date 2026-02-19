@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { requireMasterAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { buildPermissionOverrides, getPermissionKeys, type PermissionKey } from "@/lib/permissions";
 
 const ALLOWED_ROLES = new Set(["superadmin", "admin", "manager", "host"]);
+const PERMISSION_KEYS = new Set(getPermissionKeys());
+
+function parseSelectedPermissions(value: unknown): PermissionKey[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => String(entry || "").trim())
+    .filter((entry): entry is PermissionKey => PERMISSION_KEYS.has(entry as PermissionKey));
+}
 
 export async function GET() {
-  try { await requireMasterAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
+  try { await requirePermission("manage_staff"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
@@ -15,6 +24,7 @@ export async function GET() {
       email: true,
       name: true,
       role: true,
+      permissions: true,
       isActive: true,
       createdAt: true,
     },
@@ -24,7 +34,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  try { await requireMasterAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
+  try { await requirePermission("manage_staff"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
   const body = await req.json();
   const name = String(body?.name || "").trim();
@@ -48,9 +58,11 @@ export async function POST(req: NextRequest) {
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
+  const selectedPermissions = parseSelectedPermissions(body?.permissions);
+  const permissionOverrides = buildPermissionOverrides(role, selectedPermissions);
   const user = await prisma.user.create({
-    data: { name, email, passwordHash, role, isActive: true },
-    select: { id: true, email: true, name: true, role: true, isActive: true, createdAt: true },
+    data: { name, email, passwordHash, role, permissions: permissionOverrides, isActive: true },
+    select: { id: true, email: true, name: true, role: true, permissions: true, isActive: true, createdAt: true },
   });
 
   return NextResponse.json(user, { status: 201 });

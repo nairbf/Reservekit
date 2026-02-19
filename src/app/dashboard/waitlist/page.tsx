@@ -1,5 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 interface WaitlistEntry {
   id: number;
@@ -38,6 +40,7 @@ function elapsedMinutes(iso: string): number {
 }
 
 export default function WaitlistPage() {
+  const canManageWaitlist = useHasPermission("manage_waitlist");
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -76,6 +79,8 @@ export default function WaitlistPage() {
 
   const waitingEntries = visibleEntries.filter(e => e.status === "waiting");
   const longestWait = waitingEntries.reduce((max, e) => Math.max(max, e.estimatedWait || 0), 0);
+
+  if (!canManageWaitlist) return <AccessDenied />;
 
   async function updateStatus(id: number, action: "notify" | "seat" | "remove" | "cancel") {
     const payload: Record<string, unknown> = { action };

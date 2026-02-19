@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 interface Reservation {
   id: number;
@@ -127,6 +129,7 @@ function escapeHtml(value: string): string {
 }
 
 export default function TonightPage() {
+  const canViewTonight = useHasPermission("tonight_view");
   const searchParams = useSearchParams();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<TableItem[]>([]);
@@ -139,6 +142,8 @@ export default function TonightPage() {
   const [today, setToday] = useState(() => dateInTimezone("America/New_York"));
   const [selectedDate, setSelectedDate] = useState(() => dateInTimezone("America/New_York"));
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "tonight";
+
+  if (!canViewTonight) return <AccessDenied />;
 
   const load = useCallback(async () => {
     const [r, t] = await Promise.all([fetch(`/api/reservations?status=all&date=${selectedDate}`), fetch("/api/tables")]);

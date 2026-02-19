@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 interface MenuItem {
   id: number;
@@ -86,6 +88,7 @@ function dateInTimezone(timezone: string, dayOffset = 0): string {
 }
 
 export default function KitchenPage() {
+  const canManageMenu = useHasPermission("manage_menu");
   const [mode, setMode] = useState<"tonight" | "tomorrow">("tonight");
   const [loading, setLoading] = useState(true);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -157,6 +160,8 @@ export default function KitchenPage() {
       drinks: Array.from(drinkCounts.entries()).sort((a, b) => b[1] - a[1]),
     };
   }, [reservations]);
+
+  if (!canManageMenu) return <AccessDenied />;
 
   if (loading) {
     return (

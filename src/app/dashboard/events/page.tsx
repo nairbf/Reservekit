@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 import ResponsiveTable from "@/components/responsive-table";
 
 type TicketStatus = "confirmed" | "checked_in" | "cancelled" | "refunded";
@@ -61,6 +63,7 @@ function ticketBadge(status: string): string {
 }
 
 export default function EventsDashboardPage() {
+  const canManageEvents = useHasPermission("manage_events");
   const [licensed, setLicensed] = useState<boolean | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -74,6 +77,8 @@ export default function EventsDashboardPage() {
   const [qrOpen, setQrOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [qrTitle, setQrTitle] = useState("");
+
+  if (!canManageEvents) return <AccessDenied />;
 
   const [createForm, setCreateForm] = useState({
     name: "",

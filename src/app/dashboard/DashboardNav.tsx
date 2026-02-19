@@ -2,21 +2,23 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { PermissionKey } from "@/lib/permissions";
 
 const NAV = [
-  { href: "/dashboard", label: "Inbox", icon: "IN" },
-  { href: "/dashboard/tonight", label: "Tonight", icon: "TN" },
-  { href: "/dashboard/kitchen", label: "Kitchen", icon: "KT" },
-  { href: "/dashboard/waitlist", label: "Waitlist", icon: "WL" },
-  { href: "/dashboard/tables", label: "Tables", icon: "TB" },
-  { href: "/dashboard/floorplan", label: "Floor Plan", icon: "FP", feature: "floorplan" },
-  { href: "/dashboard/schedule", label: "Schedule", icon: "SC" },
-  { href: "/dashboard/reports", label: "Reports", icon: "RP", feature: "reporting" },
-  { href: "/dashboard/events", label: "Events", icon: "EV", feature: "event_ticketing" },
-  { href: "/dashboard/menu", label: "Menu", icon: "MN" },
-  { href: "/dashboard/guests", label: "Guests", icon: "GS", feature: "guest_history" },
-  { href: "/dashboard/settings", label: "Settings", icon: "ST" },
+  { href: "/dashboard", label: "Inbox", icon: "IN", permission: "view_dashboard" },
+  { href: "/dashboard/tonight", label: "Tonight", icon: "TN", permission: "tonight_view" },
+  { href: "/dashboard/kitchen", label: "Kitchen", icon: "KT", permission: "manage_menu" },
+  { href: "/dashboard/waitlist", label: "Waitlist", icon: "WL", permission: "manage_waitlist" },
+  { href: "/dashboard/tables", label: "Tables", icon: "TB", permission: "manage_tables" },
+  { href: "/dashboard/floorplan", label: "Floor Plan", icon: "FP", feature: "floorplan", permission: "manage_tables" },
+  { href: "/dashboard/schedule", label: "Schedule", icon: "SC", permission: "manage_schedule" },
+  { href: "/dashboard/reports", label: "Reports", icon: "RP", feature: "reporting", permission: "view_reports" },
+  { href: "/dashboard/events", label: "Events", icon: "EV", feature: "event_ticketing", permission: "manage_events" },
+  { href: "/dashboard/menu", label: "Menu", icon: "MN", permission: "manage_menu" },
+  { href: "/dashboard/guests", label: "Guests", icon: "GS", feature: "guest_history", permission: "view_guests" },
+  { href: "/dashboard/settings", label: "Settings", icon: "ST", permission: "manage_settings" },
+  { href: "/dashboard/admin", label: "Admin", icon: "AD", permission: "manage_staff" },
 ];
 
 const SIDEBAR_STORAGE_KEY = "dashboardSidebarCollapsed";
@@ -26,10 +28,12 @@ type DashboardFeatures = Record<string, boolean>;
 export default function DashboardNav({
   email,
   canAccessAdmin,
+  permissions,
   features,
 }: {
   email: string;
   canAccessAdmin: boolean;
+  permissions: string[];
   features: DashboardFeatures;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -42,11 +46,15 @@ export default function DashboardNav({
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const filteredNav = NAV.filter((item) => {
+  const permissionSet = useMemo(() => new Set(permissions as PermissionKey[]), [permissions]);
+
+  const nav = NAV.filter((item) => {
     if (!("feature" in item) || !item.feature) return true;
     return features[item.feature as keyof DashboardFeatures] === true;
+  }).filter((item) => {
+    if (item.href === "/dashboard/admin" && !canAccessAdmin) return false;
+    return permissionSet.has(item.permission as PermissionKey);
   });
-  const nav = canAccessAdmin ? [...filteredNav, { href: "/dashboard/admin", label: "Admin", icon: "AD" }] : filteredNav;
   const inSetupPreview = searchParams.get("fromSetup") === "1";
 
   useEffect(() => {

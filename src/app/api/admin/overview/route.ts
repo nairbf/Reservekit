@@ -1,14 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireMasterAdmin } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
+import { getEnabledFeatures } from "@/lib/features";
 import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 
 export async function GET() {
-  try { await requireMasterAdmin(); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
+  try { await requirePermission("manage_staff"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
   const timezone = await getRestaurantTimezone();
   const today = getTodayInTimezone(timezone);
-  const [usersTotal, usersActive, reservationsTotal, reservationsToday, guestsTotal, tablesTotal, pendingCount, settingsCount] = await Promise.all([
+  const [
+    usersTotal,
+    usersActive,
+    reservationsTotal,
+    reservationsToday,
+    guestsTotal,
+    tablesTotal,
+    pendingCount,
+    settingsCount,
+    features,
+  ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { isActive: true } }),
     prisma.reservation.count(),
@@ -17,6 +28,7 @@ export async function GET() {
     prisma.restaurantTable.count(),
     prisma.reservation.count({ where: { status: "pending" } }),
     prisma.setting.count(),
+    getEnabledFeatures(),
   ]);
 
   const basicSettings = await prisma.setting.findMany({
@@ -42,6 +54,7 @@ export async function GET() {
       pendingCount,
       settingsCount,
     },
+    features,
     restaurant: {
       name: settings.restaurantName || "Restaurant",
       phone: settings.phone || "",

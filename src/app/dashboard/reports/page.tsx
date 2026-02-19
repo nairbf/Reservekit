@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import AccessDenied from "@/components/access-denied";
+import { useHasPermission } from "@/hooks/use-permissions";
 
 interface Stats {
   totalCovers: number;
@@ -21,8 +23,11 @@ function Card({ label, value, color }: { label: string; value: string | number; 
 }
 
 export default function ReportsPage() {
+  const canViewReports = useHasPermission("view_reports");
   const [stats, setStats] = useState<Stats | null>(null);
   const [featureEnabled, setFeatureEnabled] = useState<boolean | null>(null);
+
+  if (!canViewReports) return <AccessDenied />;
 
   useEffect(() => {
     fetch("/api/settings")

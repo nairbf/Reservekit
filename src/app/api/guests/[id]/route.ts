@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  try { await requirePermission("view_guests"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
   const { id } = await params;
   const guest = await prisma.guest.findUnique({
@@ -22,7 +22,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  try { await requirePermission("view_guests"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
   const { id } = await params;
   const body = await req.json();

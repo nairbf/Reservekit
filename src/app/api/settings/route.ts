@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requirePermission } from "@/lib/auth";
 
 function maskValue(value: string, prefixLength: number): string {
   if (!value) return value;
@@ -39,7 +39,7 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  try { await requirePermission("manage_settings"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
   const data = (await req.json()) as Record<string, string>;
   for (const [key, value] of Object.entries(data)) {
     const nextValue = String(value ?? "");

@@ -13,6 +13,7 @@ model User {
   passwordHash String
   name         String
   role         String        @default("admin")
+  permissions  String?
   isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now())
   reservations Reservation[] @relation("CreatedBy")

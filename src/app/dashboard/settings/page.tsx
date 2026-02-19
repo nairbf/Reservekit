@@ -2,13 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AccessDenied from "@/components/access-denied";
-import LandingBuilder from "@/components/landing-builder";
 import { useHasPermission } from "@/hooks/use-permissions";
+import { RestaurantTab } from "./restaurant-tab";
+import { ReservationsTab } from "./reservations-tab";
+import { NotificationsTab } from "./notifications-tab";
+import { IntegrationsTab } from "./integrations-tab";
+import { LicenseTab } from "./license-tab";
 
 type SettingsTab = "restaurant" | "reservations" | "notifications" | "integrations" | "license";
 
-type SettingsMap = Record<string, string>;
+export type SettingsMap = Record<string, string>;
 type TemplateField = "subject" | "heading" | "body" | "ctaText" | "ctaUrl" | "footerText";
+
+export interface SettingsTabProps {
+  settings: Record<string, string>;
+  setField: (key: string, value: string) => void;
+  savePartial: (fields: Record<string, string>) => Promise<void>;
+  saving: boolean;
+}
 
 interface EmailTemplate {
   id: string;
@@ -194,46 +205,6 @@ const SETTINGS_WRITE_KEYS = new Set([
   "setupWizardCompleted",
   "setupWizardCompletedAt",
 ]);
-
-function Label({ children }: { children: React.ReactNode }) {
-  return <label className="block text-sm font-medium mb-1">{children}</label>;
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  placeholder?: string;
-}) {
-  return (
-    <div>
-      <Label>{label}</Label>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-      />
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="bg-white rounded-xl shadow p-4 sm:p-6">
-      <h2 className="text-lg font-bold mb-4">{title}</h2>
-      {children}
-    </section>
-  );
-}
 
 function planBadge(plan: string) {
   if (plan === "FULL_SUITE") return "bg-amber-100 text-amber-800 border-amber-200";
@@ -1074,955 +1045,131 @@ export default function SettingsPage() {
       </div>
 
       {activeTab === "restaurant" && (
-        <LandingBuilder settings={settings} onSavePartial={savePartial} />
+        <RestaurantTab
+          settings={settings}
+          setField={setField}
+          savePartial={savePartial}
+          saving={saving}
+        />
       )}
 
       {activeTab === "reservations" && (
-        <div className="space-y-6">
-          <Section title="Booking Rules">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <Label>Restaurant Timezone</Label>
-                <select
-                  value={settings.timezone || "America/New_York"}
-                  onChange={(event) => setField("timezone", event.target.value)}
-                  className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                >
-                  {TIMEZONE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-gray-500">
-                  Current time: {currentTimeInTimezone(settings.timezone || "America/New_York", clockMs)}
-                </p>
-              </div>
-              <Field label="Default Open Time" type="time" value={settings.openTime || "17:00"} onChange={(v) => setField("openTime", v)} />
-              <Field label="Default Close Time" type="time" value={settings.closeTime || "22:00"} onChange={(v) => setField("closeTime", v)} />
-              <Field label="Slot Duration (minutes)" type="number" value={settings.slotInterval || "30"} onChange={(v) => setField("slotInterval", v)} />
-              <Field label="Max Party Size" type="number" value={settings.maxPartySize || "8"} onChange={(v) => setField("maxPartySize", v)} />
-              <Field label="Max Covers Per Slot" type="number" value={settings.maxCoversPerSlot || "40"} onChange={(v) => setField("maxCoversPerSlot", v)} />
-              <Field label="Booking Lead Time (hours)" type="number" value={settings.bookingLeadHours || "0"} onChange={(v) => setField("bookingLeadHours", v)} />
-              <Field label="Default Party Sizes" value={settings.defaultPartySizes || "2,4,6,8"} onChange={(v) => setField("defaultPartySizes", v)} />
-              <Field label="Last Seating Buffer (minutes)" type="number" value={settings.lastSeatingBufferMin || "90"} onChange={(v) => setField("lastSeatingBufferMin", v)} />
-              <Field label="Self-Service Cutoff (hours)" type="number" value={settings.selfServiceCutoffHours || "2"} onChange={(v) => setField("selfServiceCutoffHours", v)} />
-            </div>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Approval Mode</Label>
-                <select
-                  value={settings.reservationApprovalMode || "manual"}
-                  onChange={(event) => setField("reservationApprovalMode", event.target.value)}
-                  className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                >
-                  <option value="manual">Manual approval</option>
-                  <option value="auto">Auto-confirm</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <Label>Cancellation Policy</Label>
-              <textarea
-                value={settings.cancellationPolicy || ""}
-                onChange={(event) => setField("cancellationPolicy", event.target.value)}
-                rows={3}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Example: Cancellations within 2 hours may be charged."
-              />
-            </div>
-          </Section>
-
-          <Section title="Deposits & No-Show Protection">
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <h3 className="text-sm font-semibold text-gray-900">Payment Processing</h3>
-              <p className="mt-1 text-sm text-gray-600">
-                Connect your Stripe account to accept deposits and card holds from guests.
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Don&apos;t have a Stripe account? Create one at{" "}
-                <a className="text-blue-700 underline" href="https://stripe.com" target="_blank" rel="noreferrer">
-                  stripe.com
-                </a>{" "}
-                — it takes about 10 minutes.
-              </p>
-
-              {stripeOAuthMessage ? (
-                <div className={`mt-4 rounded-lg border px-3 py-2 text-sm ${stripeOAuthError ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
-                  {stripeOAuthMessage}
-                </div>
-              ) : null}
-
-              {stripeConnectedViaOauth ? (
-                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                  <div className="text-sm font-semibold text-emerald-800">✓ Connected via Stripe Connect</div>
-                  <div className="mt-1 text-xs text-emerald-700">Account: {stripeAccountId}</div>
-                  <button
-                    type="button"
-                    onClick={disconnectStripeConnect}
-                    disabled={stripeDisconnecting}
-                    className="mt-3 h-10 rounded-lg border border-emerald-300 bg-white px-3 text-sm text-emerald-800 disabled:opacity-60"
-                  >
-                    {stripeDisconnecting ? "Disconnecting..." : "Disconnect"}
-                  </button>
-                </div>
-              ) : (
-                <>
-                  {stripeConnectEnabled ? (
-                    <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3">
-                      <a
-                        href="/api/stripe/connect"
-                        className="inline-flex h-11 items-center rounded-lg bg-[#635bff] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#7a73ff]"
-                      >
-                        Connect with Stripe
-                      </a>
-                      <p className="mt-2 text-xs text-gray-500">One click to connect your Stripe account.</p>
-                    </div>
-                  ) : null}
-
-                  <div className="mt-4 text-xs uppercase tracking-wide text-gray-500">or enter keys manually</div>
-
-                  <div className="mt-3 grid gap-3">
-                    <div>
-                      <Label>Stripe Publishable Key</Label>
-                      <input
-                        type="text"
-                        value={settings.stripePublishableKey || ""}
-                        onChange={(event) => setField("stripePublishableKey", event.target.value)}
-                        placeholder="pk_live_..."
-                        className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Stripe Secret Key</Label>
-                      <div className="flex gap-2">
-                        <input
-                          type={showStripeSecretKey ? "text" : "password"}
-                          value={settings.stripeSecretKey || ""}
-                          onChange={(event) => setField("stripeSecretKey", event.target.value)}
-                          placeholder="sk_live_..."
-                          className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowStripeSecretKey((value) => !value)}
-                          className="h-11 rounded-lg border border-gray-200 px-3 text-sm"
-                        >
-                          {showStripeSecretKey ? "Hide" : "Show"}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label>Stripe Webhook Secret (optional)</Label>
-                      <input
-                        type="password"
-                        value={settings.stripeWebhookSecret || ""}
-                        onChange={(event) => setField("stripeWebhookSecret", event.target.value)}
-                        placeholder="whsec_..."
-                        className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    {!stripeConfigured ? (
-                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                        ⚠ Not configured
-                      </span>
-                    ) : stripeTestStatus === "connected" ? (
-                      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                        ✓ Connected
-                      </span>
-                    ) : stripeTestStatus === "invalid" ? (
-                      <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                        ✗ Invalid
-                      </span>
-                    ) : (
-                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                        ⚠ Not verified
-                      </span>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={testStripeConnection}
-                      disabled={stripeTestStatus === "testing"}
-                      className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
-                    >
-                      {stripeTestStatus === "testing" ? "Testing..." : "Test Connection"}
-                    </button>
-                  </div>
-
-                  {stripeTestMessage ? (
-                    <p className={`mt-2 text-sm ${stripeTestStatus === "invalid" ? "text-red-600" : "text-emerald-700"}`}>
-                      {stripeTestMessage}
-                    </p>
-                  ) : null}
-                </>
-              )}
-            </div>
-
-            {depositsEnabled && !stripeConfigured ? (
-              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                ⚠ Deposits are enabled but Stripe is not configured. Guests will not be charged.
-              </div>
-            ) : null}
-
-            <label className="mb-4 flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={depositsEnabled}
-                onChange={(event) => {
-                  if (event.target.checked && !stripeConfigured) {
-                    setStripeTestStatus("invalid");
-                    setStripeTestMessage("Configure Stripe keys before enabling deposits.");
-                    return;
-                  }
-                  const value = event.target.checked ? "true" : "false";
-                  setField("depositEnabled", value);
-                }}
-                className="h-4 w-4"
-              />
-              Enable deposits / card holds
-            </label>
-
-            {depositsEnabled && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label>Deposit Type</Label>
-                  <select
-                    value={settings.depositType || "hold"}
-                    onChange={(event) => setField("depositType", event.target.value)}
-                    className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                  >
-                    <option value="hold">Card hold (authorize only)</option>
-                    <option value="deposit">Deposit (charge now)</option>
-                  </select>
-                </div>
-                <Field label="Deposit Amount (cents)" type="number" value={settings.depositAmount || "0"} onChange={(v) => setField("depositAmount", v)} />
-                <Field
-                  label="Apply at Party Size >="
-                  type="number"
-                  value={settings.depositMinPartySize || settings.depositMinParty || "2"}
-                  onChange={(v) => setField("depositMinPartySize", v)}
-                />
-                <div className="sm:col-span-2">
-                  <Label>Deposit Message</Label>
-                  <textarea
-                    value={settings.depositMessage || ""}
-                    onChange={(event) => setField("depositMessage", event.target.value)}
-                    rows={2}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-            )}
-
-            <label className="mt-4 flex items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={settings.noshowChargeEnabled === "true"}
-                onChange={(event) => setField("noshowChargeEnabled", event.target.checked ? "true" : "false")}
-                className="h-4 w-4"
-              />
-              Charge no-shows when a card is on file
-            </label>
-
-            {settings.noshowChargeEnabled === "true" && (
-              <div className="mt-4 max-w-sm">
-                <Field
-                  label="No-Show Charge Amount (cents)"
-                  type="number"
-                  value={settings.noshowChargeAmount || settings.depositAmount || "0"}
-                  onChange={(v) => setField("noshowChargeAmount", v)}
-                />
-              </div>
-            )}
-          </Section>
-        </div>
+        <ReservationsTab
+          settings={settings}
+          setField={setField}
+          savePartial={savePartial}
+          saving={saving}
+          TIMEZONE_OPTIONS={TIMEZONE_OPTIONS}
+          currentTimeInTimezone={currentTimeInTimezone}
+          clockMs={clockMs}
+          stripeOAuthMessage={stripeOAuthMessage}
+          stripeOAuthError={stripeOAuthError}
+          stripeConnectedViaOauth={stripeConnectedViaOauth}
+          stripeAccountId={stripeAccountId}
+          disconnectStripeConnect={disconnectStripeConnect}
+          stripeDisconnecting={stripeDisconnecting}
+          stripeConnectEnabled={stripeConnectEnabled}
+          showStripeSecretKey={showStripeSecretKey}
+          setShowStripeSecretKey={setShowStripeSecretKey}
+          stripeConfigured={stripeConfigured}
+          stripeTestStatus={stripeTestStatus}
+          testStripeConnection={testStripeConnection}
+          stripeTestMessage={stripeTestMessage}
+          depositsEnabled={depositsEnabled}
+          setStripeTestStatus={setStripeTestStatus}
+          setStripeTestMessage={setStripeTestMessage}
+        />
       )}
 
       {activeTab === "notifications" && (
-        <div className="space-y-6">
-          <Section title="Email Delivery">
-            <div className="space-y-3 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-              <p>
-                Emails are sent from:{" "}
-                <span className="font-semibold">
-                  {`${settings.restaurantName || "Restaurant"} <reservations@reservesit.com>`}
-                </span>
-              </p>
-              <p>
-                Replies go to:{" "}
-                <span className="font-semibold">
-                  {replyToEmail || "Not configured"}
-                </span>
-              </p>
-              {!replyToEmail && (
-                <p className="text-xs text-blue-800">
-                  Set a reply-to address below so guest replies go to your inbox.
-                </p>
-              )}
-              <p className="text-xs text-blue-800">
-                Guests will see your restaurant name as the sender. When they reply, it goes to your reply-to email.
-              </p>
-            </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Reply-to Email"
-                value={replyToEmail}
-                onChange={(v) => setField("replyToEmail", v)}
-                placeholder="hello@restaurant.com"
-              />
-              <Field
-                label="Staff Notification Email"
-                value={staffNotificationEmail}
-                onChange={(v) => setField("staffNotificationEmail", v)}
-                placeholder="manager@restaurant.com"
-              />
-            </div>
-          </Section>
-
-          <Section title="Notification Rules">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={(settings.emailEnabled || "true") === "true"}
-                  onChange={(event) => setField("emailEnabled", event.target.checked ? "true" : "false")}
-                  className="h-4 w-4"
-                />
-                Enable email notifications
-              </label>
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={(settings.emailSendConfirmations || "true") === "true"}
-                  onChange={(event) => setField("emailSendConfirmations", event.target.checked ? "true" : "false")}
-                  className="h-4 w-4"
-                />
-                Send reservation confirmations
-              </label>
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={(settings.emailSendReminders || "true") === "true"}
-                  onChange={(event) => {
-                    const value = event.target.checked ? "true" : "false";
-                    setField("emailSendReminders", value);
-                  }}
-                  className="h-4 w-4"
-                />
-                Send reservation reminders
-              </label>
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={(settings.emailSendWaitlist || "true") === "true"}
-                  onChange={(event) => setField("emailSendWaitlist", event.target.checked ? "true" : "false")}
-                  className="h-4 w-4"
-                />
-                Send waitlist notifications
-              </label>
-              <label className="flex items-center gap-2 text-sm font-medium">
-                <input
-                  type="checkbox"
-                  checked={settings.staffNotificationsEnabled === "true"}
-                  onChange={(event) => setField("staffNotificationsEnabled", event.target.checked ? "true" : "false")}
-                  className="h-4 w-4"
-                />
-                Enable manager alert emails
-              </label>
-              <Field
-                label="Large Party Threshold"
-                type="number"
-                value={settings.largePartyThreshold || "6"}
-                onChange={(v) => setField("largePartyThreshold", v)}
-              />
-            </div>
-            <div className="mt-4 max-w-xs">
-              <Label>Reminder Timing</Label>
-              <select
-                value={reminderLeadHours}
-                onChange={(event) => setField("reminderLeadHours", event.target.value)}
-                className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-              >
-                <option value="2">2 hours before</option>
-                <option value="4">4 hours before</option>
-                <option value="24">24 hours before</option>
-              </select>
-            </div>
-          </Section>
-
-          {smsEnabled ? (
-            <Section title="SMS Delivery (Enabled by License)">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Twilio Account SID" value={settings.twilioSid || ""} onChange={(v) => setField("twilioSid", v)} />
-                <Field label="Twilio Auth Token" type="password" value={settings.twilioToken || ""} onChange={(v) => setField("twilioToken", v)} />
-                <Field label="Twilio Phone Number" value={settings.twilioPhone || ""} onChange={(v) => setField("twilioPhone", v)} placeholder="+15551234567" />
-              </div>
-            </Section>
-          ) : (
-            <Section title="SMS Delivery">
-              <p className="text-sm text-gray-600">SMS is disabled for your plan. Contact support to enable this feature.</p>
-            </Section>
-          )}
-
-          <Section title="Email Templates">
-            <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-              Use variables like <code>{"{{guestName}}"}</code>, <code>{"{{date}}"}</code>, and <code>{"{{manageUrl}}"}</code> in your template content.
-            </div>
-
-            {templateMessage.__global && <p className="mb-4 text-sm text-red-600">{templateMessage.__global}</p>}
-
-            {templateLoading ? (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                Loading templates...
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {Object.values(templates).map((template) => {
-                  const expanded = templateExpanded === template.id;
-                  return (
-                    <article key={template.id} className="rounded-xl border border-gray-200 bg-white">
-                      <button
-                        type="button"
-                        onClick={() => setTemplateExpanded(expanded ? null : template.id)}
-                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-                      >
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">{template.name}</div>
-                          <div className="text-xs text-gray-500">{template.subject}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {template.customized && (
-                            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                              Customized
-                            </span>
-                          )}
-                          <span className="text-xs text-gray-500">{expanded ? "Hide" : "Edit"}</span>
-                        </div>
-                      </button>
-
-                      {expanded && (
-                        <div className="border-t border-gray-100 px-4 py-4">
-                          <div className="grid gap-4 sm:grid-cols-2">
-                            <div className="sm:col-span-2">
-                              <Label>Subject</Label>
-                              <input
-                                data-template={template.id}
-                                data-field="subject"
-                                value={template.subject}
-                                onChange={(event) => setTemplateField(template.id, "subject", event.target.value)}
-                                className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                              />
-                            </div>
-                            <div className="sm:col-span-2">
-                              <Label>Heading</Label>
-                              <input
-                                data-template={template.id}
-                                data-field="heading"
-                                value={template.heading}
-                                onChange={(event) => setTemplateField(template.id, "heading", event.target.value)}
-                                className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                              />
-                            </div>
-                            <div className="sm:col-span-2">
-                              <Label>Body</Label>
-                              <textarea
-                                data-template={template.id}
-                                data-field="body"
-                                value={template.body}
-                                onChange={(event) => setTemplateField(template.id, "body", event.target.value)}
-                                rows={7}
-                                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                              />
-                              <div className="mt-2 flex flex-wrap gap-2">
-                                {TEMPLATE_VARIABLES.map((variable) => (
-                                  <button
-                                    key={`${template.id}-body-${variable}`}
-                                    type="button"
-                                    onClick={() => insertTemplateVariable(template.id, "body", variable)}
-                                    className="rounded-full border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-700"
-                                  >
-                                    {variable}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                            <div>
-                              <Label>CTA Text</Label>
-                              <input
-                                data-template={template.id}
-                                data-field="ctaText"
-                                value={template.ctaText}
-                                onChange={(event) => setTemplateField(template.id, "ctaText", event.target.value)}
-                                className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                              />
-                            </div>
-                            <div>
-                              <Label>CTA URL</Label>
-                              <input
-                                data-template={template.id}
-                                data-field="ctaUrl"
-                                value={template.ctaUrl}
-                                onChange={(event) => setTemplateField(template.id, "ctaUrl", event.target.value)}
-                                className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                              />
-                            </div>
-                            <div className="sm:col-span-2">
-                              <Label>Footer Text</Label>
-                              <input
-                                data-template={template.id}
-                                data-field="footerText"
-                                value={template.footerText}
-                                onChange={(event) => setTemplateField(template.id, "footerText", event.target.value)}
-                                className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="mt-4 grid gap-2 md:flex md:flex-wrap md:items-center">
-                            <button
-                              type="button"
-                              onClick={() => previewTemplate(template.id)}
-                              disabled={templateSaving === template.id}
-                              className="h-11 rounded-lg border border-gray-300 px-3 text-sm"
-                            >
-                              Preview
-                            </button>
-                            <input
-                              type="email"
-                              value={testRecipient}
-                              onChange={(event) => setTestRecipient(event.target.value)}
-                              placeholder="Enter email address"
-                              className="h-11 w-full rounded-lg border border-gray-300 px-3 text-sm md:w-64"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => sendTestTemplate(template.id)}
-                              disabled={templateTesting === template.id}
-                              className="h-11 rounded-lg border border-gray-300 px-3 text-sm"
-                            >
-                              {templateTesting === template.id ? "Sending..." : "Send Test Email"}
-                            </button>
-                            <span className="self-center text-xs text-gray-500 md:ml-1">
-                              Test will be sent to: {testRecipient || currentUserEmail || "your account email"}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => resetTemplate(template.id)}
-                              disabled={templateSaving === template.id}
-                              className="h-11 rounded-lg border border-red-200 px-3 text-sm text-red-700"
-                            >
-                              Reset to Default
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => saveTemplate(template.id)}
-                              disabled={templateSaving === template.id}
-                              className="h-11 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white disabled:opacity-70"
-                            >
-                              {templateSaving === template.id ? "Saving..." : "Save"}
-                            </button>
-                          </div>
-
-                          {templateMessage[template.id] && (
-                            <p className={`mt-3 text-sm ${templateMessage[template.id].toLowerCase().includes("failed") || templateMessage[template.id].toLowerCase().includes("could not") ? "text-red-600" : "text-green-700"}`}>
-                              {templateMessage[template.id]}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </Section>
-        </div>
+        <NotificationsTab
+          settings={settings}
+          setField={setField}
+          savePartial={savePartial}
+          saving={saving}
+          replyToEmail={replyToEmail}
+          staffNotificationEmail={staffNotificationEmail}
+          reminderLeadHours={reminderLeadHours}
+          smsEnabled={smsEnabled}
+          templates={templates}
+          templateLoading={templateLoading}
+          templateExpanded={templateExpanded}
+          setTemplateExpanded={setTemplateExpanded}
+          TEMPLATE_VARIABLES={TEMPLATE_VARIABLES}
+          insertTemplateVariable={insertTemplateVariable}
+          testRecipient={testRecipient}
+          setTestRecipient={setTestRecipient}
+          currentUserEmail={currentUserEmail}
+          templateSaving={templateSaving}
+          templateTesting={templateTesting}
+          templateMessage={templateMessage}
+          setTemplateField={setTemplateField}
+          saveTemplate={saveTemplate}
+          resetTemplate={resetTemplate}
+          previewTemplate={previewTemplate}
+          sendTestTemplate={sendTestTemplate}
+        />
       )}
 
       {activeTab === "integrations" && (
-        <div className="space-y-6">
-          <Section title="Integrations">
-            <p className="text-sm text-gray-600">
-              Connect your POS system to sync menu items, tables, and business hours. Sync is read-only.
-            </p>
-
-            {posMessage ? (
-              <div className={`mt-3 rounded-lg border px-3 py-2 text-sm ${posMessage.toLowerCase().includes("failed") || posMessage.toLowerCase().includes("error") ? "border-red-200 bg-red-50 text-red-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
-                {posMessage}
-              </div>
-            ) : null}
-
-            {posLoading || spotOnLoading ? (
-              <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                Loading integration status...
-              </div>
-            ) : (
-              <div className="mt-4 space-y-3">
-                <article className="rounded-xl border border-gray-200 bg-white p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">📍</span>
-                        <h3 className="text-base font-semibold text-gray-900">SpotOn POS</h3>
-                        {spotOnConfigured ? (
-                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                            Connected
-                          </span>
-                        ) : null}
-                      </div>
-                      <p className="mt-1 text-sm text-gray-600">
-                        Real-time table status, auto-complete reservations when checks close.
-                      </p>
-                      {spotOnConfigured ? (
-                        <p className="mt-1 text-xs text-gray-500">
-                          Last sync: {spotOnStatus.spotonLastSync ? formatDateTime(spotOnStatus.spotonLastSync) : "Never"} · {spotOnStatus.openChecks} open checks
-                        </p>
-                      ) : null}
-                      {!spotOnStatus.licensed ? (
-                        <p className="mt-1 text-xs text-amber-700">POS integration requires an active POS module license.</p>
-                      ) : null}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setSpotOnExpanded((value) => !value)}
-                        className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white"
-                      >
-                        {spotOnExpanded ? "Hide" : spotOnConfigured ? "Manage" : "Configure"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {spotOnExpanded ? (
-                    <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <Label>SpotOn API Key</Label>
-                          <input
-                            type="password"
-                            value={settings.spotonApiKey || ""}
-                            onChange={(event) => setField("spotonApiKey", event.target.value)}
-                            placeholder="Enter SpotOn API key"
-                            className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <Label>Location ID</Label>
-                          <input
-                            value={settings.spotonLocationId || ""}
-                            onChange={(event) => setField("spotonLocationId", event.target.value)}
-                            placeholder="Location ID"
-                            className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                        <input
-                          type="checkbox"
-                          checked={settings.spotonUseMock === "true"}
-                          onChange={(event) => setField("spotonUseMock", event.target.checked ? "true" : "false")}
-                          className="h-4 w-4"
-                        />
-                        Use Mock Data
-                      </label>
-
-                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
-                        <div>API Key: {maskedSpotOnApiKey}</div>
-                        <div>Location ID: {(settings.spotonLocationId || "").trim() || "Not configured"}</div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={saveSpotOnConfig}
-                          disabled={spotOnSaving}
-                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm"
-                        >
-                          {spotOnSaving ? "Saving..." : "Save"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={syncSpotOnNow}
-                          disabled={!spotOnConfigured || !spotOnStatus.licensed || spotOnSyncing}
-                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
-                        >
-                          {spotOnSyncing ? "Syncing..." : "Sync Now"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSpotOnMappingOpen((value) => !value)}
-                          disabled={!spotOnConfigured || !spotOnStatus.licensed}
-                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
-                        >
-                          {spotOnMappingOpen ? "Hide Table Mapping" : "Table Mapping"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={disconnectSpotOn}
-                          disabled={!spotOnConfigured || spotOnSaving}
-                          className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-700 disabled:opacity-60"
-                        >
-                          Disconnect
-                        </button>
-                      </div>
-
-                      {spotOnMessage ? (
-                        <p className={`text-sm ${spotOnMessage.toLowerCase().includes("failed") || spotOnMessage.toLowerCase().includes("error") ? "text-red-600" : "text-green-700"}`}>
-                          {spotOnMessage}
-                        </p>
-                      ) : null}
-
-                      {spotOnMappingOpen ? (
-                        <div className="space-y-3 rounded-lg border border-gray-200 p-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <h4 className="text-sm font-semibold text-gray-900">Table Mapping</h4>
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={autoMatchSpotOnTables}
-                                disabled={spotOnMappingBusy}
-                                className="h-9 rounded-lg border border-gray-300 px-3 text-xs"
-                              >
-                                Auto-Match
-                              </button>
-                              <button
-                                type="button"
-                                onClick={saveSpotOnMapping}
-                                disabled={spotOnMappingBusy}
-                                className="h-9 rounded-lg bg-blue-600 px-3 text-xs font-medium text-white"
-                              >
-                                Save Mapping
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2">
-                            {spotOnMappingRows.map((row) => (
-                              <div key={row.rowId} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                                <select
-                                  value={row.reservekitTableId}
-                                  onChange={(event) => {
-                                    const next = event.target.value ? Number(event.target.value) : "";
-                                    setSpotOnMappingRow(row.rowId, { reservekitTableId: next });
-                                  }}
-                                  className="h-10 rounded-lg border border-gray-200 px-3 text-sm"
-                                >
-                                  <option value="">ReserveSit Table</option>
-                                  {spotOnTables.map((table) => (
-                                    <option key={table.id} value={table.id}>
-                                      {table.name}
-                                    </option>
-                                  ))}
-                                </select>
-                                <input
-                                  value={row.spotOnTable}
-                                  onChange={(event) => setSpotOnMappingRow(row.rowId, { spotOnTable: event.target.value })}
-                                  placeholder="SpotOn table name/number"
-                                  className="h-10 rounded-lg border border-gray-200 px-3 text-sm"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeSpotOnMappingRow(row.rowId)}
-                                  className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-700"
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={addSpotOnMappingRow}
-                            className="h-9 rounded-lg border border-gray-300 px-3 text-xs"
-                          >
-                            + Add Mapping Row
-                          </button>
-
-                          {spotOnMappingMessage ? (
-                            <p className={`text-xs ${spotOnMappingMessage.toLowerCase().includes("failed") || spotOnMappingMessage.toLowerCase().includes("error") ? "text-red-600" : "text-gray-700"}`}>
-                              {spotOnMappingMessage}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </article>
-
-                {POS_PROVIDERS.map((provider) => {
-                  const connected =
-                    posStatus?.connected &&
-                    posStatus.provider === provider.key &&
-                    Boolean(posStatus.credentialsPresent?.[provider.key]);
-                  const available = Boolean(posStatus?.availability?.[provider.key]);
-                  const comingSoon = provider.key === "toast" && !available;
-
-                  return (
-                    <article key={provider.key} className="rounded-xl border border-gray-200 bg-white p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">{provider.icon}</span>
-                            <h3 className="text-base font-semibold text-gray-900">{provider.name}</h3>
-                            {connected ? (
-                              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
-                                Connected
-                              </span>
-                            ) : null}
-                          </div>
-                          <p className="mt-1 text-sm text-gray-600">{provider.description}</p>
-                          {connected ? (
-                            <p className="mt-1 text-xs text-gray-500">
-                              Location: {posStatus?.locationName || "Unknown"} · Last sync: {posStatus?.lastSync ? formatDateTime(posStatus.lastSync) : "Never"} · {posStatus?.counts.menuItems || 0} menu items
-                            </p>
-                          ) : null}
-                          {comingSoon ? (
-                            <p className="mt-1 text-xs text-amber-700">Pending Toast partner approval.</p>
-                          ) : null}
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {connected ? (
-                            <>
-                              <button
-                                type="button"
-                                onClick={() => syncPos(provider.key)}
-                                disabled={posBusy === provider.key}
-                                className="h-10 rounded-lg border border-gray-300 px-3 text-sm"
-                              >
-                                {posBusy === provider.key ? "Syncing..." : "Sync Now"}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => disconnectPos(provider.key)}
-                                disabled={posBusy === provider.key}
-                                className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-700"
-                              >
-                                Disconnect
-                              </button>
-                            </>
-                          ) : comingSoon ? (
-                            <button
-                              type="button"
-                              disabled
-                              className="h-10 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm text-amber-700"
-                            >
-                              Coming Soon
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => connectPos(provider.key)}
-                              disabled={posBusy === provider.key}
-                              className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white"
-                            >
-                              Connect
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </Section>
-        </div>
+        <IntegrationsTab
+          settings={settings}
+          setField={setField}
+          savePartial={savePartial}
+          saving={saving}
+          posMessage={posMessage}
+          posLoading={posLoading}
+          spotOnLoading={spotOnLoading}
+          spotOnConfigured={spotOnConfigured}
+          spotOnStatus={spotOnStatus}
+          spotOnExpanded={spotOnExpanded}
+          setSpotOnExpanded={setSpotOnExpanded}
+          maskedSpotOnApiKey={maskedSpotOnApiKey}
+          saveSpotOnConfig={saveSpotOnConfig}
+          spotOnSaving={spotOnSaving}
+          syncSpotOnNow={syncSpotOnNow}
+          spotOnSyncing={spotOnSyncing}
+          spotOnMappingOpen={spotOnMappingOpen}
+          setSpotOnMappingOpen={setSpotOnMappingOpen}
+          disconnectSpotOn={disconnectSpotOn}
+          spotOnMessage={spotOnMessage}
+          spotOnMappingBusy={spotOnMappingBusy}
+          autoMatchSpotOnTables={autoMatchSpotOnTables}
+          saveSpotOnMapping={saveSpotOnMapping}
+          spotOnMappingRows={spotOnMappingRows}
+          setSpotOnMappingRow={setSpotOnMappingRow}
+          spotOnTables={spotOnTables}
+          removeSpotOnMappingRow={removeSpotOnMappingRow}
+          addSpotOnMappingRow={addSpotOnMappingRow}
+          spotOnMappingMessage={spotOnMappingMessage}
+          POS_PROVIDERS={POS_PROVIDERS}
+          posStatus={posStatus}
+          posBusy={posBusy}
+          formatDateTime={formatDateTime}
+          syncPos={syncPos}
+          disconnectPos={disconnectPos}
+          connectPos={connectPos}
+        />
       )}
 
       {activeTab === "license" && (
-        <div className="space-y-6">
-          <Section title="License Information">
-            <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-              <div>
-                <Label>License Key</Label>
-                <div className="h-11 rounded-lg border border-gray-200 px-3 flex items-center text-sm font-mono">
-                  {maskedLicenseKey}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowLicenseKey((value) => !value)}
-                  className="h-11 rounded-lg border border-gray-200 px-3 text-sm"
-                >
-                  {showLicenseKey ? "Hide" : "Reveal"}
-                </button>
-                <button
-                  type="button"
-                  onClick={copyLicenseKey}
-                  className="h-11 rounded-lg border border-gray-200 px-3 text-sm"
-                >
-                  Copy
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <div className="text-xs uppercase tracking-wide text-gray-500">Plan</div>
-                <span className={`mt-1 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${planBadge(settings.license_plan || "CORE")}`}>
-                  {settings.license_plan || "CORE"}
-                </span>
-              </div>
-              <div>
-                <div className="text-xs uppercase tracking-wide text-gray-500">Status</div>
-                <span className={`mt-1 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusBadge(settings.license_status || "UNKNOWN")}`}>
-                  {settings.license_status || "UNKNOWN"}
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-4 text-sm text-gray-600">
-              Last validated: <span className="font-medium">{formatDateTime(settings.license_last_check || "")}</span>
-            </div>
-
-            <div className="mt-4">
-              <button
-                type="button"
-                onClick={validateNow}
-                disabled={licenseBusy}
-                className="h-11 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white disabled:opacity-70"
-              >
-                {licenseBusy ? "Validating..." : "Validate Now"}
-              </button>
-            </div>
-
-            {licenseMessage && (
-              <p className={`mt-3 text-sm ${licenseMessage.toLowerCase().includes("failed") || licenseMessage.toLowerCase().includes("could not") ? "text-red-600" : "text-green-700"}`}>
-                {licenseMessage}
-              </p>
-            )}
-          </Section>
-
-          <Section title="Enabled Features">
-            <div className="space-y-2">
-              {FEATURE_ROWS.map((feature) => {
-                const enabled = settings[feature.key] === "true";
-                return (
-                  <div key={feature.key} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-sm">
-                    <span>{feature.label}</span>
-                    <span className={enabled ? "text-green-700" : "text-gray-500"}>{enabled ? "✓ Enabled" : "✕ Disabled"}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="mt-4 text-xs text-gray-500">Contact support@reservesit.com to change your plan or add features.</p>
-          </Section>
-        </div>
+        <LicenseTab
+          settings={settings}
+          setField={setField}
+          savePartial={savePartial}
+          saving={saving}
+          maskedLicenseKey={maskedLicenseKey}
+          showLicenseKey={showLicenseKey}
+          setShowLicenseKey={setShowLicenseKey}
+          copyLicenseKey={copyLicenseKey}
+          planBadge={planBadge}
+          statusBadge={statusBadge}
+          formatDateTime={formatDateTime}
+          validateNow={validateNow}
+          licenseBusy={licenseBusy}
+          licenseMessage={licenseMessage}
+          FEATURE_ROWS={FEATURE_ROWS}
+        />
       )}
 
       {previewOpen && previewData && (

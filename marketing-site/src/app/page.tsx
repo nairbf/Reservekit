@@ -59,26 +59,41 @@ export default function LandingPage() {
             >
               See Pricing
             </Link>
-            <a
-              href="https://demo.reservesit.com/dashboard"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/demo"
               className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 transition-all duration-200 hover:bg-slate-100"
             >
-              Try Live Demo →
-            </a>
+              Book a Demo Call
+            </Link>
           </div>
-          <p className="mt-3 text-sm text-slate-500">
-            Or explore the guest booking experience at{" "}
+        </div>
+      </section>
+
+      <section id="demo-preview" className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6">
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6 sm:p-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-700">👀 See it in action</p>
+          <p className="mt-3 max-w-2xl text-slate-700">
+            Explore a fully working demo instance with real data. No sign-up required.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
             <a
               href="https://demo.reservesit.com/reserve/demo"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-700"
             >
-              demo.reservesit.com
+              Open Live Demo →
             </a>
-          </p>
+            <a
+              href="https://demo.reservesit.com/dashboard"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-blue-300 bg-white px-5 text-sm font-semibold text-blue-700 transition-all duration-200 hover:bg-blue-100"
+            >
+              View Dashboard →
+            </a>
+          </div>
+          <p className="mt-4 text-sm font-semibold text-blue-800">demo.reservesit.com</p>
         </div>
       </section>
 
@@ -195,12 +210,10 @@ export default function LandingPage() {
               Get Started →
             </Link>
             <a
-              href="https://demo.reservesit.com/dashboard"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#demo-preview"
               className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 transition-all duration-200 hover:bg-slate-100"
             >
-              Try Live Demo →
+              See It In Action ↓
             </a>
           </div>
         </div>

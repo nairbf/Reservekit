@@ -51,7 +51,7 @@ export async function sendEmail(options: SendEmailOptions) {
 
   const apiKey = cleanEnv("RESEND_API_KEY");
   if (!apiKey) {
-    console.log(`[EMAIL SKIP] No RESEND_API_KEY. Would send to ${formatToLog(to)}: ${options.subject}`);
+    console.warn(`[EMAIL SKIP] No RESEND_API_KEY. Would send to ${formatToLog(to)}: ${options.subject}`);
     return { success: false, error: "No API key configured" };
   }
 
@@ -94,8 +94,6 @@ export async function sendEmail(options: SendEmailOptions) {
       }
       return { success: false, error };
     }
-
-    console.log(`[EMAIL SENT] to=${formatToLog(to)} subject="${options.subject}" id=${data?.id || ""}`);
 
     if (options.messageType) {
       await prisma.notificationLog.create({

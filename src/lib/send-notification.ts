@@ -68,7 +68,7 @@ export async function sendNotification(options: SendNotificationOptions) {
   const replyToEmail = settings.replyToEmail || settings.emailReplyTo || "";
 
   if (!options.force && shouldSkipByTemplate(options.templateId, settings)) {
-    console.log(`[EMAIL SKIP] Template ${options.templateId} disabled by settings.`);
+    console.warn(`[EMAIL SKIP] Template ${options.templateId} disabled by settings.`);
     return { success: false, error: "Template disabled by settings" };
   }
 

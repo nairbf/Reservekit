@@ -84,8 +84,12 @@ export async function POST(req: NextRequest) {
     }
 
     const settings = await getSettings();
-    const restaurantPhone = (await prisma.setting.findUnique({ where: { key: "phone" } }))?.value || "";
-    const cutoffHours = Math.max(0, parseInt((await prisma.setting.findUnique({ where: { key: "selfServiceCutoffHours" } }))?.value || "2", 10) || 2);
+    const settingRows = await prisma.setting.findMany({
+      where: { key: { in: ["phone", "selfServiceCutoffHours"] } },
+    });
+    const settingMap = Object.fromEntries(settingRows.map((row) => [row.key, row.value]));
+    const restaurantPhone = settingMap.phone || "";
+    const cutoffHours = Math.max(0, parseInt(settingMap.selfServiceCutoffHours || "2", 10) || 2);
     const timezone = await getRestaurantTimezone();
     const now = new Date();
     const cutoffAt = restaurantDateTimeToUTC(reservation.date, reservation.time, timezone).getTime() - cutoffHours * 60 * 60 * 1000;

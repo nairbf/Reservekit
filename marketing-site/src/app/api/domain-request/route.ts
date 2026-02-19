@@ -50,17 +50,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Please enter a valid domain" }, { status: 400 });
   }
 
-  const payload = {
-    customerName: session.name,
-    customerEmail: session.email,
-    requestType: type,
-    domain,
-    restaurantSlug,
-    requestedAt: new Date().toISOString(),
-  };
-
-  console.log("[domain-request]", payload);
-
   if (!process.env.RESEND_API_KEY) {
     console.warn("[domain-request] RESEND_API_KEY is not configured; email notification skipped.");
     return NextResponse.json({

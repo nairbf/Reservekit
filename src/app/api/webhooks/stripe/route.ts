@@ -19,8 +19,7 @@ export async function POST(req: NextRequest) {
   try {
     const event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      console.log(`[PURCHASE] ${session.customer_email} bought: ${session.metadata?.products}`);
+      // Purchase processing is handled in marketing-site.
     }
   } catch { return NextResponse.json({ error: "Invalid signature" }, { status: 400 }); }
   return NextResponse.json({ received: true });

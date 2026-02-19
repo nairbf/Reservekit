@@ -43,14 +43,6 @@ export async function POST(request: NextRequest) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
-      console.log("[STRIPE] Checkout completed", {
-        email: session.customer_email,
-        plan: session.metadata?.plan,
-        addons: session.metadata?.addons,
-        hosting: session.metadata?.hosting,
-        restaurantName: session.metadata?.restaurantName,
-        amountTotal: session.amount_total,
-      });
 
       if (session.customer_email && session.metadata?.plan) {
         try {
@@ -88,26 +80,15 @@ export async function POST(request: NextRequest) {
     }
 
     case "invoice.payment_succeeded": {
-      const invoice = event.data.object as Stripe.Invoice;
-      console.log("[STRIPE] Invoice paid", {
-        email: invoice.customer_email,
-        amount: invoice.amount_paid,
-        id: invoice.id,
-      });
       break;
     }
 
     case "customer.subscription.deleted": {
-      const subscription = event.data.object as Stripe.Subscription;
-      console.log("[STRIPE] Subscription cancelled", {
-        id: subscription.id,
-        metadata: subscription.metadata,
-      });
       break;
     }
 
     default:
-      console.log("[STRIPE] Unhandled event:", event.type);
+      break;
   }
 
   return NextResponse.json({ received: true });

@@ -119,6 +119,13 @@ export function getPermissionKeys(): PermissionKey[] {
   return [...ALL_KEYS];
 }
 
+/**
+ * PATH_PERMISSIONS and API_PERMISSIONS are reference maps documenting
+ * which permission is required for each route. Permission enforcement
+ * is handled at the individual route/page level using requirePermission().
+ * These maps serve as documentation and can be used for centralized
+ * enforcement in the future.
+ */
 export const PATH_PERMISSIONS: Record<string, PermissionKey> = {
   "/dashboard": "view_dashboard",
   "/dashboard/tonight": "tonight_view",

@@ -44,7 +44,7 @@ function withSecurityHeaders(response: NextResponse) {
   return response;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const token = req.cookies.get("token")?.value;
   const pathname = req.nextUrl.pathname;
   const host = req.headers.get("host") || "";

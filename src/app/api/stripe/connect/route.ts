@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { getAppUrlFromRequest } from "@/lib/app-url";
 import { prisma } from "@/lib/db";
 
@@ -8,9 +8,9 @@ export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth();
+    await requirePermission("manage_billing");
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const clientId = process.env.STRIPE_CONNECT_CLIENT_ID;

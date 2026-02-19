@@ -5,8 +5,21 @@ import { prisma } from "./db";
 import { getUserPermissions, type PermissionKey } from "./permissions";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
-const MASTER_ADMIN_EMAIL = (process.env.MASTER_ADMIN_EMAIL || "admin@restaurant.com").toLowerCase();
+const MASTER_ADMIN_EMAIL_ENV = (process.env.MASTER_ADMIN_EMAIL || "").trim();
+const MASTER_ADMIN_EMAIL = (MASTER_ADMIN_EMAIL_ENV || "admin@restaurant.com").toLowerCase();
 const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || "admin123";
+
+if (process.env.NODE_ENV === "production") {
+  if (JWT_SECRET === "dev-secret-change-me") {
+    console.error("WARNING: Using default JWT_SECRET in production. Set JWT_SECRET.");
+  }
+  if (DEFAULT_ADMIN_PASSWORD === "admin123") {
+    console.error("WARNING: Using default admin password in production. Set DEFAULT_ADMIN_PASSWORD.");
+  }
+  if (!MASTER_ADMIN_EMAIL_ENV) {
+    console.error("WARNING: MASTER_ADMIN_EMAIL is not set in production. Bootstrap admin creation is disabled.");
+  }
+}
 
 interface JwtPayload {
   userId: number;
@@ -22,6 +35,10 @@ export interface Session {
 }
 
 async function ensureBootstrapAdmin() {
+  if (process.env.NODE_ENV === "production" && !MASTER_ADMIN_EMAIL_ENV) {
+    return;
+  }
+
   const masterAdmin = await prisma.user.findUnique({ where: { email: MASTER_ADMIN_EMAIL } });
   if (masterAdmin) {
     if (masterAdmin.role !== "superadmin" || !masterAdmin.isActive) {

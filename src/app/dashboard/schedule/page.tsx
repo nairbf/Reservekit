@@ -182,7 +182,7 @@ export default function SchedulePage() {
   if (!canManageSchedule) return <AccessDenied />;
 
   async function load() {
-    const [overrideRes, settingsRes] = await Promise.all([fetch("/api/day-overrides"), fetch("/api/settings")]);
+    const [overrideRes, settingsRes] = await Promise.all([fetch("/api/day-overrides"), fetch("/api/settings/public")]);
     const [overrideData, settings] = await Promise.all([overrideRes.json(), settingsRes.json()]);
     const openTime = settings.openTime || "17:00";
     const closeTime = settings.closeTime || "22:00";

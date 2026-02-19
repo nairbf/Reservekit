@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import {
   getAvailableProviders,
@@ -107,9 +107,9 @@ async function saveSettings(data: Record<string, string>) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAuth();
+    await requirePermission("manage_integrations");
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = (await req.json().catch(() => ({}))) as { provider?: string };
@@ -168,9 +168,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   try {
-    await requireAuth();
+    await requirePermission("manage_integrations");
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const settings = await loadSettingMap();
@@ -212,9 +212,9 @@ export async function GET() {
 
 export async function DELETE(req: NextRequest) {
   try {
-    await requireAuth();
+    await requirePermission("manage_integrations");
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = (await req.json().catch(() => ({}))) as { provider?: string };

@@ -111,7 +111,7 @@ export default function MenuPage() {
 
   async function load() {
     const [settingsRes, meRes, categoriesRes, menuFilesRes, posSyncRes] = await Promise.all([
-      fetch("/api/settings"),
+      fetch("/api/settings/public"),
       fetch("/api/auth/me").catch(() => null),
       fetch("/api/menu/categories"),
       fetch("/api/menu/upload"),

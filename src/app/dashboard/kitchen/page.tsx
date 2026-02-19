@@ -110,7 +110,7 @@ export default function KitchenPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/settings").then(r => r.json()),
+      fetch("/api/settings/public").then(r => r.json()),
       fetch("/api/auth/me").then(r => (r.ok ? r.json() : null)).catch(() => null),
     ])
       .then(([settings, me]) => {

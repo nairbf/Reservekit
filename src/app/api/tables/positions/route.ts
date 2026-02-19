@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 
 export async function PUT(req: NextRequest) {
-  try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  try { await requirePermission("manage_tables"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
   const body = await req.json();
   const tables = Array.isArray(body?.tables) ? body.tables : null;
   if (!tables) return NextResponse.json({ error: "Invalid payload" }, { status: 400 });

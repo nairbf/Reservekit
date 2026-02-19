@@ -75,7 +75,7 @@ export default function DashboardNav({
   }, []);
 
   useEffect(() => {
-    fetch("/api/settings")
+    fetch("/api/settings/public")
       .then(r => r.json())
       .then(s => {
         if (s.restaurantName) setRestaurantName(s.restaurantName);

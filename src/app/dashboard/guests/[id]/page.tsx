@@ -50,7 +50,7 @@ export default function GuestDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/settings")
+    fetch("/api/settings/public")
       .then(r => r.json())
       .then((s) => {
         setLicenseOk(s.feature_guest_history === "true");

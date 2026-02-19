@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { getAppUrlFromRequest } from "@/lib/app-url";
 import { prisma } from "@/lib/db";
 import { getPosAdapter, getAvailableProviders, isPosProvider, type PosProvider } from "@/lib/pos";
@@ -21,9 +21,9 @@ function providerIsAvailable(provider: PosProvider) {
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
   try {
-    await requireAuth();
+    await requirePermission("manage_integrations");
   } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { provider: providerRaw } = await params;

@@ -115,7 +115,7 @@ export default function EventsDashboardPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/settings").then(r => r.json()),
+      fetch("/api/settings/public").then(r => r.json()),
       loadEvents(),
     ])
       .then(([settings]) => {

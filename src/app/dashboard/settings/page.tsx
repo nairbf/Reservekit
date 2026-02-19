@@ -127,6 +127,79 @@ const POS_PROVIDERS: Array<{
   { key: "clover", name: "Clover", icon: "🍀", description: "Sync menu, tables, and hours from Clover." },
 ];
 
+const SETTINGS_WRITE_KEYS = new Set([
+  "restaurantName",
+  "slug",
+  "tagline",
+  "description",
+  "accentColor",
+  "logoUrl",
+  "heroImageUrl",
+  "faviconUrl",
+  "phone",
+  "address",
+  "contactEmail",
+  "landing_sections",
+  "timezone",
+  "openTime",
+  "closeTime",
+  "slotInterval",
+  "lastSeatingBufferMin",
+  "maxCoversPerSlot",
+  "maxPartySize",
+  "diningDurations",
+  "weeklySchedule",
+  "bookingLeadHours",
+  "defaultPartySizes",
+  "reservationApprovalMode",
+  "cancellationPolicy",
+  "selfServiceCutoffHours",
+  "depositEnabled",
+  "depositsEnabled",
+  "depositType",
+  "depositAmount",
+  "depositMinParty",
+  "depositMinPartySize",
+  "depositMessage",
+  "specialDepositRules",
+  "noshowChargeEnabled",
+  "noshowChargeAmount",
+  "emailEnabled",
+  "emailSendConfirmations",
+  "emailSendReminders",
+  "emailSendWaitlist",
+  "emailReminderTiming",
+  "reminderLeadHours",
+  "emailReplyTo",
+  "replyToEmail",
+  "emailStaffNotification",
+  "staffNotificationEmail",
+  "staffNotificationsEnabled",
+  "largePartyThreshold",
+  "twilioSid",
+  "twilioToken",
+  "twilioPhone",
+  "loyaltyOptInEnabled",
+  "loyaltyProgramName",
+  "loyaltyOptInMessage",
+  "loyaltyOptInLabel",
+  "expressDiningEnabled",
+  "expressDiningMode",
+  "expressDiningPayment",
+  "expressDiningCutoffHours",
+  "expressDiningMessage",
+  "spotonApiKey",
+  "spotonLocationId",
+  "spotonEnvironment",
+  "spotonUseMock",
+  "reserveHeading",
+  "reserveSubheading",
+  "reserveConfirmationMessage",
+  "setupWizardStep",
+  "setupWizardCompleted",
+  "setupWizardCompletedAt",
+]);
+
 function Label({ children }: { children: React.ReactNode }) {
   return <label className="block text-sm font-medium mb-1">{children}</label>;
 }
@@ -212,6 +285,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [licenseBusy, setLicenseBusy] = useState(false);
   const [licenseMessage, setLicenseMessage] = useState("");
   const [showLicenseKey, setShowLicenseKey] = useState(false);
@@ -340,29 +414,51 @@ export default function SettingsPage() {
 
   async function saveChanges() {
     setSaving(true);
+    setSaveError("");
     try {
-      const payload = { ...settings };
-      delete payload.stripeConnectEnabled;
-      await fetch("/api/settings", {
+      const payload: Record<string, string> = {};
+      for (const [key, value] of Object.entries(settings)) {
+        if (!SETTINGS_WRITE_KEYS.has(key)) continue;
+        payload[key] = String(value ?? "");
+      }
+
+      const response = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || "Failed to save settings.");
+      }
       await loadSettings();
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1800);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Failed to save settings.");
     } finally {
       setSaving(false);
     }
   }
 
   async function savePartial(patch: Record<string, string>) {
-    await fetch("/api/settings", {
+    const filtered = Object.fromEntries(
+      Object.entries(patch)
+        .filter(([key]) => SETTINGS_WRITE_KEYS.has(key))
+        .map(([key, value]) => [key, String(value ?? "")]),
+    ) as Record<string, string>;
+    if (Object.keys(filtered).length === 0) return;
+
+    const response = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
+      body: JSON.stringify(filtered),
     });
-    setSettings((previous) => ({ ...previous, ...patch }));
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(data.error || "Failed to save settings.");
+    }
+    setSettings((previous) => ({ ...previous, ...filtered }));
   }
 
   async function loadTemplates() {
@@ -955,6 +1051,10 @@ export default function SettingsPage() {
           </button>
         )}
       </div>
+
+      {saveError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{saveError}</div>
+      ) : null}
 
       <div className="-mx-4 px-4 sm:mx-0 sm:px-0">
         <div className="flex flex-wrap gap-2">

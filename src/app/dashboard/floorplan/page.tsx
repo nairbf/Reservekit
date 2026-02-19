@@ -123,7 +123,7 @@ export default function FloorPlanPage() {
   useEffect(() => { tablesRef.current = tables; }, [tables]);
 
   useEffect(() => {
-    fetch("/api/settings")
+    fetch("/api/settings/public")
       .then(r => r.json())
       .then((s) => {
         setLicenseOk(s.feature_floorplan === "true");

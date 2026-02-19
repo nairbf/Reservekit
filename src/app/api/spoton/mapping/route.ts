@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requirePermission } from "@/lib/auth";
 import { isModuleActive } from "@/lib/license";
 import { autoMatchTables } from "@/lib/spoton";
 
@@ -38,7 +38,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  try { await requirePermission("manage_integrations"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
   const licenseError = await ensureLicensed();
   if (licenseError) return licenseError;
 
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  try { await requirePermission("manage_integrations"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
   const licenseError = await ensureLicensed();
   if (licenseError) return licenseError;
 

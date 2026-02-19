@@ -30,7 +30,7 @@ export default function ReportsPage() {
   if (!canViewReports) return <AccessDenied />;
 
   useEffect(() => {
-    fetch("/api/settings")
+    fetch("/api/settings/public")
       .then(r => r.json())
       .then(data => {
         const enabled = data.feature_reporting === "true";

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requirePermission } from "@/lib/auth";
 import { isModuleActive } from "@/lib/license";
 import { updateGuestStats } from "@/lib/guest";
 import { extractChecksFromOrders, getTableMapping, syncSpotOn, type SpotOnSyncResult, type SpotOnTableStatus } from "@/lib/spoton";
@@ -212,7 +212,7 @@ async function ensureLicensed() {
 }
 
 export async function POST(req: NextRequest) {
-  try { await requireAuth(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  try { await requirePermission("manage_integrations"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
 
   const licenseError = await ensureLicensed();
   if (licenseError) return licenseError;

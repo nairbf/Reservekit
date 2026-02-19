@@ -197,7 +197,7 @@ export default function TonightPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/settings")
+    fetch("/api/settings/public")
       .then((response) => response.json())
       .then((settings) => {
         if (cancelled) return;

@@ -192,7 +192,7 @@ export default function SetupWizardPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/settings").then(r => r.json()),
+      fetch("/api/settings/public").then(r => r.json()),
       fetch("/api/tables").then(r => r.json()),
     ])
       .then(([loadedSettings, loadedTables]) => {

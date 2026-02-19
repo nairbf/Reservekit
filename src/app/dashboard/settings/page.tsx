@@ -37,6 +37,24 @@ interface PosSyncStatus {
   availability: Record<PosProvider, boolean>;
 }
 
+interface SpotOnStatus {
+  licensed: boolean;
+  configured: boolean;
+  spotonLastSync: string | null;
+  openChecks: number;
+}
+
+interface SpotOnTableItem {
+  id: number;
+  name: string;
+}
+
+interface SpotOnMappingRow {
+  rowId: string;
+  reservekitTableId: number | "";
+  spotOnTable: string;
+}
+
 const TEMPLATE_VARIABLES = [
   "{{restaurantName}}",
   "{{restaurantPhone}}",
@@ -181,6 +199,10 @@ function currentTimeInTimezone(timezone: string, nowMs: number): string {
   }
 }
 
+function makeSpotOnMappingRowId() {
+  return `spoton-map-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("restaurant");
   const [settings, setSettings] = useState<SettingsMap>({});
@@ -203,6 +225,24 @@ export default function SettingsPage() {
   const [posLoading, setPosLoading] = useState(false);
   const [posBusy, setPosBusy] = useState<PosProvider | null>(null);
   const [posMessage, setPosMessage] = useState("");
+  const [spotOnStatus, setSpotOnStatus] = useState<SpotOnStatus>({
+    licensed: true,
+    configured: false,
+    spotonLastSync: null,
+    openChecks: 0,
+  });
+  const [spotOnExpanded, setSpotOnExpanded] = useState(false);
+  const [spotOnLoading, setSpotOnLoading] = useState(false);
+  const [spotOnMessage, setSpotOnMessage] = useState("");
+  const [spotOnSyncing, setSpotOnSyncing] = useState(false);
+  const [spotOnSaving, setSpotOnSaving] = useState(false);
+  const [spotOnMappingOpen, setSpotOnMappingOpen] = useState(false);
+  const [spotOnMappingBusy, setSpotOnMappingBusy] = useState(false);
+  const [spotOnMappingMessage, setSpotOnMappingMessage] = useState("");
+  const [spotOnTables, setSpotOnTables] = useState<SpotOnTableItem[]>([]);
+  const [spotOnMappingRows, setSpotOnMappingRows] = useState<SpotOnMappingRow[]>([
+    { rowId: makeSpotOnMappingRowId(), reservekitTableId: "", spotOnTable: "" },
+  ]);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [testRecipient, setTestRecipient] = useState("");
   const [clockMs, setClockMs] = useState(() => Date.now());
@@ -257,6 +297,8 @@ export default function SettingsPage() {
   useEffect(() => {
     if (activeTab !== "integrations") return;
     loadPosStatus().catch(() => undefined);
+    loadSpotOnStatus().catch(() => undefined);
+    loadSpotOnMapping().catch(() => undefined);
   }, [activeTab]);
 
   useEffect(() => {
@@ -325,6 +367,214 @@ export default function SettingsPage() {
       setPosMessage(error instanceof Error ? error.message : "Could not load integrations.");
     } finally {
       setPosLoading(false);
+    }
+  }
+
+  async function loadSpotOnStatus() {
+    setSpotOnLoading(true);
+    try {
+      const response = await fetch("/api/spoton/sync");
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        licensed?: boolean;
+        configured?: boolean;
+        spotonLastSync?: string | null;
+        openChecks?: number;
+      };
+
+      if (!response.ok) {
+        setSpotOnStatus((previous) => ({
+          ...previous,
+          licensed: data.licensed !== false,
+          configured: Boolean((settings.spotonApiKey || "").trim() && (settings.spotonLocationId || "").trim()),
+          spotonLastSync: data.spotonLastSync || previous.spotonLastSync,
+          openChecks: Number(data.openChecks || 0),
+        }));
+        if (data.error) setSpotOnMessage(data.error);
+        return;
+      }
+
+      setSpotOnStatus({
+        licensed: data.licensed !== false,
+        configured: Boolean(data.configured),
+        spotonLastSync: data.spotonLastSync || null,
+        openChecks: Number(data.openChecks || 0),
+      });
+    } catch (error) {
+      setSpotOnMessage(error instanceof Error ? error.message : "Could not load SpotOn status.");
+    } finally {
+      setSpotOnLoading(false);
+    }
+  }
+
+  async function loadSpotOnMapping() {
+    try {
+      const response = await fetch("/api/spoton/mapping");
+      if (!response.ok) return;
+      const data = (await response.json().catch(() => ({}))) as {
+        tables?: SpotOnTableItem[];
+        mappings?: Array<{ reservekitTableId: number; spotOnTable: string }>;
+      };
+      setSpotOnTables(Array.isArray(data.tables) ? data.tables : []);
+      if (Array.isArray(data.mappings) && data.mappings.length > 0) {
+        setSpotOnMappingRows(
+          data.mappings.map((row) => ({
+            rowId: makeSpotOnMappingRowId(),
+            reservekitTableId: row.reservekitTableId,
+            spotOnTable: row.spotOnTable || "",
+          })),
+        );
+      } else {
+        setSpotOnMappingRows([{ rowId: makeSpotOnMappingRowId(), reservekitTableId: "", spotOnTable: "" }]);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function saveSpotOnConfig() {
+    setSpotOnSaving(true);
+    setSpotOnMessage("");
+    try {
+      const patch = {
+        spotonApiKey: (settings.spotonApiKey || "").trim(),
+        spotonLocationId: (settings.spotonLocationId || "").trim(),
+        spotonUseMock: settings.spotonUseMock === "true" ? "true" : "false",
+      };
+      await savePartial(patch);
+      setSpotOnMessage("SpotOn settings saved.");
+      await loadSpotOnStatus();
+    } catch (error) {
+      setSpotOnMessage(error instanceof Error ? error.message : "Failed to save SpotOn settings.");
+    } finally {
+      setSpotOnSaving(false);
+    }
+  }
+
+  async function syncSpotOnNow() {
+    setSpotOnSyncing(true);
+    setSpotOnMessage("");
+    try {
+      const response = await fetch("/api/spoton/sync", { method: "POST" });
+      const data = (await response.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+        timestamp?: string;
+        openChecks?: number | unknown[];
+      };
+      if (!response.ok || !data.success) throw new Error(data.error || "SpotOn sync failed.");
+      const openChecksCount = Array.isArray(data.openChecks) ? data.openChecks.length : Number(data.openChecks || 0);
+      setSpotOnStatus((previous) => ({
+        ...previous,
+        configured: true,
+        spotonLastSync: data.timestamp || new Date().toISOString(),
+        openChecks: openChecksCount,
+      }));
+      setSpotOnMessage(`Sync complete. ${openChecksCount} open checks.`);
+    } catch (error) {
+      setSpotOnMessage(error instanceof Error ? error.message : "SpotOn sync failed.");
+    } finally {
+      setSpotOnSyncing(false);
+    }
+  }
+
+  async function disconnectSpotOn() {
+    if (!confirm("Disconnect SpotOn?")) return;
+    setSpotOnSaving(true);
+    setSpotOnMessage("");
+    try {
+      await savePartial({
+        spotonApiKey: "",
+        spotonLocationId: "",
+        spotonUseMock: "false",
+      });
+      setSpotOnStatus({
+        licensed: spotOnStatus.licensed,
+        configured: false,
+        spotonLastSync: null,
+        openChecks: 0,
+      });
+      setSpotOnExpanded(false);
+      setSpotOnMappingOpen(false);
+      setSpotOnMessage("SpotOn disconnected.");
+    } catch (error) {
+      setSpotOnMessage(error instanceof Error ? error.message : "Failed to disconnect SpotOn.");
+    } finally {
+      setSpotOnSaving(false);
+    }
+  }
+
+  function setSpotOnMappingRow(rowId: string, patch: Partial<SpotOnMappingRow>) {
+    setSpotOnMappingRows((rows) => rows.map((row) => (row.rowId === rowId ? { ...row, ...patch } : row)));
+  }
+
+  function addSpotOnMappingRow() {
+    setSpotOnMappingRows((rows) => [...rows, { rowId: makeSpotOnMappingRowId(), reservekitTableId: "", spotOnTable: "" }]);
+  }
+
+  function removeSpotOnMappingRow(rowId: string) {
+    setSpotOnMappingRows((rows) => {
+      const next = rows.filter((row) => row.rowId !== rowId);
+      return next.length > 0 ? next : [{ rowId: makeSpotOnMappingRowId(), reservekitTableId: "", spotOnTable: "" }];
+    });
+  }
+
+  async function autoMatchSpotOnTables() {
+    setSpotOnMappingBusy(true);
+    setSpotOnMappingMessage("");
+    try {
+      const response = await fetch("/api/spoton/mapping", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "auto" }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        count?: number;
+        matches?: Array<{ reservekitTableId: number; spotOnTable: string }>;
+      };
+      if (!response.ok) throw new Error(data.error || "Auto-match failed.");
+      const matches = Array.isArray(data.matches) ? data.matches : [];
+      setSpotOnMappingRows(
+        matches.length > 0
+          ? matches.map((row) => ({
+              rowId: makeSpotOnMappingRowId(),
+              reservekitTableId: row.reservekitTableId,
+              spotOnTable: row.spotOnTable || "",
+            }))
+          : [{ rowId: makeSpotOnMappingRowId(), reservekitTableId: "", spotOnTable: "" }],
+      );
+      setSpotOnMappingMessage(`Auto-matched ${Number(data.count || matches.length)} table(s).`);
+    } catch (error) {
+      setSpotOnMappingMessage(error instanceof Error ? error.message : "Auto-match failed.");
+    } finally {
+      setSpotOnMappingBusy(false);
+    }
+  }
+
+  async function saveSpotOnMapping() {
+    setSpotOnMappingBusy(true);
+    setSpotOnMappingMessage("");
+    try {
+      const mappings = spotOnMappingRows
+        .filter((row) => row.reservekitTableId !== "" && row.spotOnTable.trim())
+        .map((row) => ({
+          reservekitTableId: Number(row.reservekitTableId),
+          spotOnTable: row.spotOnTable.trim(),
+        }));
+      const response = await fetch("/api/spoton/mapping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mappings }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { error?: string; saved?: number };
+      if (!response.ok) throw new Error(data.error || "Failed to save mapping.");
+      setSpotOnMappingMessage(`Saved ${Number(data.saved || mappings.length)} mapping(s).`);
+      await loadSpotOnStatus();
+    } catch (error) {
+      setSpotOnMappingMessage(error instanceof Error ? error.message : "Failed to save mapping.");
+    } finally {
+      setSpotOnMappingBusy(false);
     }
   }
 
@@ -574,6 +824,14 @@ export default function SettingsPage() {
     if (raw.length <= 8) return "••••••••";
     return `${raw.slice(0, 4)}••••••••${raw.slice(-4)}`;
   }, [settings.license_key, showLicenseKey]);
+
+  const spotOnConfigured = Boolean((settings.spotonApiKey || "").trim() && (settings.spotonLocationId || "").trim());
+  const maskedSpotOnApiKey = useMemo(() => {
+    const raw = (settings.spotonApiKey || "").trim();
+    if (!raw) return "Not configured";
+    if (raw.length <= 8) return "••••••••";
+    return `${raw.slice(0, 2)}••••••${raw.slice(-2)}`;
+  }, [settings.spotonApiKey]);
 
   if (loading) {
     return (
@@ -1078,13 +1336,207 @@ export default function SettingsPage() {
               </div>
             ) : null}
 
-            {posLoading ? (
+            {posLoading || spotOnLoading ? (
               <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
                 Loading integration status...
               </div>
             ) : (
               <div className="mt-4 space-y-3">
+                <article className="rounded-xl border border-gray-200 bg-white p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">📍</span>
+                        <h3 className="text-base font-semibold text-gray-900">SpotOn POS</h3>
+                        {spotOnConfigured ? (
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                            Connected
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Real-time table status, auto-complete reservations when checks close.
+                      </p>
+                      {spotOnConfigured ? (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Last sync: {spotOnStatus.spotonLastSync ? formatDateTime(spotOnStatus.spotonLastSync) : "Never"} · {spotOnStatus.openChecks} open checks
+                        </p>
+                      ) : null}
+                      {!spotOnStatus.licensed ? (
+                        <p className="mt-1 text-xs text-amber-700">POS integration requires an active POS module license.</p>
+                      ) : null}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSpotOnExpanded((value) => !value)}
+                        className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white"
+                      >
+                        {spotOnExpanded ? "Hide" : spotOnConfigured ? "Manage" : "Configure"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {spotOnExpanded ? (
+                    <div className="mt-4 space-y-4 border-t border-gray-100 pt-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <Label>SpotOn API Key</Label>
+                          <input
+                            type="password"
+                            value={settings.spotonApiKey || ""}
+                            onChange={(event) => setField("spotonApiKey", event.target.value)}
+                            placeholder="Enter SpotOn API key"
+                            className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <Label>Location ID</Label>
+                          <input
+                            value={settings.spotonLocationId || ""}
+                            onChange={(event) => setField("spotonLocationId", event.target.value)}
+                            placeholder="Location ID"
+                            className="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={settings.spotonUseMock === "true"}
+                          onChange={(event) => setField("spotonUseMock", event.target.checked ? "true" : "false")}
+                          className="h-4 w-4"
+                        />
+                        Use Mock Data
+                      </label>
+
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        <div>API Key: {maskedSpotOnApiKey}</div>
+                        <div>Location ID: {(settings.spotonLocationId || "").trim() || "Not configured"}</div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={saveSpotOnConfig}
+                          disabled={spotOnSaving}
+                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm"
+                        >
+                          {spotOnSaving ? "Saving..." : "Save"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={syncSpotOnNow}
+                          disabled={!spotOnConfigured || !spotOnStatus.licensed || spotOnSyncing}
+                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
+                        >
+                          {spotOnSyncing ? "Syncing..." : "Sync Now"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSpotOnMappingOpen((value) => !value)}
+                          disabled={!spotOnConfigured || !spotOnStatus.licensed}
+                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
+                        >
+                          {spotOnMappingOpen ? "Hide Table Mapping" : "Table Mapping"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={disconnectSpotOn}
+                          disabled={!spotOnConfigured || spotOnSaving}
+                          className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-700 disabled:opacity-60"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+
+                      {spotOnMessage ? (
+                        <p className={`text-sm ${spotOnMessage.toLowerCase().includes("failed") || spotOnMessage.toLowerCase().includes("error") ? "text-red-600" : "text-green-700"}`}>
+                          {spotOnMessage}
+                        </p>
+                      ) : null}
+
+                      {spotOnMappingOpen ? (
+                        <div className="space-y-3 rounded-lg border border-gray-200 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <h4 className="text-sm font-semibold text-gray-900">Table Mapping</h4>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={autoMatchSpotOnTables}
+                                disabled={spotOnMappingBusy}
+                                className="h-9 rounded-lg border border-gray-300 px-3 text-xs"
+                              >
+                                Auto-Match
+                              </button>
+                              <button
+                                type="button"
+                                onClick={saveSpotOnMapping}
+                                disabled={spotOnMappingBusy}
+                                className="h-9 rounded-lg bg-blue-600 px-3 text-xs font-medium text-white"
+                              >
+                                Save Mapping
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            {spotOnMappingRows.map((row) => (
+                              <div key={row.rowId} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                                <select
+                                  value={row.reservekitTableId}
+                                  onChange={(event) => {
+                                    const next = event.target.value ? Number(event.target.value) : "";
+                                    setSpotOnMappingRow(row.rowId, { reservekitTableId: next });
+                                  }}
+                                  className="h-10 rounded-lg border border-gray-200 px-3 text-sm"
+                                >
+                                  <option value="">ReserveSit Table</option>
+                                  {spotOnTables.map((table) => (
+                                    <option key={table.id} value={table.id}>
+                                      {table.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                <input
+                                  value={row.spotOnTable}
+                                  onChange={(event) => setSpotOnMappingRow(row.rowId, { spotOnTable: event.target.value })}
+                                  placeholder="SpotOn table name/number"
+                                  className="h-10 rounded-lg border border-gray-200 px-3 text-sm"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeSpotOnMappingRow(row.rowId)}
+                                  className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-700"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={addSpotOnMappingRow}
+                            className="h-9 rounded-lg border border-gray-300 px-3 text-xs"
+                          >
+                            + Add Mapping Row
+                          </button>
+
+                          {spotOnMappingMessage ? (
+                            <p className={`text-xs ${spotOnMappingMessage.toLowerCase().includes("failed") || spotOnMappingMessage.toLowerCase().includes("error") ? "text-red-600" : "text-gray-700"}`}>
+                              {spotOnMappingMessage}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </article>
+
                 {POS_PROVIDERS.map((provider) => {
                   const connected =
                     posStatus?.connected &&

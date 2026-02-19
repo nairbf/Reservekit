@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import LandingBuilder from "@/components/landing-builder";
 
-type SettingsTab = "restaurant" | "reservations" | "notifications" | "license";
+type SettingsTab = "restaurant" | "reservations" | "notifications" | "integrations" | "license";
 
 type SettingsMap = Record<string, string>;
 type TemplateField = "subject" | "heading" | "body" | "ctaText" | "ctaUrl" | "footerText";
@@ -18,6 +18,23 @@ interface EmailTemplate {
   ctaUrl: string;
   footerText: string;
   customized: boolean;
+}
+
+type PosProvider = "square" | "toast" | "clover";
+
+interface PosSyncStatus {
+  provider: PosProvider | null;
+  connected: boolean;
+  lastSync: string | null;
+  locationName: string | null;
+  error: string | null;
+  counts: {
+    menuItems: number;
+    tables: number;
+    businessHours: number;
+  };
+  credentialsPresent: Record<PosProvider, boolean>;
+  availability: Record<PosProvider, boolean>;
 }
 
 const TEMPLATE_VARIABLES = [
@@ -51,6 +68,7 @@ const TABS: Array<{ key: SettingsTab; label: string; description: string }> = [
   { key: "restaurant", label: "Restaurant", description: "Branding, homepage, and contact details" },
   { key: "reservations", label: "Reservations", description: "Booking rules, deposits, and cutoffs" },
   { key: "notifications", label: "Notifications", description: "Email, reminders, and staff alerts" },
+  { key: "integrations", label: "Integrations", description: "Connect POS systems and sync data" },
   { key: "license", label: "License", description: "Read-only plan and feature status" },
 ];
 
@@ -76,6 +94,17 @@ const TIMEZONE_OPTIONS = [
   { value: "Asia/Tokyo", label: "Asia/Tokyo" },
   { value: "Asia/Shanghai", label: "Asia/Shanghai" },
   { value: "Australia/Sydney", label: "Australia/Sydney" },
+];
+
+const POS_PROVIDERS: Array<{
+  key: PosProvider;
+  name: string;
+  icon: string;
+  description: string;
+}> = [
+  { key: "square", name: "Square", icon: "🟩", description: "Sync menu items and business hours from Square." },
+  { key: "toast", name: "Toast", icon: "🍞", description: "Sync menu, tables, and hours from Toast." },
+  { key: "clover", name: "Clover", icon: "🍀", description: "Sync menu, tables, and hours from Clover." },
 ];
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -170,6 +199,10 @@ export default function SettingsPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [previewData, setPreviewData] = useState<{ templateId: string; subject: string; html: string } | null>(null);
+  const [posStatus, setPosStatus] = useState<PosSyncStatus | null>(null);
+  const [posLoading, setPosLoading] = useState(false);
+  const [posBusy, setPosBusy] = useState<PosProvider | null>(null);
+  const [posMessage, setPosMessage] = useState("");
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [testRecipient, setTestRecipient] = useState("");
   const [clockMs, setClockMs] = useState(() => Date.now());
@@ -203,10 +236,28 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedTab = params.get("tab");
+    if (requestedTab === "restaurant" || requestedTab === "reservations" || requestedTab === "notifications" || requestedTab === "integrations" || requestedTab === "license") {
+      setActiveTab(requestedTab);
+    }
+    if (params.get("connected") === "true") {
+      setPosMessage("POS provider connected.");
+    }
+    const error = params.get("error");
+    if (error) setPosMessage(error);
+  }, []);
+
+  useEffect(() => {
     if (activeTab !== "notifications") return;
     if (templateLoading || Object.keys(templates).length > 0) return;
     loadTemplates().catch(() => undefined);
   }, [activeTab, templateLoading, templates]);
+
+  useEffect(() => {
+    if (activeTab !== "integrations") return;
+    loadPosStatus().catch(() => undefined);
+  }, [activeTab]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setClockMs(Date.now()), 60_000);
@@ -259,6 +310,67 @@ export default function SettingsPage() {
       setTemplateMessage((previous) => ({ ...previous, __global: "Could not load templates." }));
     } finally {
       setTemplateLoading(false);
+    }
+  }
+
+  async function loadPosStatus() {
+    setPosLoading(true);
+    try {
+      const response = await fetch("/api/pos/sync");
+      const data = (await response.json().catch(() => ({}))) as PosSyncStatus;
+      if (!response.ok) throw new Error((data as { error?: string })?.error || "Could not load integrations.");
+      setPosStatus(data);
+    } catch (error) {
+      setPosStatus(null);
+      setPosMessage(error instanceof Error ? error.message : "Could not load integrations.");
+    } finally {
+      setPosLoading(false);
+    }
+  }
+
+  function connectPos(provider: PosProvider) {
+    setPosMessage("");
+    window.location.href = `/api/pos/auth/${provider}?action=connect`;
+  }
+
+  async function syncPos(provider: PosProvider) {
+    setPosBusy(provider);
+    setPosMessage("");
+    try {
+      const response = await fetch("/api/pos/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || "Sync failed.");
+      setPosMessage(`Synced ${provider} successfully.`);
+      await loadPosStatus();
+    } catch (error) {
+      setPosMessage(error instanceof Error ? error.message : "Sync failed.");
+    } finally {
+      setPosBusy(null);
+    }
+  }
+
+  async function disconnectPos(provider: PosProvider) {
+    if (!confirm(`Disconnect ${provider}?`)) return;
+    setPosBusy(provider);
+    setPosMessage("");
+    try {
+      const response = await fetch("/api/pos/sync", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.error || "Disconnect failed.");
+      setPosMessage(`${provider} disconnected.`);
+      await loadPosStatus();
+    } catch (error) {
+      setPosMessage(error instanceof Error ? error.message : "Disconnect failed.");
+    } finally {
+      setPosBusy(null);
     }
   }
 
@@ -479,7 +591,7 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold">Settings</h1>
           <p className="text-sm text-gray-500">Configure your restaurant profile and reservation operations.</p>
         </div>
-        {activeTab !== "license" && activeTab !== "restaurant" && (
+        {(activeTab === "reservations" || activeTab === "notifications") && (
           <button
             onClick={saveChanges}
             disabled={saving}
@@ -944,6 +1056,107 @@ export default function SettingsPage() {
                           )}
                         </div>
                       )}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </Section>
+        </div>
+      )}
+
+      {activeTab === "integrations" && (
+        <div className="space-y-6">
+          <Section title="Integrations">
+            <p className="text-sm text-gray-600">
+              Connect your POS system to sync menu items, tables, and business hours. Sync is read-only.
+            </p>
+
+            {posMessage ? (
+              <div className={`mt-3 rounded-lg border px-3 py-2 text-sm ${posMessage.toLowerCase().includes("failed") || posMessage.toLowerCase().includes("error") ? "border-red-200 bg-red-50 text-red-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>
+                {posMessage}
+              </div>
+            ) : null}
+
+            {posLoading ? (
+              <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                Loading integration status...
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {POS_PROVIDERS.map((provider) => {
+                  const connected =
+                    posStatus?.connected &&
+                    posStatus.provider === provider.key &&
+                    Boolean(posStatus.credentialsPresent?.[provider.key]);
+                  const available = Boolean(posStatus?.availability?.[provider.key]);
+                  const comingSoon = provider.key === "toast" && !available;
+
+                  return (
+                    <article key={provider.key} className="rounded-xl border border-gray-200 bg-white p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{provider.icon}</span>
+                            <h3 className="text-base font-semibold text-gray-900">{provider.name}</h3>
+                            {connected ? (
+                              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+                                Connected
+                              </span>
+                            ) : null}
+                          </div>
+                          <p className="mt-1 text-sm text-gray-600">{provider.description}</p>
+                          {connected ? (
+                            <p className="mt-1 text-xs text-gray-500">
+                              Location: {posStatus?.locationName || "Unknown"} · Last sync: {posStatus?.lastSync ? formatDateTime(posStatus.lastSync) : "Never"} · {posStatus?.counts.menuItems || 0} menu items
+                            </p>
+                          ) : null}
+                          {comingSoon ? (
+                            <p className="mt-1 text-xs text-amber-700">Pending Toast partner approval.</p>
+                          ) : null}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {connected ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => syncPos(provider.key)}
+                                disabled={posBusy === provider.key}
+                                className="h-10 rounded-lg border border-gray-300 px-3 text-sm"
+                              >
+                                {posBusy === provider.key ? "Syncing..." : "Sync Now"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => disconnectPos(provider.key)}
+                                disabled={posBusy === provider.key}
+                                className="h-10 rounded-lg border border-red-200 px-3 text-sm text-red-700"
+                              >
+                                Disconnect
+                              </button>
+                            </>
+                          ) : comingSoon ? (
+                            <button
+                              type="button"
+                              disabled
+                              className="h-10 rounded-lg border border-amber-200 bg-amber-50 px-3 text-sm text-amber-700"
+                            >
+                              Coming Soon
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => connectPos(provider.key)}
+                              disabled={posBusy === provider.key}
+                              className="h-10 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white"
+                            >
+                              Connect
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </article>
                   );
                 })}

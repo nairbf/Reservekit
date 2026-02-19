@@ -34,6 +34,19 @@ interface UploadedMenuFile {
   uploadedAt: string;
 }
 
+interface PosSyncInfo {
+  provider: string | null;
+  connected: boolean;
+  lastSync: string | null;
+  locationName: string | null;
+  error: string | null;
+  counts: {
+    menuItems: number;
+    tables: number;
+    businessHours: number;
+  };
+}
+
 interface MenuFileGroup {
   key: string;
   label: string;
@@ -72,6 +85,8 @@ export default function MenuPage() {
   const [expressEnabled, setExpressEnabled] = useState(false);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [menuFiles, setMenuFiles] = useState<UploadedMenuFile[]>([]);
+  const [posSyncInfo, setPosSyncInfo] = useState<PosSyncInfo | null>(null);
+  const [syncingPos, setSyncingPos] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
@@ -90,11 +105,12 @@ export default function MenuPage() {
   }>>({});
 
   async function load() {
-    const [settingsRes, meRes, categoriesRes, menuFilesRes] = await Promise.all([
+    const [settingsRes, meRes, categoriesRes, menuFilesRes, posSyncRes] = await Promise.all([
       fetch("/api/settings"),
       fetch("/api/auth/me").catch(() => null),
       fetch("/api/menu/categories"),
       fetch("/api/menu/upload"),
+      fetch("/api/pos/sync").catch(() => null),
     ]);
 
     const settings = await settingsRes.json();
@@ -118,6 +134,13 @@ export default function MenuPage() {
       setMenuFiles(Array.isArray(payload?.files) ? payload.files as UploadedMenuFile[] : []);
     } else {
       setMenuFiles([]);
+    }
+
+    if (posSyncRes && posSyncRes.ok) {
+      const payload = (await posSyncRes.json().catch(() => null)) as PosSyncInfo | null;
+      setPosSyncInfo(payload);
+    } else {
+      setPosSyncInfo(null);
     }
     setLoading(false);
   }
@@ -327,6 +350,28 @@ export default function MenuPage() {
     }
     setMessage("Menu file deleted.");
     await load();
+  }
+
+  async function syncPosMenuNow() {
+    const provider = posSyncInfo?.provider;
+    if (!provider) return;
+    setSyncingPos(true);
+    setMessage("");
+    try {
+      const response = await fetch("/api/pos/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || "POS sync failed.");
+      setMessage(`Synced ${provider} data.`);
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "POS sync failed.");
+    } finally {
+      setSyncingPos(false);
+    }
   }
 
   async function createCategory() {
@@ -642,6 +687,10 @@ export default function MenuPage() {
     );
   }
 
+  const posProviderLabel = posSyncInfo?.provider
+    ? `${posSyncInfo.provider.charAt(0).toUpperCase()}${posSyncInfo.provider.slice(1)}`
+    : "";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap justify-between items-center gap-3">
@@ -667,6 +716,27 @@ export default function MenuPage() {
             Preview Public Menu →
           </a>
         </div>
+
+        {posSyncInfo?.provider && posSyncInfo.connected ? (
+          <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p>
+                Synced from {posProviderLabel} ({posSyncInfo.counts.menuItems} items)
+              </p>
+              <button
+                type="button"
+                onClick={syncPosMenuNow}
+                disabled={syncingPos}
+                className="h-9 rounded border border-blue-300 px-3 text-xs font-medium text-blue-800 disabled:opacity-70"
+              >
+                {syncingPos ? "Syncing..." : "Sync Now"}
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-blue-700">
+              Last updated: {posSyncInfo.lastSync ? new Date(posSyncInfo.lastSync).toLocaleString() : "Never"}
+            </p>
+          </div>
+        ) : null}
 
         <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-2">
           <input

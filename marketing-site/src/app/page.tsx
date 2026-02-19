@@ -29,7 +29,7 @@ export default function LandingPage() {
             The reservation platform you buy once and own.
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-slate-700">
-            OpenTable and similar platforms can cost $3,000–$7,500/month. ReserveSit starts at a one-time $1,799 license.
+            OpenTable and similar platforms can cost $3,000–$75,000/year. ReserveSit starts at a one-time $1,799 license.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">

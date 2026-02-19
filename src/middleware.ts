@@ -18,6 +18,7 @@ const PUBLIC_API_EXACT = new Set([
   "/api/cron/reminders",
   "/api/checkout",
   "/api/health",
+  "/api/stripe/callback",
   "/api/reservations/lookup",
   "/api/reservations/self-service",
   "/api/events",

@@ -35,6 +35,7 @@ export async function GET() {
     }
     s[r.key] = r.value;
   }
+  s.stripeConnectEnabled = process.env.STRIPE_CONNECT_CLIENT_ID ? "true" : "false";
   return NextResponse.json(s);
 }
 
@@ -42,6 +43,7 @@ export async function PUT(req: NextRequest) {
   try { await requirePermission("manage_settings"); } catch { return NextResponse.json({ error: "Forbidden" }, { status: 403 }); }
   const data = (await req.json()) as Record<string, string>;
   for (const [key, value] of Object.entries(data)) {
+    if (key === "stripeConnectEnabled") continue;
     const nextValue = String(value ?? "");
     if ((key === "stripeSecretKey" || key === "stripeWebhookSecret") && isMaskedStripeValue(nextValue)) {
       continue;

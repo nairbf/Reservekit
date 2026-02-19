@@ -249,6 +249,9 @@ export default function SettingsPage() {
   const [showStripeSecretKey, setShowStripeSecretKey] = useState(false);
   const [stripeTestStatus, setStripeTestStatus] = useState<"idle" | "testing" | "connected" | "invalid">("idle");
   const [stripeTestMessage, setStripeTestMessage] = useState("");
+  const [stripeOAuthMessage, setStripeOAuthMessage] = useState("");
+  const [stripeOAuthError, setStripeOAuthError] = useState(false);
+  const [stripeDisconnecting, setStripeDisconnecting] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [testRecipient, setTestRecipient] = useState("");
   const [clockMs, setClockMs] = useState(() => Date.now());
@@ -292,6 +295,20 @@ export default function SettingsPage() {
     }
     const error = params.get("error");
     if (error) setPosMessage(error);
+
+    if (params.get("stripe_connected") === "true") {
+      setActiveTab("reservations");
+      setStripeOAuthError(false);
+      setStripeOAuthMessage("Stripe account connected successfully.");
+      setStripeTestStatus("connected");
+    }
+    const stripeError = params.get("stripe_error");
+    if (stripeError) {
+      setActiveTab("reservations");
+      setStripeOAuthError(true);
+      setStripeOAuthMessage(stripeError);
+      setStripeTestStatus("invalid");
+    }
   }, []);
 
   useEffect(() => {
@@ -324,10 +341,12 @@ export default function SettingsPage() {
   async function saveChanges() {
     setSaving(true);
     try {
+      const payload = { ...settings };
+      delete payload.stripeConnectEnabled;
       await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(payload),
       });
       await loadSettings();
       setSaved(true);
@@ -671,6 +690,27 @@ export default function SettingsPage() {
     }
   }
 
+  async function disconnectStripeConnect() {
+    if (!confirm("Disconnect Stripe Connect for this restaurant?")) return;
+    setStripeDisconnecting(true);
+    setStripeOAuthMessage("");
+    try {
+      const response = await fetch("/api/stripe/disconnect", { method: "POST" });
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) throw new Error(data.error || "Failed to disconnect Stripe.");
+      setStripeOAuthError(false);
+      setStripeOAuthMessage("Stripe account disconnected.");
+      setStripeTestStatus("idle");
+      setStripeTestMessage("");
+      await loadSettings();
+    } catch (error) {
+      setStripeOAuthError(true);
+      setStripeOAuthMessage(error instanceof Error ? error.message : "Failed to disconnect Stripe.");
+    } finally {
+      setStripeDisconnecting(false);
+    }
+  }
+
   async function validateNow() {
     setLicenseBusy(true);
     setLicenseMessage("");
@@ -879,6 +919,9 @@ export default function SettingsPage() {
     if (raw.length <= 8) return "••••••••";
     return `${raw.slice(0, 2)}••••••${raw.slice(-2)}`;
   }, [settings.spotonApiKey]);
+  const stripeConnectEnabled = settings.stripeConnectEnabled === "true";
+  const stripeAccountId = (settings.stripeAccountId || "").trim();
+  const stripeConnectedViaOauth = Boolean(stripeAccountId);
   const stripePublishableConfigured = Boolean((settings.stripePublishableKey || "").trim());
   const stripeSecretConfigured = Boolean((settings.stripeSecretKey || "").trim());
   const stripeConfigured = stripePublishableConfigured && stripeSecretConfigured;
@@ -1008,84 +1051,121 @@ export default function SettingsPage() {
                 — it takes about 10 minutes.
               </p>
 
-              <div className="mt-4 grid gap-3">
-                <div>
-                  <Label>Stripe Publishable Key</Label>
-                  <input
-                    type="text"
-                    value={settings.stripePublishableKey || ""}
-                    onChange={(event) => setField("stripePublishableKey", event.target.value)}
-                    placeholder="pk_live_..."
-                    className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                  />
+              {stripeOAuthMessage ? (
+                <div className={`mt-4 rounded-lg border px-3 py-2 text-sm ${stripeOAuthError ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+                  {stripeOAuthMessage}
                 </div>
+              ) : null}
 
-                <div>
-                  <Label>Stripe Secret Key</Label>
-                  <div className="flex gap-2">
-                    <input
-                      type={showStripeSecretKey ? "text" : "password"}
-                      value={settings.stripeSecretKey || ""}
-                      onChange={(event) => setField("stripeSecretKey", event.target.value)}
-                      placeholder="sk_live_..."
-                      className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                    />
+              {stripeConnectedViaOauth ? (
+                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="text-sm font-semibold text-emerald-800">✓ Connected via Stripe Connect</div>
+                  <div className="mt-1 text-xs text-emerald-700">Account: {stripeAccountId}</div>
+                  <button
+                    type="button"
+                    onClick={disconnectStripeConnect}
+                    disabled={stripeDisconnecting}
+                    className="mt-3 h-10 rounded-lg border border-emerald-300 bg-white px-3 text-sm text-emerald-800 disabled:opacity-60"
+                  >
+                    {stripeDisconnecting ? "Disconnecting..." : "Disconnect"}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {stripeConnectEnabled ? (
+                    <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3">
+                      <a
+                        href="/api/stripe/connect"
+                        className="inline-flex h-11 items-center rounded-lg bg-[#635bff] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#7a73ff]"
+                      >
+                        Connect with Stripe
+                      </a>
+                      <p className="mt-2 text-xs text-gray-500">One click to connect your Stripe account.</p>
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 text-xs uppercase tracking-wide text-gray-500">or enter keys manually</div>
+
+                  <div className="mt-3 grid gap-3">
+                    <div>
+                      <Label>Stripe Publishable Key</Label>
+                      <input
+                        type="text"
+                        value={settings.stripePublishableKey || ""}
+                        onChange={(event) => setField("stripePublishableKey", event.target.value)}
+                        placeholder="pk_live_..."
+                        className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Stripe Secret Key</Label>
+                      <div className="flex gap-2">
+                        <input
+                          type={showStripeSecretKey ? "text" : "password"}
+                          value={settings.stripeSecretKey || ""}
+                          onChange={(event) => setField("stripeSecretKey", event.target.value)}
+                          placeholder="sk_live_..."
+                          className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowStripeSecretKey((value) => !value)}
+                          className="h-11 rounded-lg border border-gray-200 px-3 text-sm"
+                        >
+                          {showStripeSecretKey ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Stripe Webhook Secret (optional)</Label>
+                      <input
+                        type="password"
+                        value={settings.stripeWebhookSecret || ""}
+                        onChange={(event) => setField("stripeWebhookSecret", event.target.value)}
+                        placeholder="whsec_..."
+                        className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {!stripeConfigured ? (
+                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                        ⚠ Not configured
+                      </span>
+                    ) : stripeTestStatus === "connected" ? (
+                      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        ✓ Connected
+                      </span>
+                    ) : stripeTestStatus === "invalid" ? (
+                      <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                        ✗ Invalid
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                        ⚠ Not verified
+                      </span>
+                    )}
+
                     <button
                       type="button"
-                      onClick={() => setShowStripeSecretKey((value) => !value)}
-                      className="h-11 rounded-lg border border-gray-200 px-3 text-sm"
+                      onClick={testStripeConnection}
+                      disabled={stripeTestStatus === "testing"}
+                      className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
                     >
-                      {showStripeSecretKey ? "Hide" : "Show"}
+                      {stripeTestStatus === "testing" ? "Testing..." : "Test Connection"}
                     </button>
                   </div>
-                </div>
 
-                <div>
-                  <Label>Stripe Webhook Secret (optional)</Label>
-                  <input
-                    type="password"
-                    value={settings.stripeWebhookSecret || ""}
-                    onChange={(event) => setField("stripeWebhookSecret", event.target.value)}
-                    placeholder="whsec_..."
-                    className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                {!stripeConfigured ? (
-                  <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                    ⚠ Not configured
-                  </span>
-                ) : stripeTestStatus === "connected" ? (
-                  <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                    ✓ Connected
-                  </span>
-                ) : stripeTestStatus === "invalid" ? (
-                  <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-                    ✗ Invalid
-                  </span>
-                ) : (
-                  <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-                    ⚠ Not verified
-                  </span>
-                )}
-
-                <button
-                  type="button"
-                  onClick={testStripeConnection}
-                  disabled={stripeTestStatus === "testing"}
-                  className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
-                >
-                  {stripeTestStatus === "testing" ? "Testing..." : "Test Connection"}
-                </button>
-              </div>
-
-              {stripeTestMessage ? (
-                <p className={`mt-2 text-sm ${stripeTestStatus === "invalid" ? "text-red-600" : "text-emerald-700"}`}>
-                  {stripeTestMessage}
-                </p>
-              ) : null}
+                  {stripeTestMessage ? (
+                    <p className={`mt-2 text-sm ${stripeTestStatus === "invalid" ? "text-red-600" : "text-emerald-700"}`}>
+                      {stripeTestMessage}
+                    </p>
+                  ) : null}
+                </>
+              )}
             </div>
 
             {depositsEnabled && !stripeConfigured ? (

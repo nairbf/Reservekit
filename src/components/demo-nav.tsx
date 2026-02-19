@@ -30,7 +30,7 @@ export function DemoNav() {
   if (!isDemoHost) return null;
 
   return (
-    <div className="border-b border-slate-200 bg-slate-50">
+    <div className="border-y border-slate-200 bg-slate-50">
       <div className="mx-auto w-full max-w-6xl overflow-x-auto px-4 sm:px-6">
         <nav className="flex min-w-max items-center justify-center gap-2 py-2">
           {DEMO_LINKS.map((item) => {

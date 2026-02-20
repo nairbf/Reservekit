@@ -7,9 +7,10 @@ import { RestaurantTab } from "./restaurant-tab";
 import { ReservationsTab } from "./reservations-tab";
 import { NotificationsTab } from "./notifications-tab";
 import { IntegrationsTab } from "./integrations-tab";
+import { LinksTab } from "./links-tab";
 import { LicenseTab } from "./license-tab";
 
-type SettingsTab = "restaurant" | "reservations" | "notifications" | "integrations" | "license";
+type SettingsTab = "restaurant" | "reservations" | "notifications" | "integrations" | "links" | "license";
 
 export type SettingsMap = Record<string, string>;
 type TemplateField = "subject" | "heading" | "body" | "ctaText" | "ctaUrl" | "footerText";
@@ -100,6 +101,7 @@ const TABS: Array<{ key: SettingsTab; label: string; description: string }> = [
   { key: "reservations", label: "Reservations", description: "Booking rules, deposits, and cutoffs" },
   { key: "notifications", label: "Notifications", description: "Email, reminders, and staff alerts" },
   { key: "integrations", label: "Integrations", description: "Connect POS systems and sync data" },
+  { key: "links", label: "Links", description: "Share URLs, embed code, and QR downloads" },
   { key: "license", label: "License", description: "Read-only plan and feature status" },
 ];
 
@@ -333,7 +335,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedTab = params.get("tab");
-    if (requestedTab === "restaurant" || requestedTab === "reservations" || requestedTab === "notifications" || requestedTab === "integrations" || requestedTab === "license") {
+    if (requestedTab === "restaurant" || requestedTab === "reservations" || requestedTab === "notifications" || requestedTab === "integrations" || requestedTab === "links" || requestedTab === "license") {
       setActiveTab(requestedTab);
     }
     if (params.get("connected") === "true") {
@@ -1186,6 +1188,8 @@ export default function SettingsPage() {
           connectPos={connectPos}
         />
       )}
+
+      {activeTab === "links" && <LinksTab settings={settings} />}
 
       {activeTab === "license" && (
         <LicenseTab

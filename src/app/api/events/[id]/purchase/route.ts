@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requirePermission } from "@/lib/auth";
 import { getAppUrlFromRequest } from "@/lib/app-url";
 import { createPaymentIntent } from "@/lib/payments";
 import { generateEventICS } from "@/lib/calendar";
@@ -103,9 +103,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (manual) {
     try {
-      await requireAuth();
+      await requirePermission("manage_events");
     } catch {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   }
 

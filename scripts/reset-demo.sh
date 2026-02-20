@@ -29,10 +29,13 @@ BEGIN;
 DELETE FROM "PreOrderItem";
 DELETE FROM "PreOrder";
 DELETE FROM "WaitlistEntry";
+DELETE FROM "EventTicket";
 DELETE FROM "ReservationPayment"
 WHERE reservationId IN (SELECT id FROM "Reservation" WHERE code NOT LIKE 'HIST-%');
 DELETE FROM "Reservation" WHERE code NOT LIKE 'HIST-%';
 DELETE FROM "Setting" WHERE key LIKE 'pos_status_%';
+
+UPDATE "Event" SET soldTickets = 0, updatedAt = datetime('now');
 
 INSERT OR REPLACE INTO "Setting" ("key","value") VALUES
   ('license_plan','FULL_SUITE'),
@@ -535,6 +538,66 @@ INSERT OR REPLACE INTO "Setting" ("key","value") VALUES
 INSERT OR REPLACE INTO "Setting" ("key","value") VALUES
   ('spotonLastSync','$NOW_ISO'),
   ('spotonLastOpenChecks','12');
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Rachel Green','rachel.g@email.com','(555) 301-0001',2,e.ticketPrice * 2,'confirmed','DEMO-WC-001',datetime('now','-2 days'),datetime('now','-2 days')
+FROM "Event" e WHERE e.name='Wine and Cheese Pairing Night' LIMIT 1;
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Monica Geller','monica.g@email.com','(555) 301-0002',2,e.ticketPrice * 2,'confirmed','DEMO-WC-002',datetime('now','-2 days'),datetime('now','-2 days')
+FROM "Event" e WHERE e.name='Wine and Cheese Pairing Night' LIMIT 1;
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Ross Geller','ross.g@email.com','(555) 301-0003',2,e.ticketPrice * 2,'confirmed','DEMO-WC-003',datetime('now','-2 days'),datetime('now','-2 days')
+FROM "Event" e WHERE e.name='Wine and Cheese Pairing Night' LIMIT 1;
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Chandler Bing','chandler.b@email.com','(555) 301-0004',2,e.ticketPrice * 2,'confirmed','DEMO-WC-004',datetime('now','-2 days'),datetime('now','-2 days')
+FROM "Event" e WHERE e.name='Wine and Cheese Pairing Night' LIMIT 1;
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Joey Tribbiani','joey.t@email.com','(555) 301-0005',2,e.ticketPrice * 2,'confirmed','DEMO-WC-005',datetime('now','-2 days'),datetime('now','-2 days')
+FROM "Event" e WHERE e.name='Wine and Cheese Pairing Night' LIMIT 1;
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Phoebe Buffay','phoebe.b@email.com','(555) 301-0006',2,e.ticketPrice * 2,'confirmed','DEMO-WC-006',datetime('now','-2 days'),datetime('now','-2 days')
+FROM "Event" e WHERE e.name='Wine and Cheese Pairing Night' LIMIT 1;
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Jim Halpert','jim.h@email.com','(555) 302-0001',2,e.ticketPrice * 2,'confirmed','DEMO-JB-001',datetime('now','-1 day'),datetime('now','-1 day')
+FROM "Event" e WHERE e.name='Live Jazz Brunch' LIMIT 1;
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Pam Beesly','pam.b@email.com','(555) 302-0002',2,e.ticketPrice * 2,'confirmed','DEMO-JB-002',datetime('now','-1 day'),datetime('now','-1 day')
+FROM "Event" e WHERE e.name='Live Jazz Brunch' LIMIT 1;
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Dwight Schrute','dwight.s@email.com','(555) 302-0003',2,e.ticketPrice * 2,'confirmed','DEMO-JB-003',datetime('now','-1 day'),datetime('now','-1 day')
+FROM "Event" e WHERE e.name='Live Jazz Brunch' LIMIT 1;
+
+INSERT INTO "EventTicket"
+("eventId","guestName","guestEmail","guestPhone","quantity","totalPaid","status","code","createdAt","updatedAt")
+SELECT e.id,'Michael Scott','michael.s@email.com','(555) 302-0004',2,e.ticketPrice * 2,'confirmed','DEMO-JB-004',datetime('now','-1 day'),datetime('now','-1 day')
+FROM "Event" e WHERE e.name='Live Jazz Brunch' LIMIT 1;
+
+UPDATE "Event"
+SET soldTickets = (
+  SELECT COALESCE(SUM(quantity), 0)
+  FROM "EventTicket"
+  WHERE "EventTicket".eventId = "Event".id
+    AND "EventTicket".status IN ('confirmed','checked_in')
+),
+updatedAt = datetime('now')
+WHERE name IN ('Wine and Cheese Pairing Night', 'Live Jazz Brunch');
 
 COMMIT;
 SQL

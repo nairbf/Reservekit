@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const slug = searchParams.get("slug");
   const session = await getSession();
+  const canManageEvents = Boolean(session?.permissions.has("manage_events"));
   const timezone = await getRestaurantTimezone();
   const today = getTodayInTimezone(timezone);
 
@@ -38,12 +39,12 @@ export async function GET(req: NextRequest) {
       include: {
         tickets: {
           orderBy: { createdAt: "desc" },
-          take: session ? 200 : 0,
+          take: canManageEvents ? 200 : 0,
         },
       },
     });
     if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (!event.isActive && !session) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!event.isActive && !canManageEvents) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({
       ...event,
       remainingTickets: Math.max(0, event.maxTickets - event.soldTickets),
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
   }
 
   const events = await prisma.event.findMany({
-    where: session
+    where: canManageEvents
       ? {}
       : { isActive: true, date: { gte: today } },
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
@@ -78,12 +79,13 @@ export async function POST(req: NextRequest) {
   const startTime = String(body?.startTime || "").trim();
   const ticketPrice = Math.max(0, Math.trunc(Number(body?.ticketPrice || 0)));
   const maxTickets = Math.max(1, Math.trunc(Number(body?.maxTickets || 1)));
+  const requestedSlug = String(body?.slug || "").trim();
 
   if (!name || !date || !startTime || ticketPrice <= 0 || maxTickets <= 0) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  const slug = await uniqueSlug(name);
+  const slug = await uniqueSlug(requestedSlug || name);
   const created = await prisma.event.create({
     data: {
       name,

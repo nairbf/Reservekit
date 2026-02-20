@@ -31,6 +31,7 @@ interface EventItem {
   soldTickets: number;
   isActive: boolean;
   slug: string;
+  imageUrl: string | null;
 }
 
 interface EventDetail extends EventItem {
@@ -73,6 +74,7 @@ export default function EventsDashboardPage() {
   const [successFlash, setSuccessFlash] = useState("");
   const [ticketQuery, setTicketQuery] = useState("");
   const [copyFlash, setCopyFlash] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
 
   const [qrOpen, setQrOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
@@ -82,12 +84,27 @@ export default function EventsDashboardPage() {
 
   const [createForm, setCreateForm] = useState({
     name: "",
+    slug: "",
     description: "",
+    imageUrl: "",
     date: "",
     startTime: "18:00",
     endTime: "21:00",
     ticketPriceDollars: "79",
     maxTickets: "40",
+  });
+
+  const [editForm, setEditForm] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    imageUrl: "",
+    date: "",
+    startTime: "18:00",
+    endTime: "21:00",
+    ticketPriceDollars: "0",
+    maxTickets: "1",
+    isActive: true,
   });
 
   const [manualOpen, setManualOpen] = useState(false);
@@ -105,6 +122,7 @@ export default function EventsDashboardPage() {
     const list = Array.isArray(data) ? data as EventItem[] : [];
     setEvents(list);
     if (!selectedId && list.length > 0) setSelectedId(list[0].id);
+    return list;
   }
 
   async function loadSelected(id: number) {
@@ -128,6 +146,22 @@ export default function EventsDashboardPage() {
     if (!selectedId) return;
     loadSelected(selectedId);
   }, [selectedId]);
+
+  useEffect(() => {
+    if (!detail) return;
+    setEditForm({
+      name: detail.name,
+      slug: detail.slug,
+      description: detail.description || "",
+      imageUrl: detail.imageUrl || "",
+      date: detail.date,
+      startTime: detail.startTime,
+      endTime: detail.endTime || "",
+      ticketPriceDollars: (detail.ticketPrice / 100).toFixed(2),
+      maxTickets: String(detail.maxTickets),
+      isActive: detail.isActive,
+    });
+  }, [detail]);
 
   useEffect(() => {
     if (!successFlash) return;
@@ -206,7 +240,9 @@ export default function EventsDashboardPage() {
     setMessage("");
     const payload = {
       name: createForm.name,
+      slug: createForm.slug || undefined,
       description: createForm.description || null,
+      imageUrl: createForm.imageUrl || null,
       date: createForm.date,
       startTime: createForm.startTime,
       endTime: createForm.endTime || null,
@@ -226,7 +262,9 @@ export default function EventsDashboardPage() {
     }
     setCreateForm({
       name: "",
+      slug: "",
       description: "",
+      imageUrl: "",
       date: "",
       startTime: "18:00",
       endTime: "21:00",
@@ -262,6 +300,60 @@ export default function EventsDashboardPage() {
     });
     if (res.ok) {
       await Promise.all([loadEvents(), loadSelected(detail.id)]);
+    }
+  }
+
+  async function saveEditedEvent(e: React.FormEvent) {
+    e.preventDefault();
+    if (!detail) return;
+    setMessage("");
+    const payload = {
+      name: editForm.name,
+      slug: editForm.slug || undefined,
+      description: editForm.description || null,
+      imageUrl: editForm.imageUrl || null,
+      date: editForm.date,
+      startTime: editForm.startTime,
+      endTime: editForm.endTime || null,
+      ticketPrice: Math.max(0, Math.round((parseFloat(editForm.ticketPriceDollars || "0") || 0) * 100)),
+      maxTickets: Math.max(1, parseInt(editForm.maxTickets || "1", 10) || 1),
+      isActive: editForm.isActive,
+    };
+    const res = await fetch(`/api/events/${detail.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setMessage(data.error || "Unable to save event");
+      return;
+    }
+    setEditOpen(false);
+    setSuccessFlash("✅ Event updated.");
+    await Promise.all([loadEvents(), loadSelected(detail.id)]);
+  }
+
+  async function deleteEvent() {
+    if (!detail) return;
+    const confirmed = window.confirm(`Delete "${detail.name}"? This will deactivate the event.`);
+    if (!confirmed) return;
+    setMessage("");
+    const res = await fetch(`/api/events/${detail.id}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) {
+      setMessage(data.error || "Unable to delete event");
+      return;
+    }
+    setEditOpen(false);
+    setSuccessFlash("✅ Event deactivated.");
+    const list = await loadEvents();
+    if (list.length > 0) {
+      setSelectedId(list[0].id);
+      await loadSelected(list[0].id);
+    } else {
+      setSelectedId(null);
+      setDetail(null);
     }
   }
 
@@ -347,6 +439,8 @@ export default function EventsDashboardPage() {
 
       <form onSubmit={createEvent} className="bg-white rounded-xl shadow p-4 sm:p-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <input value={createForm.name} onChange={e => setCreateForm(prev => ({ ...prev, name: e.target.value }))} placeholder="Event name" className="h-11 border rounded px-3" required />
+        <input value={createForm.slug} onChange={e => setCreateForm(prev => ({ ...prev, slug: e.target.value }))} placeholder="Custom slug (optional)" className="h-11 border rounded px-3" />
+        <input value={createForm.imageUrl} onChange={e => setCreateForm(prev => ({ ...prev, imageUrl: e.target.value }))} placeholder="Image URL (optional)" className="h-11 border rounded px-3" />
         <input type="date" value={createForm.date} onChange={e => setCreateForm(prev => ({ ...prev, date: e.target.value }))} className="h-11 border rounded px-3" required />
         <input type="time" value={createForm.startTime} onChange={e => setCreateForm(prev => ({ ...prev, startTime: e.target.value }))} className="h-11 border rounded px-3" required />
         <input type="time" value={createForm.endTime} onChange={e => setCreateForm(prev => ({ ...prev, endTime: e.target.value }))} className="h-11 border rounded px-3" />
@@ -393,8 +487,14 @@ export default function EventsDashboardPage() {
                 <div className="flex gap-2">
                   <button onClick={() => copyShareLink(detail)} className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200">Share Link</button>
                   <button onClick={() => openQr(detail)} className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200">View QR Code</button>
+                  <button onClick={() => setEditOpen(v => !v)} className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200">
+                    {editOpen ? "Close Edit" : "Edit"}
+                  </button>
                   <button onClick={toggleActive} className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200">
                     {detail.isActive ? "Deactivate" : "Activate"}
+                  </button>
+                  <button onClick={deleteEvent} className="h-11 px-3 rounded-lg border border-red-200 text-red-700 text-sm transition-all duration-200">
+                    Delete
                   </button>
                 </div>
               </div>
@@ -405,6 +505,93 @@ export default function EventsDashboardPage() {
                 <div className="rounded-lg bg-gray-50 p-3 border"><div className="text-xs text-gray-500">Revenue</div><div className="text-lg font-bold">{formatCents(detail.soldTickets * detail.ticketPrice)}</div></div>
                 <div className="rounded-lg bg-gray-50 p-3 border"><div className="text-xs text-gray-500">Check-in Rate</div><div className="text-lg font-bold">{detail.checkInRate}%</div></div>
               </div>
+
+              {editOpen && (
+                <form onSubmit={saveEditedEvent} className="rounded-lg border border-gray-200 p-3 grid gap-2 sm:grid-cols-2 bg-gray-50">
+                  <input
+                    value={editForm.name}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="Event name"
+                    className="h-11 border rounded px-3"
+                    required
+                  />
+                  <input
+                    value={editForm.slug}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, slug: e.target.value }))}
+                    placeholder="Slug"
+                    className="h-11 border rounded px-3"
+                  />
+                  <input
+                    type="date"
+                    value={editForm.date}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, date: e.target.value }))}
+                    className="h-11 border rounded px-3"
+                    required
+                  />
+                  <input
+                    type="time"
+                    value={editForm.startTime}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, startTime: e.target.value }))}
+                    className="h-11 border rounded px-3"
+                    required
+                  />
+                  <input
+                    type="time"
+                    value={editForm.endTime}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, endTime: e.target.value }))}
+                    className="h-11 border rounded px-3"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editForm.ticketPriceDollars}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, ticketPriceDollars: e.target.value }))}
+                    placeholder="Ticket price (USD)"
+                    className="h-11 border rounded px-3"
+                    required
+                  />
+                  <input
+                    type="number"
+                    min="1"
+                    value={editForm.maxTickets}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, maxTickets: e.target.value }))}
+                    placeholder="Max tickets"
+                    className="h-11 border rounded px-3"
+                    required
+                  />
+                  <input
+                    value={editForm.imageUrl}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, imageUrl: e.target.value }))}
+                    placeholder="Image URL"
+                    className="h-11 border rounded px-3"
+                  />
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                    placeholder="Description"
+                    className="sm:col-span-2 border rounded px-3 py-2"
+                    rows={2}
+                  />
+                  <label className="sm:col-span-2 inline-flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={editForm.isActive}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+                      className="h-4 w-4"
+                    />
+                    Event is active
+                  </label>
+                  <div className="sm:col-span-2 flex gap-2">
+                    <button type="submit" className="h-11 px-4 rounded bg-blue-600 text-white text-sm font-medium">
+                      Save Changes
+                    </button>
+                    <button type="button" onClick={() => setEditOpen(false)} className="h-11 px-4 rounded border border-gray-200 text-sm">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
 
               {successFlash && (
                 <div className="rounded-lg border border-green-300 bg-green-50 text-green-700 text-sm px-3 py-2">{successFlash}</div>

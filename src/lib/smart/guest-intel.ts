@@ -9,7 +9,11 @@ export interface GuestTag {
 export async function getGuestTags(guestId: number): Promise<GuestTag[]> {
   const tags: GuestTag[] = [];
 
-  const [completedCount, lastVisit, noShowCount, reservationIds] = await Promise.all([
+  const [guest, completedCount, lastVisit, noShowCount, reservationIds] = await Promise.all([
+    prisma.guest.findUnique({
+      where: { id: guestId },
+      select: { totalVisits: true, lastVisitDate: true },
+    }),
     prisma.reservation.count({ where: { guestId, status: "completed" } }),
     prisma.reservation.findFirst({
       where: { guestId, status: "completed" },
@@ -30,18 +34,21 @@ export async function getGuestTags(guestId: number): Promise<GuestTag[]> {
     })
     : { _sum: { amount: 0 } };
 
-  if (completedCount === 0) {
+  const visitCount = Math.max(completedCount, guest?.totalVisits || 0);
+  const lastVisitDate = lastVisit?.date || guest?.lastVisitDate || null;
+
+  if (completedCount === 0 && visitCount === 0) {
     tags.push({ label: "First Time", color: "blue", detail: "No previous visits" });
-  } else if (completedCount >= 10 || Number(totalPaid._sum.amount || 0) >= 250000) {
-    tags.push({ label: "VIP", color: "purple", detail: `${completedCount} visits` });
-  } else if (completedCount >= 3) {
-    tags.push({ label: "Regular", color: "emerald", detail: `${completedCount} visits` });
+  } else if (visitCount >= 10 || Number(totalPaid._sum.amount || 0) >= 250000) {
+    tags.push({ label: "VIP", color: "purple", detail: `${visitCount} visits` });
+  } else if (visitCount >= 3) {
+    tags.push({ label: "Regular", color: "emerald", detail: `${visitCount} visits` });
   } else {
-    tags.push({ label: "Returning", color: "sky", detail: `${completedCount} visit${completedCount > 1 ? "s" : ""}` });
+    tags.push({ label: "Returning", color: "sky", detail: `${visitCount} visit${visitCount > 1 ? "s" : ""}` });
   }
 
-  if (lastVisit && completedCount >= 2) {
-    const daysSince = (Date.now() - new Date(`${lastVisit.date}T12:00:00`).getTime()) / (1000 * 60 * 60 * 24);
+  if (lastVisitDate && visitCount >= 2) {
+    const daysSince = (Date.now() - new Date(`${lastVisitDate}T12:00:00`).getTime()) / (1000 * 60 * 60 * 24);
     if (Number.isFinite(daysSince) && daysSince > 90) {
       tags.push({ label: "Win Back", color: "amber", detail: `Last visit ${Math.round(daysSince)} days ago` });
     }

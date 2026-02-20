@@ -123,9 +123,92 @@ function nth(value: number): string {
 
 function minutesSince(timestamp: string): number | null {
   if (!timestamp) return null;
-  const dt = new Date(timestamp);
-  if (Number.isNaN(dt.getTime())) return null;
+  const dt = parseDateTime(timestamp);
+  if (!dt) return null;
   return Math.max(0, Math.round((Date.now() - dt.getTime()) / 60000));
+}
+
+function parseDateTime(value: string | null | undefined): Date | null {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const direct = new Date(raw);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  const normalized = raw.includes("T") ? raw : raw.replace(" ", "T");
+  const fallback = new Date(normalized);
+  if (!Number.isNaN(fallback.getTime())) return fallback;
+  return null;
+}
+
+function parseTimeToMinutes(value: string): number {
+  const match = (value || "").trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return Number.MAX_SAFE_INTEGER;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return Number.MAX_SAFE_INTEGER;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return Number.MAX_SAFE_INTEGER;
+  return hour * 60 + minute;
+}
+
+function getPosOpenMinutes(pos: PosStatusEntry | undefined, seatedAt: string | null | undefined): number | null {
+  if (!pos) return null;
+  const fromPos = minutesSince(pos.openedAt);
+  if (fromPos !== null) return fromPos;
+  return minutesSince(seatedAt || "");
+}
+
+function reservationSortByTime(a: Reservation, b: Reservation): number {
+  const aMinutes = parseTimeToMinutes(a.time);
+  const bMinutes = parseTimeToMinutes(b.time);
+  if (aMinutes !== bMinutes) return aMinutes - bMinutes;
+  return a.guestName.localeCompare(b.guestName);
+}
+
+function reservationSortByRecentSeated(a: Reservation, b: Reservation): number {
+  const aSeated = parseDateTime(a.seatedAt || "")?.getTime() || 0;
+  const bSeated = parseDateTime(b.seatedAt || "")?.getTime() || 0;
+  if (aSeated !== bSeated) return bSeated - aSeated;
+  return reservationSortByTime(a, b);
+}
+
+function getReservationFlowSection(status: string): "immediate" | "upcoming" | "seated" | "other" {
+  if (status === "arrived" || status === "pending") return "immediate";
+  if (status === "approved" || status === "confirmed") return "upcoming";
+  if (status === "seated") return "seated";
+  return "other";
+}
+
+function getImmediatePriority(status: string): number {
+  if (status === "arrived") return 0;
+  if (status === "pending") return 1;
+  return 2;
+}
+
+function getEstimatedTurnState(
+  reservation: Reservation,
+  turnTimes: TurnTimeStats | null,
+): { remainingMinutes: number | null; overdueMinutes: number | null } {
+  if (reservation.status !== "seated") return { remainingMinutes: null, overdueMinutes: null };
+  const seatedAt = parseDateTime(reservation.seatedAt || "");
+  if (!seatedAt) return { remainingMinutes: null, overdueMinutes: null };
+  const estimatedMinutes =
+    (reservation.table?.id ? turnTimes?.byTable?.[reservation.table.id] : undefined)
+    || turnTimes?.byPartySize?.[reservation.partySize]
+    || turnTimes?.overall
+    || 60;
+  const elapsed = Math.max(0, Math.round((Date.now() - seatedAt.getTime()) / 60000));
+  const remaining = estimatedMinutes - elapsed;
+  if (remaining >= 0) return { remainingMinutes: remaining, overdueMinutes: null };
+  return { remainingMinutes: 0, overdueMinutes: Math.abs(remaining) };
+}
+
+function formatTime12(value: string): string {
+  const match = (value || "").trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return value;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return value;
+  const h = hour % 12 || 12;
+  return `${h}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
 function formatMoney(value: string): string {
@@ -133,16 +216,6 @@ function formatMoney(value: string): string {
   if (Number.isFinite(num)) return `$${num.toFixed(2)}`;
   if (!value) return "$0.00";
   return value.startsWith("$") ? value : `$${value}`;
-}
-
-function formatTime12(value: string): string {
-  const match = (value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return value;
-  const hour = Number(match[1]);
-  const minute = Number(match[2]);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return value;
-  const h = hour % 12 || 12;
-  return `${h}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
 function formatDateLabel(value: string): string {
@@ -174,10 +247,6 @@ function escapeHtml(value: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll("\"", "&quot;")
     .replaceAll("'", "&#39;");
-}
-
-function formatClock(dt: Date): string {
-  return dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 function getTagClass(color: SmartGuestTag["color"]): string {
@@ -384,13 +453,33 @@ export default function TonightPage() {
   const totalCovers = activeReservations.reduce((s, r) => s + r.partySize, 0);
   const seatedCovers = activeReservations.filter(r => ["seated", "completed"].includes(r.status)).reduce((s, r) => s + r.partySize, 0);
 
-  const byTime: Record<string, Reservation[]> = {};
-  for (const r of reservations) {
-    if (["cancelled", "declined", "expired"].includes(r.status)) continue;
-    if (!byTime[r.time]) byTime[r.time] = [];
-    byTime[r.time].push(r);
+  const flowBuckets: Record<"immediate" | "upcoming" | "seated" | "other", Reservation[]> = {
+    immediate: [],
+    upcoming: [],
+    seated: [],
+    other: [],
+  };
+  for (const reservation of activeReservations) {
+    const key = getReservationFlowSection(reservation.status);
+    flowBuckets[key].push(reservation);
   }
-  const sortedTimes = Object.keys(byTime).sort();
+
+  flowBuckets.immediate.sort((a, b) => {
+    const priorityDiff = getImmediatePriority(a.status) - getImmediatePriority(b.status);
+    if (priorityDiff !== 0) return priorityDiff;
+    return reservationSortByTime(a, b);
+  });
+  flowBuckets.upcoming.sort(reservationSortByTime);
+  flowBuckets.seated.sort(reservationSortByRecentSeated);
+  flowBuckets.other.sort(reservationSortByTime);
+
+  const flowSections = [
+    { key: "immediate", title: "Arrived & Pending", reservations: flowBuckets.immediate },
+    { key: "upcoming", title: "Confirmed & Upcoming", reservations: flowBuckets.upcoming },
+    { key: "seated", title: "Seated", reservations: flowBuckets.seated },
+    { key: "other", title: "Other Statuses", reservations: flowBuckets.other },
+  ].filter((section) => section.reservations.length > 0);
+
   const tableStatus: Record<number, Reservation | null> = {};
   for (const t of tables) tableStatus[t.id] = null;
   for (const r of reservations) { if (r.table && ["seated", "arrived"].includes(r.status)) tableStatus[r.table.id] = r; }
@@ -495,11 +584,11 @@ export default function TonightPage() {
       </div>
 
       <div className="space-y-4">
-        {sortedTimes.map(time => (
-          <div key={time}>
-            <h2 className="font-bold text-lg mb-2">{formatTime12(time)}</h2>
+        {flowSections.map((section) => (
+          <div key={section.key}>
+            <h2 className="mb-2 text-lg font-bold">{section.title}</h2>
             <div className="space-y-2">
-              {byTime[time].map(r => (
+              {section.reservations.map((r) => (
                 <div key={r.id} className="bg-white rounded-xl shadow px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     {(() => {
@@ -507,25 +596,16 @@ export default function TonightPage() {
                       const noShowRisk = smartData?.features?.smartNoShowRisk ? smartEntry?.noShowRisk : undefined;
                       const guestTags = smartData?.features?.smartGuestIntel ? (smartEntry?.guestTags || []) : [];
                       const turnTimes = smartData?.features?.smartTurnTime ? smartData?.turnTimes : null;
-                      const estimatedMinutes =
-                        (r.table?.id ? turnTimes?.byTable?.[r.table.id] : undefined)
-                        || turnTimes?.byPartySize?.[r.partySize]
-                        || turnTimes?.overall
-                        || 60;
-                      const seatedAt = r.seatedAt ? new Date(r.seatedAt) : null;
-                      const elapsed = seatedAt && !Number.isNaN(seatedAt.getTime())
-                        ? Math.max(0, Math.round((Date.now() - seatedAt.getTime()) / 60000))
-                        : null;
-                      const remaining = elapsed !== null ? estimatedMinutes - elapsed : null;
-                      const estimatedDoneAt = seatedAt && !Number.isNaN(seatedAt.getTime())
-                        ? new Date(seatedAt.getTime() + estimatedMinutes * 60000)
-                        : null;
+                      const pos = r.table ? posStatusMap[r.table.id] : undefined;
+                      const posOpenMinutes = getPosOpenMinutes(pos, r.seatedAt);
+                      const turnState = getEstimatedTurnState(r, turnTimes);
                       return (
                         <>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SC[r.status] || "bg-gray-100 text-gray-600"}`}>{r.status.replace("_", " ")}</span>
                       <span className="font-medium">{r.guestName}</span>
                       <span className="text-sm text-gray-500">({r.partySize})</span>
+                      <span className="text-sm text-gray-500">{formatTime12(r.time)}</span>
                       {r.table && <span className="text-sm text-gray-400">{r.table.name}</span>}
                       {(r.guest?.totalVisits ?? 0) > 1 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest?.totalVisits ?? 0)} visit</span>}
                       {r.guest?.vipStatus === "vip" && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>}
@@ -556,21 +636,23 @@ export default function TonightPage() {
                         </button>
                       )}
                     </div>
-                    {r.table && posStatusMap[r.table.id] && (
+                    {r.table && pos && (
                       <div className="text-xs text-emerald-700 mt-1">
-                        {`💲 POS: Open check — ${formatMoney(posStatusMap[r.table.id].checkTotal)} (${minutesSince(posStatusMap[r.table.id].openedAt) ?? 0} min)`}
+                        {`💲 POS: Open check — ${formatMoney(pos.checkTotal)}${posOpenMinutes !== null ? ` (${posOpenMinutes} min)` : ""}`}
                       </div>
                     )}
-                    {smartData?.features?.smartTurnTime && r.status === "seated" && remaining !== null ? (
+                    {smartData?.features?.smartTurnTime && r.status === "seated" && (
                       <div className="text-xs text-gray-500 mt-1">
-                        {remaining > 0
-                          ? `Est. ${remaining} min remaining`
-                          : estimatedDoneAt
-                            ? `Est. available ${formatClock(estimatedDoneAt)}`
-                            : "Est. availability pending"}
+                        {turnState.remainingMinutes === null
+                          ? "Est. availability pending"
+                          : turnState.overdueMinutes && turnState.overdueMinutes > 0
+                            ? (turnState.overdueMinutes >= 10
+                              ? `Overdue by ${turnState.overdueMinutes} min`
+                              : "Should be available now")
+                            : `Est. ${turnState.remainingMinutes} min remaining`}
                       </div>
-                    ) : null}
-                    {r.table && r.status === "seated" && !posStatusMap[r.table.id] && (
+                    )}
+                    {r.table && r.status === "seated" && !pos && (
                       <div className="text-xs text-orange-700 mt-1">⚠ No POS check found</div>
                     )}
                     {r.preOrder && expandedPreOrders[r.id] && (
@@ -635,7 +717,7 @@ export default function TonightPage() {
         ))}
       </div>
 
-      {sortedTimes.length === 0 && (
+      {flowSections.length === 0 && (
         <div className="bg-white rounded-xl shadow p-8 text-center text-gray-500">No reservations for today yet.</div>
       )}
     </div>

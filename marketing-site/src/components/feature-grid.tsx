@@ -1,4 +1,5 @@
 import {
+  Brain,
   CalendarCheck2,
   LayoutDashboard,
   Mail,
@@ -8,6 +9,7 @@ import {
   Map,
   Users,
   ChartColumn,
+  Plug,
 } from "lucide-react";
 
 const features = [
@@ -16,7 +18,9 @@ const features = [
   { icon: Mail, title: "Email Notifications", desc: "Automatic confirmations, reminders, and status updates." },
   { icon: PhoneCall, title: "Walk-ins & Phone", desc: "Capture in-person and call-in demand in seconds." },
   { icon: Ticket, title: "Event Ticketing", desc: "Run wine dinners, holiday seatings, and paid special events." },
-  { icon: ShieldCheck, title: "Smart Availability", desc: "Capacity rules prevent overbooking during peak periods." },
+  { icon: ShieldCheck, title: "Smart Availability", desc: "Capacity rules and pacing alerts prevent overbooking during peak periods." },
+  { icon: Brain, title: "Built-in Intelligence", desc: "No-show risk scoring, smart waitlist estimates, turn time tracking, pacing alerts, and daily prep summaries - all automatic." },
+  { icon: Plug, title: "POS Integration", desc: "Sync menu items and track open checks from SpotOn. Floor plan shows live POS status." },
   { icon: Map, title: "Visual Floor Plan", desc: "Drag-and-drop layout with live table state. (Add-on)" },
   { icon: Users, title: "Guest History", desc: "Repeat-guest timeline, notes, and loyalty context. (Add-on)" },
   { icon: ChartColumn, title: "Reporting Dashboard", desc: "Covers, no-show trends, and service performance. (Add-on)" },

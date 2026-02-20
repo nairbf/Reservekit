@@ -113,6 +113,27 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <section className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6">
+        <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-blue-50/30 p-6 sm:p-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-700">🧠 Built-in Intelligence</p>
+          <h2 className="mt-3 text-2xl font-bold text-slate-900">
+            Your system gets smarter every service.
+          </h2>
+          <p className="mt-2 max-w-2xl text-slate-600">
+            ReserveSit quietly learns your restaurant&apos;s patterns and surfaces insights where your team already looks - no extra setup, no extra cost.
+          </p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="text-sm"><strong className="text-slate-900">Turn Time Tracking</strong><br /><span className="text-slate-500">Learns how long tables take and predicts availability.</span></div>
+            <div className="text-sm"><strong className="text-slate-900">No-Show Risk</strong><br /><span className="text-slate-500">Flags high-risk reservations so you can plan ahead.</span></div>
+            <div className="text-sm"><strong className="text-slate-900">Guest Intelligence</strong><br /><span className="text-slate-500">Auto-tags VIPs, first-timers, and lapsed guests.</span></div>
+            <div className="text-sm"><strong className="text-slate-900">Smart Waitlist</strong><br /><span className="text-slate-500">Real wait times based on actual table turnover.</span></div>
+            <div className="text-sm"><strong className="text-slate-900">Daily Prep Email</strong><br /><span className="text-slate-500">Morning brief with tonight&apos;s VIPs, large parties, and risks.</span></div>
+            <div className="text-sm"><strong className="text-slate-900">Pacing Alerts</strong><br /><span className="text-slate-500">Warns when time slots are overpacked.</span></div>
+          </div>
+          <p className="mt-5 text-xs text-slate-400">All smart features included in every plan. No add-on fees.</p>
+        </div>
+      </section>
+
       <section className="border-y border-slate-200 bg-white">
         <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
           <h2 className="text-3xl font-semibold text-slate-900">How It Works</h2>

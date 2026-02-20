@@ -1204,20 +1204,18 @@ export default function MenuPage() {
               Let guests pre-order from your digital menu when making a reservation.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={toggleExpressDining}
-            disabled={savingExpress}
-            className={`relative inline-flex h-6 w-11 items-center ${savingExpress ? "opacity-70" : ""}`}
-            aria-pressed={expressEnabled}
-          >
-            <span
-              className={`absolute inset-0 rounded-full transition ${expressEnabled ? "bg-blue-600" : "bg-slate-300"}`}
+          <label className={`relative inline-flex h-6 w-11 items-center ${savingExpress ? "opacity-70" : ""}`}>
+            <input
+              type="checkbox"
+              checked={expressEnabled}
+              onChange={() => { void toggleExpressDining(); }}
+              disabled={savingExpress}
+              className="peer sr-only"
+              aria-label="Toggle Express Dining"
             />
-            <span
-              className={`absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${expressEnabled ? "translate-x-5" : "translate-x-0"}`}
-            />
-          </button>
+            <span className="absolute inset-0 rounded-full bg-slate-300 transition peer-checked:bg-blue-600" />
+            <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+          </label>
         </div>
         {expressEnabled && (
           <p className="mt-2 text-xs text-emerald-700">

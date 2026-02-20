@@ -1,16 +1,15 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type PlanKey = "core" | "servicePro" | "fullSuite";
-type AddonKey = "sms" | "floorPlan" | "reporting" | "guestHistory" | "eventTicketing";
-type HostingKey = "none" | "monthly" | "annual";
+type AddonKey = "sms" | "floorPlan" | "reporting" | "guestHistory" | "eventTicketing" | "customDomain";
 
 const plans: Array<{
   key: PlanKey;
   name: string;
   price: number;
+  hostingPrice: number;
   blurb: string;
   featured?: boolean;
   features: string[];
@@ -18,54 +17,63 @@ const plans: Array<{
   {
     key: "core",
     name: "Core",
-    price: 1799,
-    blurb: "Reliable reservation operations without subscription lock-in.",
+    price: 2199,
+    hostingPrice: 299,
+    blurb: "Everything you need to run reservations - without subscription lock-in.",
     features: [
-      "Booking widget",
-      "Hostess dashboard",
-      "Tables + approvals",
-      "Email notifications",
-      "Walk-ins + phone bookings",
-      "14-day free trial",
+      "Reservation booking widget",
+      "Host dashboard & tonight view",
+      "Waitlist management",
+      "Email confirmations & reminders",
+      "Guest database",
+      "Schedule management",
+      "Landing page builder",
+      "POS integrations (SpotOn, Square, Toast, Clover)",
+      "First year managed hosting included",
     ],
   },
   {
     key: "servicePro",
     name: "Service Pro",
-    price: 2227,
-    blurb: "The best fit for active dining rooms that need faster service flow.",
+    price: 2999,
+    hostingPrice: 399,
+    blurb: "For busy dining rooms that need real-time floor management and faster communication.",
     featured: true,
     features: [
       "Everything in Core",
       "SMS notifications",
-      "Visual floor plan",
+      "Interactive floor plan",
       "Reporting dashboard",
+      "Menu display",
       "Priority setup support",
-      "14-day free trial",
+      "First year managed hosting included",
     ],
   },
   {
     key: "fullSuite",
     name: "Full Suite",
-    price: 2734,
-    blurb: "Complete toolkit for high-volume operations and special events.",
+    price: 3799,
+    hostingPrice: 399,
+    blurb: "Complete toolkit for high-volume operations, events, and repeat-guest loyalty.",
     features: [
       "Everything in Service Pro",
-      "Guest history + notes",
       "Event ticketing",
+      "Full guest history & loyalty",
+      "Pre-ordering",
       "Advanced customization",
-      "Best for high-volume service",
-      "14-day free trial",
+      "Priority support",
+      "First year managed hosting included",
     ],
   },
 ];
 
 const addons: Array<{ key: AddonKey; name: string; price: number; description: string }> = [
-  { key: "sms", name: "SMS Notifications", price: 199, description: "Text confirmations and reminders to reduce no-shows." },
-  { key: "floorPlan", name: "Visual Floor Plan", price: 249, description: "Interactive table map with live status." },
-  { key: "reporting", name: "Reporting Dashboard", price: 179, description: "Covers, no-show trends, and service metrics." },
-  { key: "guestHistory", name: "Guest History", price: 179, description: "Repeat-guest context, notes, and preferences." },
-  { key: "eventTicketing", name: "Event Ticketing", price: 129, description: "Sell and manage paid events and special seatings." },
+  { key: "sms", name: "SMS Notifications", price: 349, description: "Text confirmations and reminders to cut no-shows." },
+  { key: "floorPlan", name: "Visual Floor Plan", price: 399, description: "Interactive table map with live status." },
+  { key: "reporting", name: "Reporting Dashboard", price: 299, description: "Covers, no-show trends, and service metrics." },
+  { key: "guestHistory", name: "Guest History & Loyalty", price: 349, description: "Repeat-guest context, notes, and preferences." },
+  { key: "eventTicketing", name: "Event Ticketing", price: 299, description: "Sell and manage paid events and special seatings." },
+  { key: "customDomain", name: "Custom Domain Setup", price: 30, description: "Connect your own domain to your ReserveSit instance." },
 ];
 
 const PLAN_INCLUDED_ADDONS: Record<PlanKey, AddonKey[]> = {
@@ -74,33 +82,35 @@ const PLAN_INCLUDED_ADDONS: Record<PlanKey, AddonKey[]> = {
   fullSuite: ["sms", "floorPlan", "reporting", "guestHistory", "eventTicketing"],
 };
 
-const hosting = {
-  none: { key: "none" as HostingKey, name: "Self-Hosted", price: 0, interval: "month", summary: "You handle hosting. We provide the code." },
-  monthly: { key: "monthly" as HostingKey, name: "Managed Hosting", price: 15, interval: "month", summary: "We handle updates, backups, and monitoring." },
-  annual: { key: "annual" as HostingKey, name: "Managed Hosting", price: 149, interval: "year", summary: "Annual managed hosting (save $31 per year)." },
-};
-
 const faq = [
   {
-    q: "What happens after I purchase?",
-    a: "You receive confirmation immediately. We provision your restaurant instance and onboarding details within 24 hours.",
+    q: "What's included in managed hosting?",
+    a: "Dedicated cloud server, daily automated backups, software updates & security patches, uptime monitoring, and email/chat support. First year is included free.",
+  },
+  {
+    q: "What if I don't renew hosting?",
+    a: "Your instance stays live but won't receive updates, backups, or support. You can self-host at any time or renew later.",
+  },
+  {
+    q: "Is there a monthly option?",
+    a: "We offer one-time licensing to save you money long-term. The only recurring cost is annual managed hosting starting year 2.",
+  },
+  {
+    q: "Can I self-host?",
+    a: "Yes. The software is yours. You can run it on your own infrastructure - no hosting fee required.",
   },
   {
     q: "Can I upgrade later?",
-    a: "Yes. You can upgrade your plan at any time and pay only the price difference.",
+    a: "Yes. You can upgrade your plan at any time and only pay the difference in one-time license cost.",
   },
-  {
-    q: "What's included in the free trial?",
-    a: "All new restaurants include a 14-day trial period for managed hosting so your team can validate the workflow before billing starts.",
-  },
-  {
-    q: "Do I own the software?",
-    a: "Yes. Your license is a one-time purchase. You can self-host and keep full control over your data.",
-  },
-  {
-    q: "What if I want to cancel hosting?",
-    a: "You can cancel managed hosting and migrate to self-hosting. We provide your data export and transition support.",
-  },
+];
+
+const savingsRows = [
+  { label: "ReserveSit Core", year1: "$2,199", year2: "$299", year3: "$299", total: "$2,797", reserveSit: true },
+  { label: "ReserveSit Pro", year1: "$2,999", year2: "$399", year3: "$399", total: "$3,797", reserveSit: true },
+  { label: "ReserveSit Full", year1: "$3,799", year2: "$399", year3: "$399", total: "$4,597", reserveSit: true },
+  { label: "OpenTable", year1: "$6,000+", year2: "$6,000+", year3: "$6,000+", total: "$18,000+", reserveSit: false },
+  { label: "Resy", year1: "$5,988+", year2: "$5,988+", year3: "$5,988+", total: "$17,964+", reserveSit: false },
 ];
 
 function usd(value: number) {
@@ -111,12 +121,9 @@ function usd(value: number) {
   }).format(value);
 }
 
-export default function PricingPage() {
+export default function PricingPageClient() {
   const [plan, setPlan] = useState<PlanKey>("servicePro");
   const [selectedAddons, setSelectedAddons] = useState<AddonKey[]>([]);
-  const [hostingCycle, setHostingCycle] = useState<"monthly" | "annual">("monthly");
-  const [useManagedHosting, setUseManagedHosting] = useState(true);
-  const [authState, setAuthState] = useState<"loading" | "authed" | "guest">("loading");
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
@@ -127,60 +134,26 @@ export default function PricingPage() {
 
   const selectedPlan = useMemo(() => plans.find((item) => item.key === plan) || plans[0], [plan]);
   const includedAddonKeys = useMemo(() => new Set<AddonKey>(PLAN_INCLUDED_ADDONS[plan]), [plan]);
+
   const billableSelectedAddons = useMemo(
     () => selectedAddons.filter((addon) => !includedAddonKeys.has(addon)),
     [includedAddonKeys, selectedAddons],
   );
+
   const selectedAddonRows = useMemo(
     () => addons.filter((item) => billableSelectedAddons.includes(item.key)),
     [billableSelectedAddons],
   );
+
   const includedAddonRows = useMemo(
     () => addons.filter((item) => includedAddonKeys.has(item.key)),
     [includedAddonKeys],
   );
-  const selectedHosting = useMemo(() => {
-    if (!useManagedHosting) return hosting.none;
-    return hosting[hostingCycle];
-  }, [useManagedHosting, hostingCycle]);
 
   const oneTimeTotal = useMemo(() => {
     const addonsTotal = selectedAddonRows.reduce((sum, item) => sum + item.price, 0);
     return selectedPlan.price + addonsTotal;
   }, [selectedPlan, selectedAddonRows]);
-
-  const recurringLabel = useMemo(() => {
-    if (!useManagedHosting) return "No recurring hosting fee";
-    return hostingCycle === "monthly" ? "$15/month after 14-day trial" : "$149/year after 14-day trial";
-  }, [useManagedHosting, hostingCycle]);
-
-  useEffect(() => {
-    let mounted = true;
-    fetch("/api/auth/me")
-      .then((response) => {
-        if (!mounted) return;
-        setAuthState(response.ok ? "authed" : "guest");
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setAuthState("guest");
-      });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    setSelectedAddons((prev) => {
-      const normalized = prev.filter((addon) => !includedAddonKeys.has(addon));
-      return normalized.length === prev.length ? prev : normalized;
-    });
-  }, [includedAddonKeys]);
-
-  function domainCtaHref(interest: "domain-connect" | "domain-new") {
-    if (authState === "authed") return `/portal/domain?interest=${interest}`;
-    return `/demo?interest=${interest}`;
-  }
 
   function toggleAddon(key: AddonKey) {
     setSelectedAddons((prev) => {
@@ -202,7 +175,6 @@ export default function PricingPage() {
         body: JSON.stringify({
           plan,
           addons: billableSelectedAddons,
-          hosting: useManagedHosting ? hostingCycle : "none",
           customerEmail,
           customerName,
           restaurantName,
@@ -231,11 +203,11 @@ export default function PricingPage() {
             Own your reservation system.
           </h1>
           <p className="mt-4 max-w-3xl text-lg text-slate-700">
-            No per-cover tax. No platform lock-in. One-time license plus optional managed hosting.
+            One-time license. First year managed hosting included. Renew annually starting year 2.
           </p>
 
           <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 sm:p-5">
-            <p className="font-semibold">OpenTable can run $3,000–$7,000/year for busy restaurants. ReserveSit charges once.</p>
+            <p className="font-semibold">OpenTable can run $3,000-$7,000/year for busy restaurants. ReserveSit charges once.</p>
             <p className="mt-1 text-rose-800">Keep your margins and keep ownership of your guest data.</p>
           </div>
         </section>
@@ -266,6 +238,9 @@ export default function PricingPage() {
                       </div>
                       <p className="mt-3 text-3xl font-bold text-slate-900">{usd(item.price)}</p>
                       <p className="text-xs uppercase tracking-wide text-slate-500">one-time license</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">
+                        + {usd(item.hostingPrice)}/yr managed hosting (first year included)
+                      </p>
                       <p className="mt-3 text-sm text-slate-600">{item.blurb}</p>
                       <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
                         {item.features.map((feature) => (
@@ -284,11 +259,11 @@ export default function PricingPage() {
             <section className="rounded-2xl border border-slate-200 bg-white p-6">
               <h2 className="text-xl font-semibold text-slate-900">Add-on Builder</h2>
               <p className="mt-1 text-sm text-slate-600">
-                Start with any plan and add exactly what you need. Included features are locked automatically.
+                Core users can add features individually. Service Pro and Full Suite include select add-ons automatically.
               </p>
               {plan === "fullSuite" ? (
                 <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-                  All add-ons are included in Full Suite.
+                  All core add-ons are included in Full Suite. Custom Domain Setup remains optional.
                 </p>
               ) : null}
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -333,116 +308,39 @@ export default function PricingPage() {
                   );
                 })}
               </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h2 className="text-xl font-semibold text-slate-900">Hosting Options</h2>
-              <p className="mt-1 text-sm text-slate-600">Choose self-hosted or let us manage everything for you.</p>
-
-              <div className="mt-4 inline-flex rounded-lg border border-slate-300 bg-slate-100 p-1">
-                <button
-                  type="button"
-                  onClick={() => setHostingCycle("monthly")}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${hostingCycle === "monthly" ? "bg-white text-slate-900 shadow" : "text-slate-600"}`}
-                >
-                  Monthly
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHostingCycle("annual")}
-                  className={`rounded-md px-3 py-1.5 text-sm font-medium ${hostingCycle === "annual" ? "bg-white text-slate-900 shadow" : "text-slate-600"}`}
-                >
-                  Annual
-                </button>
-              </div>
-
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => setUseManagedHosting(false)}
-                  className={`rounded-xl border p-4 text-left transition-all ${!useManagedHosting ? "border-blue-400 bg-blue-50" : "border-slate-200"}`}
-                >
-                  <p className="text-sm font-semibold text-slate-900">Self-Hosted</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">$0/month</p>
-                  <p className="mt-1 text-xs text-slate-600">You handle hosting. We provide the code.</p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setUseManagedHosting(true)}
-                  className={`rounded-xl border p-4 text-left transition-all ${useManagedHosting ? "border-blue-400 bg-blue-50" : "border-slate-200"}`}
-                >
-                  <p className="text-sm font-semibold text-slate-900">Managed Hosting</p>
-                  <p className="mt-1 text-xl font-bold text-slate-900">
-                    {hostingCycle === "monthly" ? "$15/month" : "$149/year"}
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">
-                    {hostingCycle === "annual" ? "Save $31 per year." : "Zero maintenance for your team."}
-                  </p>
-                </button>
-              </div>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h2 className="text-2xl font-semibold text-slate-900">Your Online Presence</h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Every plan includes a free branded booking page at yourname.reservesit.com. Want your own domain? We&apos;ll handle everything.
-              </p>
-
-              <div className="mt-5 grid gap-4 lg:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Free</p>
-                  <p className="mt-1 text-lg font-semibold text-slate-900">Included with all plans</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-800">yourname.reservesit.com</p>
-                  <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
-                    <li>✓ SSL included</li>
-                    <li>✓ Mobile optimized</li>
-                    <li>✓ Instant setup</li>
-                  </ul>
-                  <span className="mt-5 inline-flex h-10 items-center rounded-lg border border-slate-300 px-4 text-sm font-semibold text-slate-700">
-                    Current Plan
-                  </span>
-                </div>
-
-                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Connect Your Domain</p>
-                  <p className="mt-1 text-lg font-semibold text-slate-900">$30 one-time</p>
-                  <p className="mt-2 text-sm text-slate-700">Already have a domain? We configure DNS and SSL in about 24 hours.</p>
-                  <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
-                    <li>✓ DNS configuration</li>
-                    <li>✓ SSL certificate</li>
-                    <li>✓ Done in 24 hours</li>
-                  </ul>
-                  <Link
-                    href={domainCtaHref("domain-connect")}
-                    className="mt-5 inline-flex h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"
-                  >
-                    Get Started →
-                  </Link>
-                </div>
-
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">New Domain</p>
-                  <p className="mt-1 text-lg font-semibold text-slate-900">$99 one-time</p>
-                  <p className="mt-2 text-sm text-slate-700">Don&apos;t have a domain? We register and configure a new one for your restaurant.</p>
-                  <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
-                    <li>✓ 2-3 year registration</li>
-                    <li>✓ Full DNS setup</li>
-                    <li>✓ SSL certificate</li>
-                    <li>✓ Done in 48 hours</li>
-                  </ul>
-                  <Link
-                    href={domainCtaHref("domain-new")}
-                    className="mt-5 inline-flex h-10 items-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white"
-                  >
-                    Get Started →
-                  </Link>
-                </div>
-              </div>
-
               <p className="mt-4 text-xs text-slate-500">
-                Domain registration prices may vary depending on domain name and availability. The $99 price covers most standard .com domains.
-                Premium or specialty domains may cost more and are always confirmed before purchase.
+                All plans include POS integrations, landing page builder, and first year managed hosting + updates.
+              </p>
+            </section>
+
+            <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-6 sm:p-8">
+              <h2 className="text-2xl font-semibold text-slate-900">💰 How much will you save?</h2>
+              <div className="mt-5 overflow-x-auto rounded-xl border border-blue-200 bg-white">
+                <table className="min-w-[760px] w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                      <th className="px-4 py-3">Plan</th>
+                      <th className="px-4 py-3">Year 1</th>
+                      <th className="px-4 py-3">Year 2</th>
+                      <th className="px-4 py-3">Year 3</th>
+                      <th className="px-4 py-3">3-Year Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {savingsRows.map((row) => (
+                      <tr key={row.label} className="border-t border-slate-100">
+                        <td className={`px-4 py-3 font-semibold ${row.reserveSit ? "text-blue-700" : "text-slate-700"}`}>{row.label}</td>
+                        <td className={`px-4 py-3 ${row.reserveSit ? "text-blue-700 font-semibold" : "text-slate-700"}`}>{row.year1}</td>
+                        <td className={`px-4 py-3 ${row.reserveSit ? "text-blue-700 font-semibold" : "text-slate-700"}`}>{row.year2}</td>
+                        <td className={`px-4 py-3 ${row.reserveSit ? "text-blue-700 font-semibold" : "text-slate-700"}`}>{row.year3}</td>
+                        <td className={`px-4 py-3 font-semibold ${row.reserveSit ? "text-blue-700" : "text-slate-700"}`}>{row.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-4 text-sm font-semibold text-blue-800">
+                Your annual hosting costs less than one month of OpenTable.
               </p>
             </section>
           </div>
@@ -472,17 +370,18 @@ export default function PricingPage() {
 
                 <div className="border-t border-slate-200 pt-3">
                   <div className="flex items-start justify-between gap-3">
-                    <span className="font-medium text-slate-800">One-time total</span>
+                    <span className="font-medium text-slate-800">Total due today</span>
                     <span className="text-lg font-bold text-slate-900">{usd(oneTimeTotal)}</span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">Due at checkout</p>
+                  <p className="mt-1 text-xs text-slate-500">License + selected add-ons</p>
                 </div>
 
                 <div className="rounded-lg bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Hosting</p>
-                  <p className="mt-1 font-medium text-slate-800">{selectedHosting.name}</p>
-                  <p className="text-xs text-slate-600">{selectedHosting.summary}</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">{recurringLabel}</p>
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Managed Hosting</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    Starting year 2: {usd(selectedPlan.hostingPrice)}/yr managed hosting
+                  </p>
+                  <p className="mt-1 text-xs text-slate-600">First year is included free with every plan.</p>
                 </div>
               </div>
 

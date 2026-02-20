@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-import { ADDON_PRICE_KEY, appUrl, getStripe, type AddonKey, type HostingKey, type PlanKey, PRICES } from "@/lib/stripe";
+import type Stripe from "stripe";
+import { ADDON_PRICE_KEY, appUrl, getStripe, type AddonKey, type PlanKey, PRICES } from "@/lib/stripe";
 
 export const runtime = "nodejs";
 
 interface CheckoutBody {
   plan?: PlanKey;
   addons?: AddonKey[];
-  hosting?: HostingKey;
   customerEmail?: string;
   customerName?: string;
   restaurantName?: string;
@@ -15,8 +14,12 @@ interface CheckoutBody {
 
 function sanitizeAddons(addons: unknown): AddonKey[] {
   if (!Array.isArray(addons)) return [];
-  const valid = new Set<AddonKey>(["sms", "floorPlan", "reporting", "guestHistory", "eventTicketing"]);
+  const valid = new Set<AddonKey>(["sms", "floorPlan", "reporting", "guestHistory", "eventTicketing", "customDomain"]);
   return Array.from(new Set(addons.filter((v): v is AddonKey => typeof v === "string" && valid.has(v as AddonKey))));
+}
+
+function hostingTierForPlan(plan: PlanKey) {
+  return plan === "core" ? "core_299" : "pro_399";
 }
 
 export async function POST(request: NextRequest) {
@@ -28,7 +31,6 @@ export async function POST(request: NextRequest) {
   }
 
   const plan = body.plan;
-  const hosting = body.hosting || "none";
   const customerEmail = String(body.customerEmail || "").trim().toLowerCase();
   const customerName = String(body.customerName || "").trim();
   const restaurantName = String(body.restaurantName || "").trim();
@@ -36,10 +38,6 @@ export async function POST(request: NextRequest) {
 
   if (!plan || !["core", "servicePro", "fullSuite"].includes(plan)) {
     return NextResponse.json({ error: "A valid plan is required" }, { status: 400 });
-  }
-
-  if (!["none", "monthly", "annual"].includes(hosting)) {
-    return NextResponse.json({ error: "Invalid hosting selection" }, { status: 400 });
   }
 
   if (!customerEmail || !customerName || !restaurantName) {
@@ -63,50 +61,27 @@ export async function POST(request: NextRequest) {
     lineItems.push({ price: addonPriceId, quantity: 1 });
   }
 
-  if (hosting === "monthly") {
-    if (!PRICES.hostingMonthly) {
-      return NextResponse.json({ error: "Missing Stripe price for monthly hosting" }, { status: 500 });
-    }
-    lineItems.push({ price: PRICES.hostingMonthly, quantity: 1 });
-  } else if (hosting === "annual") {
-    if (!PRICES.hostingAnnual) {
-      return NextResponse.json({ error: "Missing Stripe price for annual hosting" }, { status: 500 });
-    }
-    lineItems.push({ price: PRICES.hostingAnnual, quantity: 1 });
-  }
-
   const stripe = getStripe();
   const baseUrl = appUrl();
 
   const params: Stripe.Checkout.SessionCreateParams = {
-    mode: hosting === "none" ? "payment" : "subscription",
+    mode: "payment",
     line_items: lineItems,
     customer_email: customerEmail,
     success_url: `${baseUrl}/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${baseUrl}/pricing`,
     metadata: {
       plan,
-      addons: addons.join(","),
-      hosting,
+      addons: JSON.stringify(addons),
+      hosting: "true",
+      hostingTier: hostingTierForPlan(plan),
+      hostingRenewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
       customerName,
       customerEmail,
       restaurantName,
     },
     allow_promotion_codes: true,
   };
-
-  if (hosting !== "none") {
-    params.subscription_data = {
-      trial_period_days: 14,
-      metadata: {
-        plan,
-        hosting,
-        customerName,
-        customerEmail,
-        restaurantName,
-      },
-    };
-  }
 
   try {
     const session = await stripe.checkout.sessions.create(params);

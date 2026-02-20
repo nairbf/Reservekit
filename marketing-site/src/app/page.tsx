@@ -49,7 +49,7 @@ export default function LandingPage() {
             The reservation platform you buy once and own.
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-slate-700">
-            OpenTable and similar platforms can cost $3,000-$7,000/year. ReserveSit starts at a one-time $1,799 license.
+            OpenTable and similar platforms can cost $3,000-$7,000/year. ReserveSit starts at a one-time $2,199 license.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -120,7 +120,7 @@ export default function LandingPage() {
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-blue-700">1</p>
               <h3 className="mt-2 text-lg font-semibold text-slate-900">Choose your plan</h3>
-              <p className="mt-2 text-sm text-slate-600">One-time license or optional monthly hosting.</p>
+              <p className="mt-2 text-sm text-slate-600">One-time license with first-year managed hosting included.</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
               <p className="text-sm font-semibold text-blue-700">2</p>
@@ -173,7 +173,7 @@ export default function LandingPage() {
       <section id="pricing" className="border-y border-slate-200 bg-white">
         <div className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
           <h2 className="text-3xl font-semibold text-slate-900">Pricing</h2>
-          <p className="mt-2 text-slate-600">One-time ownership, optional add-ons, and managed hosting with a 14-day trial.</p>
+          <p className="mt-2 text-slate-600">One-time ownership, optional add-ons, and annual managed hosting starting in year 2.</p>
           <div className="mt-8">
             <PricingCards />
           </div>

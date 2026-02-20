@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     default: "ReserveSit - Restaurant Reservation Software You Own",
     template: "%s | ReserveSit",
   },
-  description: "The restaurant reservation platform you buy once and own. No per-cover fees. No monthly lock-in. Starting at $1,799.",
+  description: "The restaurant reservation platform you buy once and own. No per-cover fees. No monthly lock-in. Starting at $2,199.",
   keywords: [
     "restaurant reservation software",
     "reservation system",
@@ -24,12 +24,12 @@ export const metadata: Metadata = {
     url: "https://reservesit.com",
     siteName: "ReserveSit",
     title: "ReserveSit - Restaurant Reservation Software You Own",
-    description: "The restaurant reservation platform you buy once and own. No per-cover fees. Starting at $1,799.",
+    description: "The restaurant reservation platform you buy once and own. No per-cover fees. Starting at $2,199.",
   },
   twitter: {
     card: "summary_large_image",
     title: "ReserveSit - Restaurant Reservation Software You Own",
-    description: "The restaurant reservation platform you buy once and own. No per-cover fees. Starting at $1,799.",
+    description: "The restaurant reservation platform you buy once and own. No per-cover fees. Starting at $2,199.",
   },
   robots: {
     index: true,

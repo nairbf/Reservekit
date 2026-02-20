@@ -669,9 +669,9 @@ export default function MenuPage() {
     const sortedItems = [...category.items].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
     return (
       <div key={category.id} className="rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="border-b border-slate-200 p-3 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               <button
                 onClick={() => toggleCategoryCollapse(category.id)}
                 className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600"
@@ -695,17 +695,17 @@ export default function MenuPage() {
               </button>
             </div>
 
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-1 sm:flex-row sm:flex-wrap sm:items-center">
               <input
                 value={category.name}
                 onChange={(event) => setCategories((previous) => previous.map((entry) => (entry.id === category.id ? { ...entry, name: event.target.value } : entry)))}
                 onBlur={(event) => saveCategory(category, { name: event.target.value })}
-                className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-200 px-3 text-base font-semibold text-slate-900"
+                className="h-10 w-full min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-900 sm:min-w-[220px] sm:text-base"
               />
               <select
                 value={categoryType}
                 onChange={(event) => saveCategory(category, { type: normalizeCategoryType(event.target.value) })}
-                className="h-10 rounded-lg border border-slate-200 px-2 text-sm"
+                className="h-10 w-full rounded-lg border border-slate-200 px-2 text-sm sm:w-auto"
               >
                 {CATEGORY_TYPE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -715,19 +715,26 @@ export default function MenuPage() {
               </select>
             </div>
 
-            <div className="flex items-center gap-2">
-              <label className="inline-flex items-center gap-1 text-xs text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={category.isActive}
-                  onChange={(event) => saveCategory(category, { isActive: event.target.checked })}
-                  className="h-4 w-4"
-                />
-                Active
-              </label>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <div className="flex items-center justify-between gap-2 sm:justify-start">
+                <span className="text-xs text-slate-600">Active</span>
+                <button
+                  type="button"
+                  onClick={() => saveCategory(category, { isActive: !category.isActive })}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    category.isActive ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      category.isActive ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
               <button
                 onClick={() => deleteCategory(category)}
-                className="h-10 rounded-lg border border-red-200 px-3 text-xs font-medium text-red-700"
+                className="h-10 w-full rounded-lg border border-red-200 px-3 text-xs font-medium text-red-700 sm:w-auto"
               >
                 Delete
               </button>
@@ -737,7 +744,7 @@ export default function MenuPage() {
 
         {!collapsed && (
           <>
-            <div className="p-4">
+            <div className="p-3 sm:p-5">
               {sortedItems.length === 0 ? (
                 <p className="text-sm text-slate-500">No items yet.</p>
               ) : (
@@ -755,19 +762,19 @@ export default function MenuPage() {
                     const isEditing = editingItemId === item.id;
                     if (isEditing && editingItem) {
                       return (
-                        <div key={item.id} className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                          <div className="grid gap-3 md:grid-cols-[1fr_120px]">
+                        <div key={item.id} className="rounded-lg border border-blue-200 bg-blue-50 p-3 sm:p-4">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_140px]">
                             <input
                               value={editingItem.name}
                               onChange={(event) => setEditingItem((previous) => (previous ? { ...previous, name: event.target.value } : previous))}
                               placeholder="Item name"
-                              className="h-10 rounded-lg border border-slate-300 px-3 text-sm"
+                              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
                             />
                             <input
                               value={editingItem.price}
                               onChange={(event) => setEditingItem((previous) => (previous ? { ...previous, price: event.target.value } : previous))}
                               placeholder="Price (USD)"
-                              className="h-10 rounded-lg border border-slate-300 px-3 text-sm"
+                              className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
                             />
                           </div>
                           <textarea
@@ -796,7 +803,7 @@ export default function MenuPage() {
                             <button
                               type="button"
                               onClick={() => saveEditedItem(item)}
-                              className="inline-flex h-9 items-center gap-1 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white"
+                              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white sm:w-auto"
                             >
                               <Save className="h-3.5 w-3.5" />
                               Save
@@ -804,7 +811,7 @@ export default function MenuPage() {
                             <button
                               type="button"
                               onClick={cancelEditItem}
-                              className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700"
+                              className="inline-flex h-9 w-full items-center justify-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 sm:w-auto"
                             >
                               <X className="h-3.5 w-3.5" />
                               Cancel
@@ -815,17 +822,18 @@ export default function MenuPage() {
                     }
 
                     return (
-                      <div key={item.id} className="rounded-lg border border-slate-200 p-3">
+                      <div key={item.id} className="rounded-lg border border-slate-200 p-3 sm:p-4">
                         <div className="grid gap-2 md:grid-cols-[minmax(160px,1.2fr)_minmax(220px,2fr)_100px_150px_95px_220px] md:items-center">
-                          <div>
+                          <div className="flex items-start justify-between gap-3 md:block">
                             <div className="text-xs text-slate-400 md:hidden">Name</div>
                             <div className="font-medium text-slate-900">{item.name}</div>
+                            <div className="text-sm text-slate-700 md:hidden">{formatCents(item.price)}</div>
                           </div>
                           <div>
                             <div className="text-xs text-slate-400 md:hidden">Description</div>
                             <div className="text-sm text-slate-500">{item.description || "-"}</div>
                           </div>
-                          <div>
+                          <div className="hidden md:block">
                             <div className="text-xs text-slate-400 md:hidden">Price</div>
                             <div className="text-sm text-slate-700">{formatCents(item.price)}</div>
                           </div>
@@ -845,24 +853,27 @@ export default function MenuPage() {
                           </div>
                           <div>
                             <div className="text-xs text-slate-400 md:hidden">Available</div>
-                            <label className="relative inline-flex h-6 w-11 items-center">
-                              <input
-                                type="checkbox"
-                                checked={item.isAvailable}
-                                onChange={(event) => toggleAvailability(item, event.target.checked)}
-                                className="peer sr-only"
+                            <button
+                              type="button"
+                              onClick={() => toggleAvailability(item, !item.isAvailable)}
+                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                item.isAvailable ? 'bg-blue-600' : 'bg-gray-200'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                  item.isAvailable ? 'translate-x-5' : 'translate-x-0'
+                                }`}
                               />
-                              <span className="absolute inset-0 rounded-full bg-slate-300 transition peer-checked:bg-blue-600" />
-                              <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
-                            </label>
+                            </button>
                           </div>
                           <div>
                             <div className="text-xs text-slate-400 md:hidden">Actions</div>
-                            <div className="flex flex-wrap items-center gap-1">
+                            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-1">
                               <button
                                 type="button"
                                 onClick={() => shiftSort("item", item.id, item.sortOrder, "up", { categoryId: item.categoryId })}
-                                className="flex h-8 w-8 items-center justify-center rounded border border-slate-200 text-slate-600"
+                                className="hidden h-8 w-8 items-center justify-center rounded border border-slate-200 text-slate-600 sm:flex"
                                 aria-label="Move item up"
                               >
                                 <ChevronUp className="h-3.5 w-3.5" />
@@ -870,7 +881,7 @@ export default function MenuPage() {
                               <button
                                 type="button"
                                 onClick={() => shiftSort("item", item.id, item.sortOrder, "down", { categoryId: item.categoryId })}
-                                className="flex h-8 w-8 items-center justify-center rounded border border-slate-200 text-slate-600"
+                                className="hidden h-8 w-8 items-center justify-center rounded border border-slate-200 text-slate-600 sm:flex"
                                 aria-label="Move item down"
                               >
                                 <ChevronDown className="h-3.5 w-3.5" />
@@ -878,7 +889,7 @@ export default function MenuPage() {
                               <button
                                 type="button"
                                 onClick={() => startEditItem(item)}
-                                className="inline-flex h-8 items-center gap-1 rounded border border-slate-200 px-2 text-xs font-medium text-slate-700"
+                                className="inline-flex h-9 w-full items-center justify-center gap-1 rounded border border-slate-200 px-2 text-xs font-medium text-slate-700 sm:h-8 sm:w-auto"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                                 Edit
@@ -886,7 +897,7 @@ export default function MenuPage() {
                               <button
                                 type="button"
                                 onClick={() => deleteItem(item)}
-                                className="inline-flex h-8 items-center rounded border border-red-200 px-2 text-xs font-medium text-red-700"
+                                className="inline-flex h-9 w-full items-center justify-center rounded border border-red-200 px-2 text-xs font-medium text-red-700 sm:h-8 sm:w-auto"
                               >
                                 Delete
                               </button>
@@ -900,20 +911,20 @@ export default function MenuPage() {
               )}
             </div>
 
-            <div className="border-t border-slate-200 bg-slate-50 p-4">
+            <div className="border-t border-slate-200 bg-slate-50 p-3 sm:p-5">
               <h3 className="text-sm font-semibold text-slate-800">Add item</h3>
-              <div className="mt-3 grid gap-3 md:grid-cols-[1fr_120px]">
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_140px]">
                 <input
                   value={newItem.name}
                   onChange={(event) => setNewItemState(category.id, { name: event.target.value })}
                   placeholder="Item name"
-                  className="h-10 rounded-lg border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
                 />
                 <input
                   value={newItem.price}
                   onChange={(event) => setNewItemState(category.id, { price: event.target.value })}
                   placeholder="Price (USD)"
-                  className="h-10 rounded-lg border border-slate-300 px-3 text-sm"
+                  className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
                 />
               </div>
               <textarea
@@ -941,7 +952,7 @@ export default function MenuPage() {
               <button
                 type="button"
                 onClick={() => createItem(category.id)}
-                className="mt-3 h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"
+                className="mt-3 h-10 w-full rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white sm:w-auto"
               >
                 Add Item
               </button>
@@ -966,8 +977,8 @@ export default function MenuPage() {
     : "";
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap justify-between items-center gap-3">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Menu Manager</h1>
           <p className="text-sm text-gray-500">Upload real menu files, and optionally maintain a digital menu builder for pre-ordering.</p>
@@ -981,7 +992,7 @@ export default function MenuPage() {
       </div>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-slate-900">POS Menu Sync</h2>
             <p className="mt-0.5 text-sm text-slate-500">
@@ -993,7 +1004,7 @@ export default function MenuPage() {
               type="button"
               onClick={syncPosMenuNow}
               disabled={syncingPos}
-              className="h-10 rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-800 disabled:opacity-70"
+              className="h-10 w-full rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-800 disabled:opacity-70 sm:w-auto"
             >
               {syncingPos ? "Syncing..." : "Sync Now"}
             </button>
@@ -1010,8 +1021,8 @@ export default function MenuPage() {
         )}
       </section>
 
-      <section className="bg-white rounded-xl shadow p-4 sm:p-6 space-y-4">
-        <div className="flex items-center justify-between gap-3">
+      <section className="space-y-4 rounded-xl bg-white p-3 shadow sm:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-bold">Menu Files</h2>
             <p className="text-sm text-gray-500">Upload PDFs or photos exactly as your printed menus appear.</p>
@@ -1021,7 +1032,7 @@ export default function MenuPage() {
           </a>
         </div>
 
-        <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
           <input
             value={uploadLabel}
             onChange={(event) => setUploadLabel(event.target.value)}
@@ -1037,7 +1048,7 @@ export default function MenuPage() {
           <button
             onClick={uploadMenuFile}
             disabled={uploadingMenuFile}
-            className="h-11 px-4 rounded bg-blue-600 text-white text-sm font-medium disabled:opacity-60"
+            className="h-11 w-full rounded bg-blue-600 px-4 text-sm font-medium text-white disabled:opacity-60 sm:w-auto"
           >
             {uploadingMenuFile ? "Uploading..." : "Upload Menu"}
           </button>
@@ -1087,38 +1098,38 @@ export default function MenuPage() {
                     </div>
                   </button>
 
-                  <div className="mt-3 flex flex-wrap gap-2 px-3 pb-3">
+                  <div className="mt-3 flex flex-col gap-2 px-3 pb-3 sm:flex-row sm:flex-wrap">
                     <button
                       onClick={() => moveMenuGroup(index, "up")}
                       disabled={index === 0}
-                      className="h-11 px-3 rounded border border-gray-200 text-xs disabled:opacity-40"
+                      className="h-11 w-full rounded border border-gray-200 px-3 text-xs disabled:opacity-40 sm:w-auto"
                     >
                       ↑
                     </button>
                     <button
                       onClick={() => moveMenuGroup(index, "down")}
                       disabled={index === groupedMenuFiles.length - 1}
-                      className="h-11 px-3 rounded border border-gray-200 text-xs disabled:opacity-40"
+                      className="h-11 w-full rounded border border-gray-200 px-3 text-xs disabled:opacity-40 sm:w-auto"
                     >
                       ↓
                     </button>
                     {renamingGroupKey === group.key ? (
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
                         <input
                           value={renameGroupValue}
                           onChange={(event) => setRenameGroupValue(event.target.value)}
-                          className="h-11 rounded border border-gray-200 px-3 text-xs"
+                          className="h-11 w-full rounded border border-gray-200 px-3 text-xs sm:w-auto"
                           placeholder="Menu label"
                         />
                         <button
                           onClick={() => saveMenuGroupRename(group)}
-                          className="h-11 px-3 rounded border border-blue-200 text-blue-700 text-xs"
+                          className="h-11 w-full rounded border border-blue-200 px-3 text-xs text-blue-700 sm:w-auto"
                         >
                           Save
                         </button>
                         <button
                           onClick={cancelRenameMenuGroup}
-                          className="h-11 px-3 rounded border border-gray-200 text-xs"
+                          className="h-11 w-full rounded border border-gray-200 px-3 text-xs sm:w-auto"
                         >
                           Cancel
                         </button>
@@ -1126,14 +1137,14 @@ export default function MenuPage() {
                     ) : (
                       <button
                         onClick={() => startRenameMenuGroup(group)}
-                        className="h-11 px-3 rounded border border-gray-200 text-xs"
+                        className="h-11 w-full rounded border border-gray-200 px-3 text-xs sm:w-auto"
                       >
                         Rename
                       </button>
                     )}
                     <button
                       onClick={() => deleteAllMenuFilesInGroup(group)}
-                      className="h-11 px-3 rounded border border-red-200 text-red-700 text-xs"
+                      className="h-11 w-full rounded border border-red-200 px-3 text-xs text-red-700 sm:w-auto"
                     >
                       Delete All
                     </button>
@@ -1147,7 +1158,7 @@ export default function MenuPage() {
                         {group.files.map((file) => (
                           <div
                             key={file.id}
-                            className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200 bg-white px-3 py-2"
+                            className="flex flex-col gap-3 rounded-md border border-gray-200 bg-white px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                           >
                             <div className="flex min-w-0 items-center gap-3">
                               {file.type === "image" ? (
@@ -1169,18 +1180,18 @@ export default function MenuPage() {
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                               <a
                                 href={file.url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="h-10 px-3 rounded border border-gray-200 text-xs inline-flex items-center"
+                                className="inline-flex h-10 w-full items-center justify-center rounded border border-gray-200 px-3 text-xs sm:w-auto"
                               >
                                 Open
                               </a>
                               <button
                                 onClick={() => deleteMenuFile(file)}
-                                className="h-10 px-3 rounded border border-red-200 text-red-700 text-xs"
+                                className="h-10 w-full rounded border border-red-200 px-3 text-xs text-red-700 sm:w-auto"
                               >
                                 Delete
                               </button>
@@ -1198,22 +1209,26 @@ export default function MenuPage() {
       </section>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-5">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-slate-900">Express Dining</h2>
             <p className="mt-0.5 text-sm text-slate-500">
               Let guests pre-order from your digital menu when making a reservation.
             </p>
           </div>
-          <label className="relative inline-flex cursor-pointer items-center">
-            <input
-              type="checkbox"
-              checked={expressDiningEnabled}
-              onChange={() => toggleExpressDining()}
-              className="peer sr-only"
+          <button
+            type="button"
+            onClick={() => toggleExpressDining()}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              expressDiningEnabled ? 'bg-blue-600' : 'bg-gray-200'
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                expressDiningEnabled ? 'translate-x-5' : 'translate-x-0'
+              }`}
             />
-            <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
-          </label>
+          </button>
         </div>
         {expressEnabled && (
           <p className="mt-2 text-xs text-emerald-700">
@@ -1230,12 +1245,12 @@ export default function MenuPage() {
 
       {licensed !== false ? (
         <>
-          <section className="bg-white rounded-xl shadow p-4">
-            <div className="flex items-center justify-between gap-2 mb-3">
+          <section className="rounded-xl bg-white p-3 shadow sm:p-5">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-bold">Digital Menu Builder</h2>
               <span className="text-xs text-gray-500">For Express Dining pre-orders</span>
             </div>
-            <div className="grid sm:grid-cols-[1fr_180px_auto] gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_180px_auto]">
               <input
                 value={newCategoryName}
                 onChange={e => setNewCategoryName(e.target.value)}
@@ -1253,7 +1268,7 @@ export default function MenuPage() {
                   </option>
                 ))}
               </select>
-              <button onClick={createCategory} className="h-11 px-4 rounded bg-blue-600 text-white text-sm font-medium">Add Category</button>
+              <button onClick={createCategory} className="h-11 w-full rounded bg-blue-600 px-4 text-sm font-medium text-white sm:w-auto">Add Category</button>
             </div>
           </section>
 
@@ -1264,7 +1279,7 @@ export default function MenuPage() {
           ) : (
             groupedByType.map((group) => (
               <section key={group.type} className="space-y-4">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-lg font-bold text-slate-900">{group.label}</h2>
                   <span className="text-xs text-slate-400">{group.categories.length} categories</span>
                 </div>

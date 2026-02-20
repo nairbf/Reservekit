@@ -107,6 +107,13 @@ const TABS: Array<{ key: SettingsTab; label: string; description: string }> = [
   { key: "license", label: "License", description: "Read-only plan and feature status" },
 ];
 
+const SETTINGS_TAB_KEYS = new Set<SettingsTab>(TABS.map((tab) => tab.key));
+
+function isSettingsTab(value: string | null): value is SettingsTab {
+  if (!value) return false;
+  return SETTINGS_TAB_KEYS.has(value as SettingsTab);
+}
+
 const FEATURE_ROWS = [
   { key: "feature_sms", label: "SMS Notifications" },
   { key: "feature_floorplan", label: "Visual Floor Plan" },
@@ -343,7 +350,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedTab = params.get("tab");
-    if (requestedTab === "restaurant" || requestedTab === "reservations" || requestedTab === "notifications" || requestedTab === "integrations" || requestedTab === "links" || requestedTab === "smart" || requestedTab === "license") {
+    if (isSettingsTab(requestedTab)) {
       setActiveTab(requestedTab);
     }
     if (params.get("connected") === "true") {

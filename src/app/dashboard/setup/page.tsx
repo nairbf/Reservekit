@@ -8,6 +8,7 @@ type TemplateKey = "small" | "medium" | "large";
 
 interface SetupSettings {
   restaurantName: string;
+  slug: string;
   phone: string;
   address: string;
   timezone: string;
@@ -37,8 +38,11 @@ interface TutorialChecks {
   inbox: boolean;
   tonight: boolean;
   tables: boolean;
-  settings: boolean;
-  publish: boolean;
+  menu: boolean;
+  integrations: boolean;
+  links: boolean;
+  smart: boolean;
+  testReservation: boolean;
 }
 
 const STEP_TITLES: Record<StepKey, string> = {
@@ -65,6 +69,7 @@ const TIMEZONE_OPTIONS = [
 
 const DEFAULTS: SetupSettings = {
   restaurantName: "My Restaurant",
+  slug: "",
   phone: "",
   address: "",
   timezone: "America/New_York",
@@ -184,11 +189,21 @@ export default function SetupWizardPage() {
     inbox: false,
     tonight: false,
     tables: false,
-    settings: false,
-    publish: false,
+    menu: false,
+    integrations: false,
+    links: false,
+    smart: false,
+    testReservation: false,
   });
 
   const tutorialDoneCount = useMemo(() => Object.values(tutorial).filter(Boolean).length, [tutorial]);
+  const reservationTestUrl = useMemo(() => {
+    const slug = String(settings.slug || "").trim();
+    if (typeof window === "undefined") {
+      return slug ? `/reserve/${slug}` : "/";
+    }
+    return slug ? `${window.location.origin}/reserve/${slug}` : `${window.location.origin}/`;
+  }, [settings.slug]);
 
   useEffect(() => {
     Promise.all([
@@ -565,42 +580,67 @@ export default function SetupWizardPage() {
             <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
               <span className="text-sm">Review pending requests in Inbox</span>
               <div className="flex items-center gap-2">
-                <Link href="/dashboard?fromSetup=1&tour=inbox" className="text-xs text-blue-600">Open</Link>
+                <Link href="/dashboard" className="text-xs text-blue-600">Open</Link>
                 <input type="checkbox" checked={tutorial.inbox} onChange={e => setTutorial(prev => ({ ...prev, inbox: e.target.checked }))} className="h-4 w-4" />
               </div>
             </label>
             <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
               <span className="text-sm">Practice the service flow on Tonight (Arrive {"->"} Seat {"->"} Complete)</span>
               <div className="flex items-center gap-2">
-                <Link href="/dashboard/tonight?fromSetup=1&tour=tonight" className="text-xs text-blue-600">Open</Link>
+                <Link href="/dashboard/tonight" className="text-xs text-blue-600">Open</Link>
                 <input type="checkbox" checked={tutorial.tonight} onChange={e => setTutorial(prev => ({ ...prev, tonight: e.target.checked }))} className="h-4 w-4" />
               </div>
             </label>
             <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
               <span className="text-sm">Verify table capacities and floor plan layout</span>
               <div className="flex items-center gap-2">
-                <Link href="/dashboard/floorplan?fromSetup=1&tour=floorplan" className="text-xs text-blue-600">Open</Link>
+                <Link href="/dashboard/floorplan" className="text-xs text-blue-600">Open</Link>
                 <input type="checkbox" checked={tutorial.tables} onChange={e => setTutorial(prev => ({ ...prev, tables: e.target.checked }))} className="h-4 w-4" />
               </div>
             </label>
             <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-              <span className="text-sm">Finalize settings and integrations (SMS/POS)</span>
+              <span className="text-sm">Add your menu (manually or sync from POS)</span>
               <div className="flex items-center gap-2">
-                <Link href="/dashboard/settings?fromSetup=1&tour=settings" className="text-xs text-blue-600">Open</Link>
-                <input type="checkbox" checked={tutorial.settings} onChange={e => setTutorial(prev => ({ ...prev, settings: e.target.checked }))} className="h-4 w-4" />
+                <Link href="/dashboard/menu" className="text-xs text-blue-600">Open</Link>
+                <input type="checkbox" checked={tutorial.menu} onChange={e => setTutorial(prev => ({ ...prev, menu: e.target.checked }))} className="h-4 w-4" />
               </div>
             </label>
             <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
-              <span className="text-sm">Embed widget on website and test a real request</span>
+              <span className="text-sm">Connect integrations (Stripe, SpotOn POS)</span>
               <div className="flex items-center gap-2">
-                <Link href="/dashboard/settings?fromSetup=1&tour=publish" className="text-xs text-blue-600">Open</Link>
-                <input type="checkbox" checked={tutorial.publish} onChange={e => setTutorial(prev => ({ ...prev, publish: e.target.checked }))} className="h-4 w-4" />
+                <Link href="/dashboard/settings?tab=integrations" className="text-xs text-blue-600">Open</Link>
+                <input type="checkbox" checked={tutorial.integrations} onChange={e => setTutorial(prev => ({ ...prev, integrations: e.target.checked }))} className="h-4 w-4" />
+              </div>
+            </label>
+            <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <span className="text-sm">Grab your embed code and links</span>
+              <div className="flex items-center gap-2">
+                <Link href="/dashboard/settings?tab=links" className="text-xs text-blue-600">Open</Link>
+                <input type="checkbox" checked={tutorial.links} onChange={e => setTutorial(prev => ({ ...prev, links: e.target.checked }))} className="h-4 w-4" />
+              </div>
+            </label>
+            <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <span className="text-sm">Review Smart Features</span>
+              <div className="flex items-center gap-2">
+                <Link href="/dashboard/settings?tab=smart" className="text-xs text-blue-600">Open</Link>
+                <input type="checkbox" checked={tutorial.smart} onChange={e => setTutorial(prev => ({ ...prev, smart: e.target.checked }))} className="h-4 w-4" />
+              </div>
+            </label>
+            <label className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <span className="text-sm">Test a real reservation from your website</span>
+              <div className="flex items-center gap-2">
+                <Link href={reservationTestUrl} className="text-xs text-blue-600" target={reservationTestUrl.startsWith("http") ? "_blank" : undefined} rel={reservationTestUrl.startsWith("http") ? "noopener noreferrer" : undefined}>Open</Link>
+                <input type="checkbox" checked={tutorial.testReservation} onChange={e => setTutorial(prev => ({ ...prev, testReservation: e.target.checked }))} className="h-4 w-4" />
               </div>
             </label>
           </div>
 
           <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-700">
-            Tutorial progress: {tutorialDoneCount}/5 steps complete.
+            Tutorial progress: {tutorialDoneCount}/8 steps complete — you can always come back to this later.
+          </div>
+
+          <div className="text-xs text-gray-500">
+            Don&apos;t worry about completing everything now. You can access all of these from your dashboard at any time.
           </div>
 
           <div className="flex justify-between">

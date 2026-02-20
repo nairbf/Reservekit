@@ -1208,11 +1208,14 @@ export default function MenuPage() {
             type="button"
             onClick={toggleExpressDining}
             disabled={savingExpress}
-            className={`relative h-7 w-12 rounded-full transition-colors ${expressEnabled ? "bg-blue-600" : "bg-slate-300"} ${savingExpress ? "opacity-70" : ""}`}
+            className={`relative inline-flex h-6 w-11 items-center ${savingExpress ? "opacity-70" : ""}`}
             aria-pressed={expressEnabled}
           >
             <span
-              className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform ${expressEnabled ? "translate-x-5" : "translate-x-0.5"}`}
+              className={`absolute inset-0 rounded-full transition ${expressEnabled ? "bg-blue-600" : "bg-slate-300"}`}
+            />
+            <span
+              className={`absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${expressEnabled ? "translate-x-5" : "translate-x-0"}`}
             />
           </button>
         </div>

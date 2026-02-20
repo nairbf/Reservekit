@@ -181,7 +181,7 @@ export default function DashboardNav({
           {!tabletMode && (
             <button
               onClick={toggleCollapsed}
-              className="h-9 w-9 rounded-lg border border-gray-200 text-sm text-gray-700 transition-all duration-200"
+              className="h-9 w-9 rounded-lg border border-gray-200 text-sm text-gray-700 transition-all duration-200 flex items-center justify-center"
               title={effectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {effectiveCollapsed ? <Menu className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}

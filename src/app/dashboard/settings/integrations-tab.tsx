@@ -9,6 +9,19 @@ export function IntegrationsTab(props: IntegrationsTabProps) {
   const {
     settings,
     setField,
+    stripeOAuthMessage,
+    stripeOAuthError,
+    stripeConnectedViaOauth,
+    stripeAccountId,
+    disconnectStripeConnect,
+    stripeDisconnecting,
+    stripeConnectEnabled,
+    showStripeSecretKey,
+    setShowStripeSecretKey,
+    stripeConfigured,
+    stripeTestStatus,
+    testStripeConnection,
+    stripeTestMessage,
     posMessage,
     posLoading,
     spotOnLoading,
@@ -45,6 +58,138 @@ export function IntegrationsTab(props: IntegrationsTabProps) {
 
   return (
     <div className="space-y-6">
+          <Section title="Stripe Connect">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <h3 className="text-sm font-semibold text-gray-900">Payment Processing</h3>
+              <p className="mt-1 text-sm text-gray-600">
+                Connect your Stripe account to accept deposits and card holds from guests.
+              </p>
+              <p className="mt-1 text-xs text-gray-500">
+                Don&apos;t have a Stripe account? Create one at{" "}
+                <a className="text-blue-700 underline" href="https://stripe.com" target="_blank" rel="noreferrer">
+                  stripe.com
+                </a>{" "}
+                — it takes about 10 minutes.
+              </p>
+
+              {stripeOAuthMessage ? (
+                <div className={`mt-4 rounded-lg border px-3 py-2 text-sm ${stripeOAuthError ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+                  {stripeOAuthMessage}
+                </div>
+              ) : null}
+
+              {stripeConnectedViaOauth ? (
+                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                  <div className="text-sm font-semibold text-emerald-800">✓ Connected via Stripe Connect</div>
+                  <div className="mt-1 text-xs text-emerald-700">Account: {stripeAccountId}</div>
+                  <button
+                    type="button"
+                    onClick={disconnectStripeConnect}
+                    disabled={stripeDisconnecting}
+                    className="mt-3 h-10 rounded-lg border border-emerald-300 bg-white px-3 text-sm text-emerald-800 disabled:opacity-60"
+                  >
+                    {stripeDisconnecting ? "Disconnecting..." : "Disconnect"}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {stripeConnectEnabled ? (
+                    <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3">
+                      <a
+                        href="/api/stripe/connect"
+                        className="inline-flex h-11 items-center rounded-lg bg-[#635bff] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#7a73ff]"
+                      >
+                        Connect with Stripe
+                      </a>
+                      <p className="mt-2 text-xs text-gray-500">One click to connect your Stripe account.</p>
+                    </div>
+                  ) : null}
+
+                  <div className="mt-4 text-xs uppercase tracking-wide text-gray-500">or enter keys manually</div>
+
+                  <div className="mt-3 grid gap-3">
+                    <div>
+                      <Label>Stripe Publishable Key</Label>
+                      <input
+                        type="text"
+                        value={settings.stripePublishableKey || ""}
+                        onChange={(event) => setField("stripePublishableKey", event.target.value)}
+                        placeholder="pk_live_..."
+                        className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Stripe Secret Key</Label>
+                      <div className="flex gap-2">
+                        <input
+                          type={showStripeSecretKey ? "text" : "password"}
+                          value={settings.stripeSecretKey || ""}
+                          onChange={(event) => setField("stripeSecretKey", event.target.value)}
+                          placeholder="sk_live_..."
+                          className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowStripeSecretKey((value: boolean) => !value)}
+                          className="h-11 rounded-lg border border-gray-200 px-3 text-sm"
+                        >
+                          {showStripeSecretKey ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Stripe Webhook Secret (optional)</Label>
+                      <input
+                        type="password"
+                        value={settings.stripeWebhookSecret || ""}
+                        onChange={(event) => setField("stripeWebhookSecret", event.target.value)}
+                        placeholder="whsec_..."
+                        className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {!stripeConfigured ? (
+                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                        ⚠ Not configured
+                      </span>
+                    ) : stripeTestStatus === "connected" ? (
+                      <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        ✓ Connected
+                      </span>
+                    ) : stripeTestStatus === "invalid" ? (
+                      <span className="inline-flex rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+                        ✗ Invalid
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                        ⚠ Not verified
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={testStripeConnection}
+                      disabled={stripeTestStatus === "testing"}
+                      className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
+                    >
+                      {stripeTestStatus === "testing" ? "Testing..." : "Test Connection"}
+                    </button>
+                  </div>
+
+                  {stripeTestMessage ? (
+                    <p className={`mt-2 text-sm ${stripeTestStatus === "invalid" ? "text-red-600" : "text-emerald-700"}`}>
+                      {stripeTestMessage}
+                    </p>
+                  ) : null}
+                </>
+              )}
+            </div>
+          </Section>
+
           <Section title="Integrations">
             <p className="text-sm text-gray-600">
               Connect your POS system to sync menu items, tables, and business hours. Sync is read-only.

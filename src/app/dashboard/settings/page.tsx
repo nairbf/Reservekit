@@ -185,6 +185,10 @@ const SETTINGS_WRITE_KEYS = new Set([
   "twilioSid",
   "twilioToken",
   "twilioPhone",
+  "sms_template_confirmed",
+  "sms_template_reminder",
+  "sms_template_cancelled",
+  "sms_template_waitlist_ready",
   "loyaltyOptInEnabled",
   "loyaltyProgramName",
   "loyaltyOptInMessage",
@@ -337,14 +341,14 @@ export default function SettingsPage() {
     if (error) setPosMessage(error);
 
     if (params.get("stripe_connected") === "true") {
-      setActiveTab("reservations");
+      setActiveTab("integrations");
       setStripeOAuthError(false);
       setStripeOAuthMessage("Stripe account connected successfully.");
       setStripeTestStatus("connected");
     }
     const stripeError = params.get("stripe_error");
     if (stripeError) {
-      setActiveTab("reservations");
+      setActiveTab("integrations");
       setStripeOAuthError(true);
       setStripeOAuthMessage(stripeError);
       setStripeTestStatus("invalid");
@@ -435,10 +439,6 @@ export default function SettingsPage() {
       const data = await response.json();
       const incoming = (data?.templates || {}) as Record<string, EmailTemplate>;
       setTemplates(incoming);
-      if (!templateExpanded) {
-        const first = Object.keys(incoming)[0];
-        if (first) setTemplateExpanded(first);
-      }
       setTemplateMessage((previous) => ({ ...previous, __global: "" }));
     } catch {
       setTemplateMessage((previous) => ({ ...previous, __global: "Could not load templates." }));
@@ -1010,7 +1010,7 @@ export default function SettingsPage() {
           <h1 className="text-2xl font-bold">Settings</h1>
           <p className="text-sm text-gray-500">Configure your restaurant profile and reservation operations.</p>
         </div>
-        {(activeTab === "reservations" || activeTab === "notifications") && (
+        {(activeTab === "reservations" || activeTab === "notifications" || activeTab === "integrations") && (
           <button
             onClick={saveChanges}
             disabled={saving}
@@ -1062,22 +1062,11 @@ export default function SettingsPage() {
           TIMEZONE_OPTIONS={TIMEZONE_OPTIONS}
           currentTimeInTimezone={currentTimeInTimezone}
           clockMs={clockMs}
-          stripeOAuthMessage={stripeOAuthMessage}
-          stripeOAuthError={stripeOAuthError}
-          stripeConnectedViaOauth={stripeConnectedViaOauth}
-          stripeAccountId={stripeAccountId}
-          disconnectStripeConnect={disconnectStripeConnect}
-          stripeDisconnecting={stripeDisconnecting}
-          stripeConnectEnabled={stripeConnectEnabled}
-          showStripeSecretKey={showStripeSecretKey}
-          setShowStripeSecretKey={setShowStripeSecretKey}
           stripeConfigured={stripeConfigured}
-          stripeTestStatus={stripeTestStatus}
-          testStripeConnection={testStripeConnection}
-          stripeTestMessage={stripeTestMessage}
           depositsEnabled={depositsEnabled}
           setStripeTestStatus={setStripeTestStatus}
           setStripeTestMessage={setStripeTestMessage}
+          onGoToIntegrations={() => setActiveTab("integrations")}
         />
       )}
 
@@ -1117,6 +1106,19 @@ export default function SettingsPage() {
           setField={setField}
           savePartial={savePartial}
           saving={saving}
+          stripeOAuthMessage={stripeOAuthMessage}
+          stripeOAuthError={stripeOAuthError}
+          stripeConnectedViaOauth={stripeConnectedViaOauth}
+          stripeAccountId={stripeAccountId}
+          disconnectStripeConnect={disconnectStripeConnect}
+          stripeDisconnecting={stripeDisconnecting}
+          stripeConnectEnabled={stripeConnectEnabled}
+          showStripeSecretKey={showStripeSecretKey}
+          setShowStripeSecretKey={setShowStripeSecretKey}
+          stripeConfigured={stripeConfigured}
+          stripeTestStatus={stripeTestStatus}
+          testStripeConnection={testStripeConnection}
+          stripeTestMessage={stripeTestMessage}
           posMessage={posMessage}
           posLoading={posLoading}
           spotOnLoading={spotOnLoading}

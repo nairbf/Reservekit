@@ -71,7 +71,7 @@ export default function LandingBuilder({
   onSavePartial: (patch: Record<string, string>) => Promise<void>;
 }) {
   const [sections, setSections] = useState<LandingSection[]>(normalizeSections(settings.landing_sections));
-  const [expandedId, setExpandedId] = useState<LandingSectionId | null>("hero");
+  const [expandedId, setExpandedId] = useState<LandingSectionId | null>(null);
   const [layoutSaving, setLayoutSaving] = useState(false);
   const [layoutMessage, setLayoutMessage] = useState("");
 

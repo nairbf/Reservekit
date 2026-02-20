@@ -1,9 +1,36 @@
 "use client";
 
+import { useState } from "react";
 import type { SettingsTabProps } from "./page";
 import { Field, Label, Section } from "./shared";
 
 type NotificationsTabProps = SettingsTabProps & { [key: string]: any };
+
+const SMS_TEMPLATES = [
+  {
+    key: "sms_template_confirmed",
+    title: "Reservation Confirmed",
+    defaultBody:
+      "Hi {{guestName}}, your reservation at {{restaurantName}} on {{date}} at {{time}} for {{partySize}} is confirmed. Manage: {{manageUrl}}",
+  },
+  {
+    key: "sms_template_reminder",
+    title: "Reservation Reminder",
+    defaultBody:
+      "Reminder: {{guestName}}, your table at {{restaurantName}} is at {{time}} today for {{partySize}}. See you soon! Manage: {{manageUrl}}",
+  },
+  {
+    key: "sms_template_cancelled",
+    title: "Reservation Cancelled",
+    defaultBody:
+      "Hi {{guestName}}, your reservation at {{restaurantName}} on {{date}} at {{time}} has been cancelled. Questions? Reply to this message.",
+  },
+  {
+    key: "sms_template_waitlist_ready",
+    title: "Waitlist Ready",
+    defaultBody: "Great news {{guestName}}! Your table at {{restaurantName}} is ready. Please check in with the host.",
+  },
+] as const;
 
 export function NotificationsTab(props: NotificationsTabProps) {
   const {
@@ -31,6 +58,11 @@ export function NotificationsTab(props: NotificationsTabProps) {
     previewTemplate,
     sendTestTemplate,
   } = props;
+  const [smsTemplateExpanded, setSmsTemplateExpanded] = useState<string | null>(null);
+
+  function getSmsTemplateValue(key: string, fallback: string) {
+    return Object.prototype.hasOwnProperty.call(settings, key) ? settings[key] || "" : fallback;
+  }
 
   return (
     <div className="space-y-6">
@@ -331,6 +363,51 @@ export function NotificationsTab(props: NotificationsTabProps) {
               </div>
             )}
           </Section>
+
+          {smsEnabled ? (
+            <Section title="SMS Templates">
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                SMS templates have a 160-character limit per segment. Keep messages concise.
+              </div>
+
+              <div className="space-y-3">
+                {SMS_TEMPLATES.map((template) => {
+                  const expanded = smsTemplateExpanded === template.key;
+                  const value = getSmsTemplateValue(template.key, template.defaultBody);
+                  const count = value.length;
+                  return (
+                    <article key={template.key} className="rounded-xl border border-gray-200 bg-white">
+                      <button
+                        type="button"
+                        onClick={() => setSmsTemplateExpanded(expanded ? null : template.key)}
+                        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+                      >
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">{template.title}</div>
+                          <div className="line-clamp-1 text-xs text-gray-500">{value}</div>
+                        </div>
+                        <span className="text-xs text-gray-500">{expanded ? "Hide" : "Edit"}</span>
+                      </button>
+
+                      {expanded ? (
+                        <div className="border-t border-gray-100 px-4 py-4">
+                          <textarea
+                            value={value}
+                            onChange={(event) => setField(template.key, event.target.value)}
+                            rows={4}
+                            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                          />
+                          <div className={`mt-2 text-xs ${count > 160 ? "text-red-600" : "text-gray-500"}`}>
+                            {count} characters
+                          </div>
+                        </div>
+                      ) : null}
+                    </article>
+                  );
+                })}
+              </div>
+            </Section>
+          ) : null}
     </div>
   );
 }

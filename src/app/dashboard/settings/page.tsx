@@ -282,6 +282,8 @@ export default function SettingsPage() {
   const [spotOnLoading, setSpotOnLoading] = useState(false);
   const [spotOnMessage, setSpotOnMessage] = useState("");
   const [spotOnSyncing, setSpotOnSyncing] = useState(false);
+  const [spotOnMenuSyncing, setSpotOnMenuSyncing] = useState(false);
+  const [spotOnMenuMessage, setSpotOnMenuMessage] = useState("");
   const [spotOnSaving, setSpotOnSaving] = useState(false);
   const [spotOnMappingOpen, setSpotOnMappingOpen] = useState(false);
   const [spotOnMappingBusy, setSpotOnMappingBusy] = useState(false);
@@ -570,6 +572,33 @@ export default function SettingsPage() {
     }
   }
 
+  async function syncSpotOnMenu() {
+    setSpotOnMenuSyncing(true);
+    setSpotOnMenuMessage("");
+    try {
+      const response = await fetch("/api/spoton/menu-sync", { method: "POST" });
+      const data = (await response.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+        created?: number;
+        updated?: number;
+        skipped?: number;
+        useMock?: boolean;
+      };
+      if (!response.ok || !data.success) throw new Error(data.error || "SpotOn menu sync failed.");
+      const created = Number(data.created || 0);
+      const updated = Number(data.updated || 0);
+      const skipped = Number(data.skipped || 0);
+      const suffix = data.useMock ? " (mock mode)" : "";
+      setSpotOnMenuMessage(`Menu sync complete. ${created} created, ${updated} updated, ${skipped} skipped.${suffix}`);
+      await loadSettings();
+    } catch (error) {
+      setSpotOnMenuMessage(error instanceof Error ? error.message : "SpotOn menu sync failed.");
+    } finally {
+      setSpotOnMenuSyncing(false);
+    }
+  }
+
   async function disconnectSpotOn() {
     if (!confirm("Disconnect SpotOn?")) return;
     setSpotOnSaving(true);
@@ -589,6 +618,7 @@ export default function SettingsPage() {
       setSpotOnExpanded(false);
       setSpotOnMappingOpen(false);
       setSpotOnMessage("SpotOn disconnected.");
+      setSpotOnMenuMessage("");
     } catch (error) {
       setSpotOnMessage(error instanceof Error ? error.message : "Failed to disconnect SpotOn.");
     } finally {
@@ -1131,6 +1161,9 @@ export default function SettingsPage() {
           spotOnSaving={spotOnSaving}
           syncSpotOnNow={syncSpotOnNow}
           spotOnSyncing={spotOnSyncing}
+          syncSpotOnMenu={syncSpotOnMenu}
+          spotOnMenuSyncing={spotOnMenuSyncing}
+          spotOnMenuMessage={spotOnMenuMessage}
           spotOnMappingOpen={spotOnMappingOpen}
           setSpotOnMappingOpen={setSpotOnMappingOpen}
           disconnectSpotOn={disconnectSpotOn}

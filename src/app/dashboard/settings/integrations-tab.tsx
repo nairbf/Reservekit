@@ -34,6 +34,9 @@ export function IntegrationsTab(props: IntegrationsTabProps) {
     spotOnSaving,
     syncSpotOnNow,
     spotOnSyncing,
+    syncSpotOnMenu,
+    spotOnMenuSyncing,
+    spotOnMenuMessage,
     spotOnMappingOpen,
     setSpotOnMappingOpen,
     disconnectSpotOn,
@@ -228,6 +231,11 @@ export function IntegrationsTab(props: IntegrationsTabProps) {
                           Last sync: {spotOnStatus.spotonLastSync ? formatDateTime(spotOnStatus.spotonLastSync) : "Never"} · {spotOnStatus.openChecks} open checks
                         </p>
                       ) : null}
+                      {spotOnConfigured ? (
+                        <p className="mt-1 text-xs text-gray-500">
+                          Last menu sync: {settings.spotonLastMenuSync ? formatDateTime(settings.spotonLastMenuSync) : "Never"}
+                        </p>
+                      ) : null}
                       {!spotOnStatus.licensed ? (
                         <p className="mt-1 text-xs text-amber-700">POS integration requires an active POS module license.</p>
                       ) : null}
@@ -302,6 +310,14 @@ export function IntegrationsTab(props: IntegrationsTabProps) {
                         </button>
                         <button
                           type="button"
+                          onClick={syncSpotOnMenu}
+                          disabled={!spotOnConfigured || !spotOnStatus.licensed || spotOnMenuSyncing}
+                          className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
+                        >
+                          {spotOnMenuSyncing ? "Syncing Menu..." : "Sync Menu"}
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setSpotOnMappingOpen((value: boolean) => !value)}
                           disabled={!spotOnConfigured || !spotOnStatus.licensed}
                           className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
@@ -321,6 +337,11 @@ export function IntegrationsTab(props: IntegrationsTabProps) {
                       {spotOnMessage ? (
                         <p className={`text-sm ${spotOnMessage.toLowerCase().includes("failed") || spotOnMessage.toLowerCase().includes("error") ? "text-red-600" : "text-green-700"}`}>
                           {spotOnMessage}
+                        </p>
+                      ) : null}
+                      {spotOnMenuMessage ? (
+                        <p className={`text-sm ${spotOnMenuMessage.toLowerCase().includes("failed") || spotOnMenuMessage.toLowerCase().includes("error") ? "text-red-600" : "text-green-700"}`}>
+                          {spotOnMenuMessage}
                         </p>
                       ) : null}
 

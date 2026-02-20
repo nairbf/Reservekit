@@ -209,10 +209,6 @@ export default function PricingPageClient() {
             One-time license. First year managed hosting included. Renew annually starting year 2.
           </p>
 
-          <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 sm:p-5">
-            <p className="font-semibold">OpenTable and similar platforms start around ~$3,000-$3,600/year on entry plans and go up from there.</p>
-            <p className="mt-1 text-rose-800">Keep your margins and keep ownership of your guest data.</p>
-          </div>
         </section>
 
         <section className="mt-10 grid gap-6 xl:grid-cols-[1fr_360px]">
@@ -257,6 +253,16 @@ export default function PricingPageClient() {
                   );
                 })}
               </div>
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-blue-50/50 px-4 py-3 sm:px-5">
+              <p className="text-sm text-slate-600">
+                <span className="mr-2">ℹ️</span>
+                <span className="font-semibold text-slate-700">
+                  For reference:
+                </span>{" "}
+                OpenTable and similar platforms start around ~$3,000-$3,600/year on entry-level plans. ReserveSit is a one-time purchase.
+              </p>
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6">

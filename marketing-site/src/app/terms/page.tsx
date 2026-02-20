@@ -10,7 +10,7 @@ const sections = [
   { id: "acceptance", title: "1. Acceptance of Terms" },
   { id: "service-description", title: "2. Description of Service" },
   { id: "account-registration", title: "3. Account Registration" },
-  { id: "billing", title: "4. Subscription and Payments" },
+  { id: "licensing", title: "4. Licensing and Payments" },
   { id: "acceptable-use", title: "5. Acceptable Use" },
   { id: "restaurant-responsibilities", title: "6. Restaurant Responsibilities" },
   { id: "guest-terms", title: "7. Guest Terms" },
@@ -92,13 +92,16 @@ export default function TermsPage() {
         </section>
 
         <section className="space-y-3">
-          <SectionHeading id="billing">4. Subscription and Payments</SectionHeading>
+          <SectionHeading id="licensing">4. Licensing and Payments</SectionHeading>
           <ul className="list-disc space-y-2 pl-6 text-sm leading-7 text-slate-700">
-            <li>Available plans include Core, Service Pro, and Full Suite.</li>
-            <li>Subscriptions are billed monthly unless a separate written plan applies.</li>
-            <li>Payments are processed by Stripe under Stripe's terms and privacy policies.</li>
-            <li>We may adjust pricing with at least 30 days' advance notice.</li>
-            <li>Monthly fees are generally non-refundable; annual plans may be eligible for prorated refunds where required by contract or law.</li>
+            <li>ReserveSit is sold as a one-time software license. Available plans include Core, Service Pro, and Full Suite.</li>
+            <li>Your license fee is a one-time payment that grants you perpetual use of the software version purchased.</li>
+            <li>First-year managed hosting is included with your license at no additional cost.</li>
+            <li>Starting in year two, optional managed hosting is billed annually ($299/year for Core, $399/year for Service Pro and Full Suite). You will receive at least 30 days' notice before your first renewal.</li>
+            <li>If you choose not to renew managed hosting, you may self-host the software at no cost. Your license remains valid regardless of hosting choice.</li>
+            <li>Payments are processed by Stripe under Stripe&apos;s terms and privacy policies.</li>
+            <li>License fees are non-refundable. Managed hosting renewals may be eligible for prorated refunds if cancelled within 30 days of renewal.</li>
+            <li>Add-on features (SMS, Floor Plan, Reporting, Guest History, Event Ticketing) are one-time purchases tied to your license.</li>
           </ul>
         </section>
 
@@ -177,7 +180,7 @@ export default function TermsPage() {
         <section className="space-y-3">
           <SectionHeading id="termination">13. Termination</SectionHeading>
           <p className="text-sm leading-7 text-slate-700">
-            Either party may terminate the service in accordance with the applicable subscription terms. Upon
+            Either party may terminate the service in accordance with the applicable license terms. Upon
             termination, access may be suspended or revoked. We provide a 30-day window for data export unless legal or
             security obligations require immediate restriction.
           </p>

@@ -4,21 +4,6 @@ import { PricingCards } from "@/components/pricing-cards";
 import { ComparisonTable } from "@/components/comparison-table";
 import { DemoForm } from "@/components/demo-form";
 
-const testimonials = [
-  {
-    quote: "We replaced a costly subscription and were fully live in a weekend.",
-    author: "Owner, Harbor House",
-  },
-  {
-    quote: "Our host team finally has one clear workflow for requests and arrivals.",
-    author: "GM, Midtown Bistro",
-  },
-  {
-    quote: "The one-time license model made budgeting predictable immediately.",
-    author: "Operations Lead, The Reef",
-  },
-];
-
 const featureCategories = [
   {
     title: "Guest Booking",
@@ -157,22 +142,12 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h2 className="text-3xl font-semibold text-slate-900">Trusted by growing operators</h2>
-            <p className="mt-2 text-slate-600">Trusted by <strong>42 restaurants</strong> and counting.</p>
-          </div>
-        </div>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {testimonials.map((t) => (
-            <blockquote key={t.author} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-3xl leading-none text-blue-300">“</p>
-              <p className="mt-2 text-sm text-slate-700">{t.quote}</p>
-              <footer className="mt-4 text-xs font-semibold text-slate-500">{t.author}</footer>
-            </blockquote>
-          ))}
-        </div>
+      <section className="mx-auto w-full max-w-6xl px-4 py-16 text-center sm:px-6">
+        <h2 className="text-2xl font-semibold text-slate-900">Built for independent restaurants</h2>
+        <p className="mx-auto mt-2 max-w-2xl text-slate-600">
+          ReserveSit is designed for owner-operated restaurants who want professional reservation
+          management without the monthly fees. Own your system, own your data.
+        </p>
       </section>
 
       <section className="border-y border-slate-200 bg-white">

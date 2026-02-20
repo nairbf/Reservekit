@@ -43,7 +43,7 @@ export async function Hero({
         <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-800">
           You are viewing a demo of ReserveSit.{" "}
           <a href="https://reservesit.com/pricing" className="font-semibold underline">
-            Start your free trial →
+            Get your own instance →
           </a>
         </div>
       ) : null}

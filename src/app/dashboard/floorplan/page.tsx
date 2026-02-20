@@ -28,6 +28,8 @@ interface Reservation {
   date: string;
   status: string;
   code: string;
+  seatedAt?: string | null;
+  durationMin?: number;
 }
 
 interface StatusEntry {
@@ -46,6 +48,19 @@ interface PosStatusEntry {
   closedAt: string | null;
   isOpen: boolean;
   syncedAt: string;
+}
+
+interface TurnTimeStats {
+  overall: number;
+  byPartySize: Record<number, number>;
+  byTable: Record<number, number>;
+}
+
+interface SmartTonightResponse {
+  features: {
+    smartTurnTime: boolean;
+  };
+  turnTimes: TurnTimeStats | null;
 }
 
 function normalizeTable(t: TableItem): TableItem {
@@ -92,6 +107,26 @@ function formatTime12(value: string): string {
   return `${h}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
+function formatClock(dt: Date): string {
+  return dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function getTurnEstimate(reservation: Reservation, tableId: number, turnTimes: TurnTimeStats | null): { remaining: number | null; availableAt: Date | null } {
+  if (!turnTimes || !reservation.seatedAt) return { remaining: null, availableAt: null };
+  const seatedAt = new Date(reservation.seatedAt);
+  if (Number.isNaN(seatedAt.getTime())) return { remaining: null, availableAt: null };
+
+  const estimatedMinutes =
+    turnTimes.byTable?.[tableId]
+    || turnTimes.byPartySize?.[reservation.partySize]
+    || turnTimes.overall
+    || 60;
+
+  const availableAt = new Date(seatedAt.getTime() + estimatedMinutes * 60000);
+  const remaining = Math.round((availableAt.getTime() - Date.now()) / 60000);
+  return { remaining, availableAt };
+}
+
 export default function FloorPlanPage() {
   const canManageTables = useHasPermission("manage_tables");
   const searchParams = useSearchParams();
@@ -99,6 +134,8 @@ export default function FloorPlanPage() {
   const [tables, setTables] = useState<TableItem[]>([]);
   const [statusData, setStatusData] = useState<StatusEntry[]>([]);
   const [posStatusMap, setPosStatusMap] = useState<Record<number, PosStatusEntry>>({});
+  const [smartTurnTimeEnabled, setSmartTurnTimeEnabled] = useState(true);
+  const [turnTimes, setTurnTimes] = useState<TurnTimeStats | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detailsId, setDetailsId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -205,18 +242,37 @@ export default function FloorPlanPage() {
     }
   }
 
+  async function loadSmartData() {
+    try {
+      const response = await fetch("/api/smart/tonight");
+      if (!response.ok) return;
+      const data = await response.json() as SmartTonightResponse;
+      setSmartTurnTimeEnabled(data.features?.smartTurnTime !== false);
+      setTurnTimes(data.turnTimes || null);
+    } catch {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     if (licenseOk === false) return;
     setSelectedId(null);
     setDetailsId(null);
     if (mode === "edit") loadTables(false);
-    else loadStatus(false);
+    else {
+      loadStatus(false);
+      loadSmartData();
+    }
   }, [mode, licenseOk]);
 
   useEffect(() => {
     if (licenseOk === false || mode !== "live") return;
     const i = setInterval(() => loadStatus(true), 10000);
-    return () => clearInterval(i);
+    const smartTimer = setInterval(() => loadSmartData(), 60000);
+    return () => {
+      clearInterval(i);
+      clearInterval(smartTimer);
+    };
   }, [mode, licenseOk]);
 
   useEffect(() => {
@@ -528,6 +584,9 @@ export default function FloorPlanPage() {
               const openMinutes = pos ? minutesSince(pos.openedAt) : null;
               const longCheck = openMinutes !== null && openMinutes > 90;
               const untracked = Boolean(pos && !res);
+              const turnEstimate = mode === "live" && smartTurnTimeEnabled && res?.status === "seated"
+                ? getTurnEstimate(res, t.id, turnTimes)
+                : { remaining: null as number | null, availableAt: null as Date | null };
               const shapeClass = t.shape === "rect" ? "rounded-lg" : "rounded-full";
               const statusClass = mode === "edit" ? "bg-white border-gray-200 text-gray-700" : STATUS_STYLES[status];
               return (
@@ -582,6 +641,15 @@ export default function FloorPlanPage() {
                   {mode === "live" && res && (
                     <span className="text-[9px] text-gray-500 truncate max-w-full px-1">{res.guestName}</span>
                   )}
+                  {mode === "live" && turnEstimate.remaining !== null ? (
+                    <span className="text-[9px] text-gray-500 truncate max-w-full px-1">
+                      {turnEstimate.remaining > 0
+                        ? `~${turnEstimate.remaining}m`
+                        : turnEstimate.availableAt
+                          ? `Est ${formatClock(turnEstimate.availableAt)}`
+                          : ""}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
@@ -635,6 +703,9 @@ export default function FloorPlanPage() {
               const res = entry?.reservation || null;
               const pos = posStatusMap[detailsId];
               const openMinutes = pos ? minutesSince(pos.openedAt) : null;
+              const turnEstimate = res?.status === "seated" && smartTurnTimeEnabled
+                ? getTurnEstimate(res, detailsId, turnTimes)
+                : { remaining: null as number | null, availableAt: null as Date | null };
               if (!res) return (
                 <div>
                   <div className="text-lg font-bold mb-2">Table Details</div>
@@ -671,6 +742,12 @@ export default function FloorPlanPage() {
                       {pos.serverName ? ` • ${pos.serverName}` : ""}
                     </div>
                   )}
+                  {turnEstimate.availableAt ? (
+                    <div className="text-xs text-gray-600 mb-3">
+                      Est. available: {formatClock(turnEstimate.availableAt)}
+                      {turnEstimate.remaining !== null ? ` (${Math.max(0, turnEstimate.remaining)} min)` : ""}
+                    </div>
+                  ) : null}
                   {!pos && res.status === "seated" && (
                     <div className="text-xs text-orange-700 mb-3">⚠ No POS check found</div>
                   )}

@@ -8,9 +8,10 @@ import { ReservationsTab } from "./reservations-tab";
 import { NotificationsTab } from "./notifications-tab";
 import { IntegrationsTab } from "./integrations-tab";
 import { LinksTab } from "./links-tab";
+import { SmartFeaturesTab } from "./smart-features-tab";
 import { LicenseTab } from "./license-tab";
 
-type SettingsTab = "restaurant" | "reservations" | "notifications" | "integrations" | "links" | "license";
+type SettingsTab = "restaurant" | "reservations" | "notifications" | "integrations" | "links" | "smart" | "license";
 
 export type SettingsMap = Record<string, string>;
 type TemplateField = "subject" | "heading" | "body" | "ctaText" | "ctaUrl" | "footerText";
@@ -102,6 +103,7 @@ const TABS: Array<{ key: SettingsTab; label: string; description: string }> = [
   { key: "notifications", label: "Notifications", description: "Email, reminders, and staff alerts" },
   { key: "integrations", label: "Integrations", description: "Connect POS systems and sync data" },
   { key: "links", label: "Links", description: "Share URLs, embed code, and QR downloads" },
+  { key: "smart", label: "Smart Features", description: "Quiet intelligence for service, guests, and pacing" },
   { key: "license", label: "License", description: "Read-only plan and feature status" },
 ];
 
@@ -204,6 +206,12 @@ const SETTINGS_WRITE_KEYS = new Set([
   "spotonLocationId",
   "spotonEnvironment",
   "spotonUseMock",
+  "smartTurnTime",
+  "smartNoShowRisk",
+  "smartGuestIntel",
+  "smartWaitlistEstimate",
+  "smartDailyPrep",
+  "smartPacingAlerts",
   "reserveHeading",
   "reserveSubheading",
   "reserveConfirmationMessage",
@@ -335,7 +343,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const requestedTab = params.get("tab");
-    if (requestedTab === "restaurant" || requestedTab === "reservations" || requestedTab === "notifications" || requestedTab === "integrations" || requestedTab === "links" || requestedTab === "license") {
+    if (requestedTab === "restaurant" || requestedTab === "reservations" || requestedTab === "notifications" || requestedTab === "integrations" || requestedTab === "links" || requestedTab === "smart" || requestedTab === "license") {
       setActiveTab(requestedTab);
     }
     if (params.get("connected") === "true") {
@@ -1190,6 +1198,15 @@ export default function SettingsPage() {
       )}
 
       {activeTab === "links" && <LinksTab settings={settings} />}
+
+      {activeTab === "smart" && (
+        <SmartFeaturesTab
+          settings={settings}
+          setField={setField}
+          savePartial={savePartial}
+          saving={saving}
+        />
+      )}
 
       {activeTab === "license" && (
         <LicenseTab

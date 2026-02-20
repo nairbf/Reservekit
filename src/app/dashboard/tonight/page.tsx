@@ -14,6 +14,7 @@ interface Reservation {
   status: string;
   source: string;
   table: { id: number; name: string } | null;
+  seatedAt?: string | null;
   guest: {
     id: number;
     totalVisits: number;
@@ -54,6 +55,43 @@ interface PosStatusEntry {
   serverName: string;
   openedAt: string;
   isOpen: boolean;
+}
+
+interface NoShowRisk {
+  score: number;
+  level: "low" | "medium" | "high";
+  reasons: string[];
+}
+
+interface SmartGuestTag {
+  label: string;
+  color: "blue" | "emerald" | "purple" | "sky" | "amber" | "red";
+  detail: string;
+}
+
+interface TurnTimeStats {
+  overall: number;
+  byPartySize: Record<number, number>;
+  byTable: Record<number, number>;
+}
+
+interface SmartReservationData {
+  noShowRisk?: NoShowRisk;
+  guestTags?: SmartGuestTag[];
+}
+
+interface SmartTonightResponse {
+  features: {
+    smartTurnTime: boolean;
+    smartNoShowRisk: boolean;
+    smartGuestIntel: boolean;
+    smartWaitlistEstimate: boolean;
+    smartDailyPrep: boolean;
+    smartPacingAlerts: boolean;
+  };
+  reservations: Record<string, SmartReservationData>;
+  turnTimes: TurnTimeStats | null;
+  date: string;
 }
 const SC: Record<string, string> = {
   approved: "bg-blue-50 text-blue-700",
@@ -128,6 +166,25 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
+function formatClock(dt: Date): string {
+  return dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function getTagClass(color: SmartGuestTag["color"]): string {
+  if (color === "purple") return "bg-purple-100 text-purple-700";
+  if (color === "emerald") return "bg-emerald-100 text-emerald-700";
+  if (color === "sky") return "bg-sky-100 text-sky-700";
+  if (color === "amber") return "bg-amber-100 text-amber-800";
+  if (color === "red") return "bg-red-100 text-red-700";
+  return "bg-blue-100 text-blue-700";
+}
+
+function getRiskBadgeClass(level: NoShowRisk["level"]): string {
+  if (level === "high") return "bg-red-100 text-red-700";
+  if (level === "medium") return "bg-amber-100 text-amber-800";
+  return "bg-gray-100 text-gray-600";
+}
+
 export default function TonightPage() {
   const canViewTonight = useHasPermission("tonight_view");
   const searchParams = useSearchParams();
@@ -138,6 +195,7 @@ export default function TonightPage() {
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [loadingUpcoming, setLoadingUpcoming] = useState(false);
   const [expandedPreOrders, setExpandedPreOrders] = useState<Record<number, boolean>>({});
+  const [smartData, setSmartData] = useState<SmartTonightResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [today, setToday] = useState(() => dateInTimezone("America/New_York"));
   const [selectedDate, setSelectedDate] = useState(() => dateInTimezone("America/New_York"));
@@ -183,17 +241,31 @@ export default function TonightPage() {
     setPosStatusMap(nextMap);
   }, []);
 
+  const loadSmartData = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/smart/tonight?date=${encodeURIComponent(selectedDate)}`);
+      if (!response.ok) return;
+      const data = await response.json() as SmartTonightResponse;
+      setSmartData(data);
+    } catch {
+      // ignore
+    }
+  }, [selectedDate]);
+
   useEffect(() => {
     Promise.all([load(), loadPosStatus(), loadUpcoming()]);
+    loadSmartData();
     const reservationTimer = setInterval(load, 10000);
     const posTimer = setInterval(loadPosStatus, 30000);
     const upcomingTimer = setInterval(loadUpcoming, 60000);
+    const smartTimer = setInterval(loadSmartData, 60000);
     return () => {
       clearInterval(reservationTimer);
       clearInterval(posTimer);
       clearInterval(upcomingTimer);
+      clearInterval(smartTimer);
     };
-  }, [load, loadPosStatus, loadUpcoming]);
+  }, [load, loadPosStatus, loadUpcoming, loadSmartData]);
 
   useEffect(() => {
     let cancelled = false;
@@ -389,6 +461,26 @@ export default function TonightPage() {
               {byTime[time].map(r => (
                 <div key={r.id} className="bg-white rounded-xl shadow px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
+                    {(() => {
+                      const smartEntry = smartData?.reservations?.[String(r.id)];
+                      const noShowRisk = smartData?.features?.smartNoShowRisk ? smartEntry?.noShowRisk : undefined;
+                      const guestTags = smartData?.features?.smartGuestIntel ? (smartEntry?.guestTags || []) : [];
+                      const turnTimes = smartData?.features?.smartTurnTime ? smartData?.turnTimes : null;
+                      const estimatedMinutes =
+                        (r.table?.id ? turnTimes?.byTable?.[r.table.id] : undefined)
+                        || turnTimes?.byPartySize?.[r.partySize]
+                        || turnTimes?.overall
+                        || 60;
+                      const seatedAt = r.seatedAt ? new Date(r.seatedAt) : null;
+                      const elapsed = seatedAt && !Number.isNaN(seatedAt.getTime())
+                        ? Math.max(0, Math.round((Date.now() - seatedAt.getTime()) / 60000))
+                        : null;
+                      const remaining = elapsed !== null ? estimatedMinutes - elapsed : null;
+                      const estimatedDoneAt = seatedAt && !Number.isNaN(seatedAt.getTime())
+                        ? new Date(seatedAt.getTime() + estimatedMinutes * 60000)
+                        : null;
+                      return (
+                        <>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SC[r.status] || "bg-gray-100 text-gray-600"}`}>{r.status.replace("_", " ")}</span>
                       <span className="font-medium">{r.guestName}</span>
@@ -397,6 +489,23 @@ export default function TonightPage() {
                       {(r.guest?.totalVisits ?? 0) > 1 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest?.totalVisits ?? 0)} visit</span>}
                       {r.guest?.vipStatus === "vip" && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>}
                       {r.guest?.allergyNotes && <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Allergies</span>}
+                      {noShowRisk && noShowRisk.score >= 25 && r.status !== "seated" ? (
+                        <span
+                          className={`text-[11px] px-2 py-0.5 rounded-full ${getRiskBadgeClass(noShowRisk.level)}`}
+                          title={noShowRisk.reasons.join(" · ")}
+                        >
+                          ⚠ No-show risk ({noShowRisk.score})
+                        </span>
+                      ) : null}
+                      {guestTags.map((tag) => (
+                        <span
+                          key={`${r.id}-${tag.label}`}
+                          className={`text-[11px] px-2 py-0.5 rounded-full ${getTagClass(tag.color)}`}
+                          title={tag.detail}
+                        >
+                          {tag.label}
+                        </span>
+                      ))}
                       {r.preOrder && (
                         <button
                           onClick={() => setExpandedPreOrders(prev => ({ ...prev, [r.id]: !prev[r.id] }))}
@@ -411,6 +520,15 @@ export default function TonightPage() {
                         {`💲 POS: Open check — ${formatMoney(posStatusMap[r.table.id].checkTotal)} (${minutesSince(posStatusMap[r.table.id].openedAt) ?? 0} min)`}
                       </div>
                     )}
+                    {smartData?.features?.smartTurnTime && r.status === "seated" && remaining !== null ? (
+                      <div className="text-xs text-gray-500 mt-1">
+                        {remaining > 0
+                          ? `Est. ${remaining} min remaining`
+                          : estimatedDoneAt
+                            ? `Est. available ${formatClock(estimatedDoneAt)}`
+                            : "Est. availability pending"}
+                      </div>
+                    ) : null}
                     {r.table && r.status === "seated" && !posStatusMap[r.table.id] && (
                       <div className="text-xs text-orange-700 mt-1">⚠ No POS check found</div>
                     )}
@@ -451,6 +569,9 @@ export default function TonightPage() {
                         {r.preOrder.specialNotes && <div className="mt-1"><span className="font-medium">Notes:</span> {r.preOrder.specialNotes}</div>}
                       </div>
                     )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(["approved", "confirmed"].includes(r.status)) && (

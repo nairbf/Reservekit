@@ -88,8 +88,23 @@ export default async function EventsPage() {
                 <Link
                   key={event.id}
                   href={`/events/${event.slug}`}
-                  className={`rounded-2xl border p-5 transition-all duration-200 ${soldOut ? "bg-gray-100 border-gray-200 opacity-80" : "bg-white border-gray-100 hover:shadow-lg hover:-translate-y-0.5"}`}
+                  className={`overflow-hidden rounded-2xl border transition-all duration-200 ${soldOut ? "bg-gray-100 border-gray-200 opacity-80" : "bg-white border-gray-100 hover:shadow-lg hover:-translate-y-0.5"}`}
                 >
+                  <div className="h-40 w-full bg-gradient-to-br from-slate-100 to-slate-200">
+                    {event.imageUrl ? (
+                      <img
+                        src={event.imageUrl}
+                        alt={event.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Event Preview
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-xs font-medium text-gray-500">{formatDate(event.date)} · {formatTime12(event.startTime)}</p>
@@ -109,6 +124,7 @@ export default async function EventsPage() {
                   <div className="mt-5 flex items-center justify-between">
                     <span className="text-lg font-semibold text-gray-900">${(event.ticketPrice / 100).toFixed(2)}</span>
                     <span className="text-sm font-medium text-blue-700">View Event</span>
+                  </div>
                   </div>
                 </Link>
               );

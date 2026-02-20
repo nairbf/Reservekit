@@ -44,10 +44,19 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   if (!event) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!event.isActive && !canManageEvents) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const revenueAggregate = await prisma.eventTicket.aggregate({
+    where: {
+      eventId: event.id,
+      status: { in: ["confirmed", "checked_in"] },
+    },
+    _sum: { totalPaid: true },
+  });
+  const actualRevenue = Number(revenueAggregate._sum.totalPaid || 0);
   const checkedIn = event.tickets.filter(t => t.status === "checked_in").length;
   return NextResponse.json({
     ...event,
     remainingTickets: Math.max(0, event.maxTickets - event.soldTickets),
+    actualRevenue,
     revenue: event.tickets
       .filter(t => ["confirmed", "checked_in"].includes(t.status))
       .reduce((sum, t) => sum + t.totalPaid, 0),

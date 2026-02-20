@@ -19,6 +19,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     id: event.id,
     name: event.name,
     description: event.description,
+    imageUrl: event.imageUrl,
     date: event.date,
     startTime: event.startTime,
     endTime: event.endTime,

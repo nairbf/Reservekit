@@ -59,10 +59,26 @@ export async function GET(req: NextRequest) {
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
 
+  const eventIds = events.map((event) => event.id);
+  const revenueRows = eventIds.length > 0
+    ? await prisma.eventTicket.groupBy({
+      by: ["eventId"],
+      where: {
+        eventId: { in: eventIds },
+        status: { in: ["confirmed", "checked_in"] },
+      },
+      _sum: { totalPaid: true },
+    })
+    : [];
+  const actualRevenueByEvent = new Map<number, number>(
+    revenueRows.map((row) => [row.eventId, Number(row._sum.totalPaid || 0)]),
+  );
+
   return NextResponse.json(events.map(event => ({
     ...event,
     remainingTickets: Math.max(0, event.maxTickets - event.soldTickets),
     soldOut: event.soldTickets >= event.maxTickets,
+    actualRevenue: actualRevenueByEvent.get(event.id) || 0,
   })));
 }
 

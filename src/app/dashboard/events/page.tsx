@@ -32,12 +32,14 @@ interface EventItem {
   isActive: boolean;
   slug: string;
   imageUrl: string | null;
+  actualRevenue?: number;
 }
 
 interface EventDetail extends EventItem {
   tickets: EventTicket[];
   remainingTickets: number;
-  revenue: number;
+  revenue?: number;
+  actualRevenue?: number;
   checkInRate: number;
 }
 
@@ -75,6 +77,8 @@ export default function EventsDashboardPage() {
   const [ticketQuery, setTicketQuery] = useState("");
   const [copyFlash, setCopyFlash] = useState("");
   const [editOpen, setEditOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [actionLoadingTicketId, setActionLoadingTicketId] = useState<number | null>(null);
 
   const [qrOpen, setQrOpen] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
@@ -196,23 +200,44 @@ export default function EventsDashboardPage() {
 
   const ticketRows = filteredTickets.map((ticket) => {
     const statusLabel = ticket.status.replaceAll("_", " ");
-    const actionButton = ticket.status !== "checked_in"
-      ? (
-        <button
-          onClick={() => checkInTicket(ticket.code)}
-          className="h-11 rounded border border-green-300 px-3 text-xs text-green-700 transition-all duration-200"
-        >
-          Check In
-        </button>
-      )
-      : <span className="text-xs text-gray-500">Checked In</span>;
+    const canCheckIn = ticket.status === "confirmed";
+    const canCancel = ticket.status === "confirmed" || ticket.status === "checked_in";
+    const actionControls = (
+      <div className="flex w-full flex-wrap justify-end gap-2">
+        {canCheckIn ? (
+          <button
+            onClick={() => checkInTicket(ticket)}
+            disabled={actionLoadingTicketId === ticket.id}
+            className="h-11 w-full rounded border border-green-300 px-3 text-xs text-green-700 transition-all duration-200 disabled:opacity-60 sm:w-auto"
+          >
+            {actionLoadingTicketId === ticket.id ? "Working..." : "Check In"}
+          </button>
+        ) : null}
+        {canCancel ? (
+          <button
+            onClick={() => cancelOrRefundTicket(ticket)}
+            disabled={actionLoadingTicketId === ticket.id}
+            className="h-11 w-full rounded border border-red-300 px-3 text-xs text-red-700 transition-all duration-200 disabled:opacity-60 sm:w-auto"
+          >
+            {actionLoadingTicketId === ticket.id
+              ? "Working..."
+              : ticket.totalPaid > 0
+                ? "Refund"
+                : "Cancel"}
+          </button>
+        ) : null}
+        {!canCheckIn && !canCancel ? (
+          <span className="text-xs text-gray-500">{statusLabel}</span>
+        ) : null}
+      </div>
+    );
 
     return {
       key: ticket.id,
       mobileTitle: ticket.code,
       mobileSubtitle: `${ticket.guestName} • ${ticket.guestEmail}`,
       mobileMeta: [`Qty ${ticket.quantity}`, statusLabel],
-      actions: actionButton,
+      actions: actionControls,
       cells: [
         <div key="ticket">
           <div className="font-mono font-semibold">{ticket.code}</div>
@@ -230,7 +255,7 @@ export default function EventsDashboardPage() {
             <div className="text-xs text-gray-500 mt-1">✓ Checked in at {new Date(ticket.checkedInAt).toLocaleTimeString()}</div>
           ) : null}
         </div>,
-        <div key="action" className="text-right">{actionButton}</div>,
+        <div key="action" className="text-right">{actionControls}</div>,
       ],
     };
   });
@@ -271,24 +296,55 @@ export default function EventsDashboardPage() {
       ticketPriceDollars: "79",
       maxTickets: "40",
     });
+    setCreateOpen(false);
     await loadEvents();
     setSelectedId(data.id);
   }
 
-  async function checkInTicket(code: string) {
+  async function checkInTicket(ticket: EventTicket) {
     if (!detail) return;
-    const res = await fetch(`/api/events/${detail.id}/checkin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setMessage(data.error || "Check-in failed");
-      return;
+    setActionLoadingTicketId(ticket.id);
+    try {
+      const res = await fetch(`/api/events/${detail.id}/checkin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: ticket.code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Check-in failed");
+        return;
+      }
+      await loadSelected(detail.id);
+      setSuccessFlash(`✅ ${data.guestName || "Guest"} checked in!`);
+    } finally {
+      setActionLoadingTicketId(null);
     }
-    await loadSelected(detail.id);
-    setSuccessFlash(`✅ ${data.guestName || "Guest"} checked in!`);
+  }
+
+  async function cancelOrRefundTicket(ticket: EventTicket) {
+    if (!detail) return;
+    const formattedAmount = formatCents(ticket.totalPaid);
+    const label = ticket.totalPaid > 0 ? "refund" : "cancel";
+    const confirmed = window.confirm(
+      `Cancel this ticket and ${label} ${formattedAmount} to ${ticket.guestName}?`,
+    );
+    if (!confirmed) return;
+
+    setMessage("");
+    setActionLoadingTicketId(ticket.id);
+    try {
+      const res = await fetch(`/api/events/${detail.id}/tickets/${ticket.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Could not cancel ticket.");
+        return;
+      }
+      await Promise.all([loadEvents(), loadSelected(detail.id)]);
+      setSuccessFlash(data.refunded ? "✅ Ticket refunded." : "✅ Ticket cancelled.");
+    } finally {
+      setActionLoadingTicketId(null);
+    }
   }
 
   async function toggleActive() {
@@ -432,28 +488,23 @@ export default function EventsDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Events</h1>
-        <p className="text-sm text-gray-500">Create ticketed events, share event links, and check guests in at the door.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Events</h1>
+          <p className="text-sm text-gray-500">Create ticketed events, share event links, and check guests in at the door.</p>
+        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="h-11 w-full rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-all duration-200 sm:w-auto"
+        >
+          New Event
+        </button>
       </div>
 
-      <form onSubmit={createEvent} className="bg-white rounded-xl shadow p-4 sm:p-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <input value={createForm.name} onChange={e => setCreateForm(prev => ({ ...prev, name: e.target.value }))} placeholder="Event name" className="h-11 border rounded px-3" required />
-        <input value={createForm.slug} onChange={e => setCreateForm(prev => ({ ...prev, slug: e.target.value }))} placeholder="Custom slug (optional)" className="h-11 border rounded px-3" />
-        <input value={createForm.imageUrl} onChange={e => setCreateForm(prev => ({ ...prev, imageUrl: e.target.value }))} placeholder="Image URL (optional)" className="h-11 border rounded px-3" />
-        <input type="date" value={createForm.date} onChange={e => setCreateForm(prev => ({ ...prev, date: e.target.value }))} className="h-11 border rounded px-3" required />
-        <input type="time" value={createForm.startTime} onChange={e => setCreateForm(prev => ({ ...prev, startTime: e.target.value }))} className="h-11 border rounded px-3" required />
-        <input type="time" value={createForm.endTime} onChange={e => setCreateForm(prev => ({ ...prev, endTime: e.target.value }))} className="h-11 border rounded px-3" />
-        <input type="number" step="0.01" min="0" value={createForm.ticketPriceDollars} onChange={e => setCreateForm(prev => ({ ...prev, ticketPriceDollars: e.target.value }))} placeholder="Ticket price (USD)" className="h-11 border rounded px-3" required />
-        <input type="number" min="1" value={createForm.maxTickets} onChange={e => setCreateForm(prev => ({ ...prev, maxTickets: e.target.value }))} placeholder="Max tickets" className="h-11 border rounded px-3" required />
-        <textarea value={createForm.description} onChange={e => setCreateForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Description" className="sm:col-span-2 lg:col-span-3 border rounded px-3 py-2" rows={2} />
-        <button type="submit" className="sm:col-span-2 lg:col-span-3 h-11 rounded bg-blue-600 text-white text-sm font-medium transition-all duration-200">Create Event</button>
-      </form>
-
       <div className="grid lg:grid-cols-[340px_1fr] gap-4">
-        <div className="bg-white rounded-xl shadow p-3 space-y-2 max-h-[680px] overflow-auto">
+        <div className="bg-white rounded-xl shadow p-3 sm:p-5 space-y-2 max-h-[680px] overflow-auto">
           {events.map(event => {
-            const revenue = event.soldTickets * event.ticketPrice;
+            const revenue = event.actualRevenue ?? 0;
             return (
               <div
                 key={event.id}
@@ -464,9 +515,9 @@ export default function EventsDashboardPage() {
                   <div className="text-xs text-gray-500">{formatDate(event.date)} · {formatTime12(event.startTime)}</div>
                   <div className="text-xs text-gray-500">{event.soldTickets}/{event.maxTickets} sold · {formatCents(revenue)}</div>
                 </button>
-                <div className="mt-2 flex gap-2">
-                  <button onClick={() => copyShareLink(event)} className="h-11 px-3 rounded border border-gray-200 text-xs">Share Link</button>
-                  <button onClick={() => openQr(event)} className="h-11 px-3 rounded border border-gray-200 text-xs">View QR Code</button>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <button onClick={() => copyShareLink(event)} className="h-11 w-full px-3 rounded border border-gray-200 text-xs sm:w-auto">Share Link</button>
+                  <button onClick={() => openQr(event)} className="h-11 w-full px-3 rounded border border-gray-200 text-xs sm:w-auto">View QR Code</button>
                 </div>
               </div>
             );
@@ -484,16 +535,16 @@ export default function EventsDashboardPage() {
                   <h2 className="text-xl font-bold">{detail.name}</h2>
                   <p className="text-sm text-gray-500">{formatDate(detail.date)} · {formatTime12(detail.startTime)}{detail.endTime ? ` - ${formatTime12(detail.endTime)}` : ""}</p>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => copyShareLink(detail)} className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200">Share Link</button>
-                  <button onClick={() => openQr(detail)} className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200">View QR Code</button>
-                  <button onClick={() => setEditOpen(v => !v)} className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200">
-                    {editOpen ? "Close Edit" : "Edit"}
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  <button onClick={() => copyShareLink(detail)} className="h-11 w-full px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200 sm:w-auto">Share Link</button>
+                  <button onClick={() => openQr(detail)} className="h-11 w-full px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200 sm:w-auto">View QR Code</button>
+                  <button onClick={() => setEditOpen(true)} className="h-11 w-full px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200 sm:w-auto">
+                    Edit
                   </button>
-                  <button onClick={toggleActive} className="h-11 px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200">
+                  <button onClick={toggleActive} className="h-11 w-full px-3 rounded-lg border border-gray-200 text-sm transition-all duration-200 sm:w-auto">
                     {detail.isActive ? "Deactivate" : "Activate"}
                   </button>
-                  <button onClick={deleteEvent} className="h-11 px-3 rounded-lg border border-red-200 text-red-700 text-sm transition-all duration-200">
+                  <button onClick={deleteEvent} className="h-11 w-full px-3 rounded-lg border border-red-200 text-red-700 text-sm transition-all duration-200 sm:w-auto">
                     Delete
                   </button>
                 </div>
@@ -502,96 +553,9 @@ export default function EventsDashboardPage() {
               <div className="grid sm:grid-cols-4 gap-3">
                 <div className="rounded-lg bg-gray-50 p-3 border"><div className="text-xs text-gray-500">Tickets Sold</div><div className="text-lg font-bold">{detail.soldTickets}</div></div>
                 <div className="rounded-lg bg-gray-50 p-3 border"><div className="text-xs text-gray-500">Remaining</div><div className="text-lg font-bold">{detail.remainingTickets}</div></div>
-                <div className="rounded-lg bg-gray-50 p-3 border"><div className="text-xs text-gray-500">Revenue</div><div className="text-lg font-bold">{formatCents(detail.soldTickets * detail.ticketPrice)}</div></div>
+                <div className="rounded-lg bg-gray-50 p-3 border"><div className="text-xs text-gray-500">Revenue</div><div className="text-lg font-bold">{formatCents(detail.actualRevenue ?? detail.revenue ?? 0)}</div></div>
                 <div className="rounded-lg bg-gray-50 p-3 border"><div className="text-xs text-gray-500">Check-in Rate</div><div className="text-lg font-bold">{detail.checkInRate}%</div></div>
               </div>
-
-              {editOpen && (
-                <form onSubmit={saveEditedEvent} className="rounded-lg border border-gray-200 p-3 grid gap-2 sm:grid-cols-2 bg-gray-50">
-                  <input
-                    value={editForm.name}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                    placeholder="Event name"
-                    className="h-11 border rounded px-3"
-                    required
-                  />
-                  <input
-                    value={editForm.slug}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, slug: e.target.value }))}
-                    placeholder="Slug"
-                    className="h-11 border rounded px-3"
-                  />
-                  <input
-                    type="date"
-                    value={editForm.date}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, date: e.target.value }))}
-                    className="h-11 border rounded px-3"
-                    required
-                  />
-                  <input
-                    type="time"
-                    value={editForm.startTime}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, startTime: e.target.value }))}
-                    className="h-11 border rounded px-3"
-                    required
-                  />
-                  <input
-                    type="time"
-                    value={editForm.endTime}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, endTime: e.target.value }))}
-                    className="h-11 border rounded px-3"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editForm.ticketPriceDollars}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, ticketPriceDollars: e.target.value }))}
-                    placeholder="Ticket price (USD)"
-                    className="h-11 border rounded px-3"
-                    required
-                  />
-                  <input
-                    type="number"
-                    min="1"
-                    value={editForm.maxTickets}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, maxTickets: e.target.value }))}
-                    placeholder="Max tickets"
-                    className="h-11 border rounded px-3"
-                    required
-                  />
-                  <input
-                    value={editForm.imageUrl}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, imageUrl: e.target.value }))}
-                    placeholder="Image URL"
-                    className="h-11 border rounded px-3"
-                  />
-                  <textarea
-                    value={editForm.description}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
-                    placeholder="Description"
-                    className="sm:col-span-2 border rounded px-3 py-2"
-                    rows={2}
-                  />
-                  <label className="sm:col-span-2 inline-flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={editForm.isActive}
-                      onChange={(e) => setEditForm((prev) => ({ ...prev, isActive: e.target.checked }))}
-                      className="h-4 w-4"
-                    />
-                    Event is active
-                  </label>
-                  <div className="sm:col-span-2 flex gap-2">
-                    <button type="submit" className="h-11 px-4 rounded bg-blue-600 text-white text-sm font-medium">
-                      Save Changes
-                    </button>
-                    <button type="button" onClick={() => setEditOpen(false)} className="h-11 px-4 rounded border border-gray-200 text-sm">
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              )}
 
               {successFlash && (
                 <div className="rounded-lg border border-green-300 bg-green-50 text-green-700 text-sm px-3 py-2">{successFlash}</div>
@@ -602,7 +566,7 @@ export default function EventsDashboardPage() {
                   <h3 className="font-semibold">Check-in</h3>
                   <button
                     onClick={() => setManualOpen(v => !v)}
-                    className="h-11 px-3 rounded border border-gray-200 text-sm"
+                    className="h-11 w-full px-3 rounded border border-gray-200 text-sm sm:w-auto"
                   >
                     {manualOpen ? "Close Manual Add" : "Add Ticket Manually"}
                   </button>
@@ -625,7 +589,7 @@ export default function EventsDashboardPage() {
                       <input type="checkbox" checked={manualForm.paid} onChange={e => setManualForm(prev => ({ ...prev, paid: e.target.checked }))} className="h-4 w-4" />
                       Mark as paid
                     </label>
-                    <button type="submit" className="sm:col-span-2 h-11 rounded bg-blue-600 text-white text-sm font-medium">Save Ticket</button>
+                    <button type="submit" className="sm:col-span-2 h-11 w-full rounded bg-blue-600 text-white text-sm font-medium sm:w-auto">Save Ticket</button>
                   </form>
                 )}
               </div>
@@ -642,6 +606,74 @@ export default function EventsDashboardPage() {
 
       {message && <p className="text-sm text-red-600">{message}</p>}
       {copyFlash && <p className="text-sm text-green-700">{copyFlash}</p>}
+
+      {createOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:px-4"
+          onClick={() => setCreateOpen(false)}
+        >
+          <div
+            className="h-full w-full overflow-y-auto bg-white p-4 sm:h-auto sm:max-w-2xl sm:rounded-xl sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Create Event</h3>
+              <button onClick={() => setCreateOpen(false)} className="h-11 w-11 rounded border border-gray-200">✕</button>
+            </div>
+            <form onSubmit={createEvent} className="grid gap-3 sm:grid-cols-2">
+              <input value={createForm.name} onChange={e => setCreateForm(prev => ({ ...prev, name: e.target.value }))} placeholder="Event name" className="h-11 border rounded px-3" required />
+              <input value={createForm.slug} onChange={e => setCreateForm(prev => ({ ...prev, slug: e.target.value }))} placeholder="Custom slug (optional)" className="h-11 border rounded px-3" />
+              <input value={createForm.imageUrl} onChange={e => setCreateForm(prev => ({ ...prev, imageUrl: e.target.value }))} placeholder="Image URL (optional)" className="h-11 border rounded px-3 sm:col-span-2" />
+              <input type="date" value={createForm.date} onChange={e => setCreateForm(prev => ({ ...prev, date: e.target.value }))} className="h-11 border rounded px-3" required />
+              <input type="time" value={createForm.startTime} onChange={e => setCreateForm(prev => ({ ...prev, startTime: e.target.value }))} className="h-11 border rounded px-3" required />
+              <input type="time" value={createForm.endTime} onChange={e => setCreateForm(prev => ({ ...prev, endTime: e.target.value }))} className="h-11 border rounded px-3" />
+              <input type="number" step="0.01" min="0" value={createForm.ticketPriceDollars} onChange={e => setCreateForm(prev => ({ ...prev, ticketPriceDollars: e.target.value }))} placeholder="Ticket price (USD)" className="h-11 border rounded px-3" required />
+              <input type="number" min="1" value={createForm.maxTickets} onChange={e => setCreateForm(prev => ({ ...prev, maxTickets: e.target.value }))} placeholder="Max tickets" className="h-11 border rounded px-3 sm:col-span-2" required />
+              <textarea value={createForm.description} onChange={e => setCreateForm(prev => ({ ...prev, description: e.target.value }))} placeholder="Description" className="sm:col-span-2 border rounded px-3 py-2" rows={3} />
+              <div className="sm:col-span-2 flex flex-col gap-2 sm:flex-row">
+                <button type="submit" className="h-11 w-full rounded bg-blue-600 text-sm font-medium text-white sm:w-auto">Create Event</button>
+                <button type="button" onClick={() => setCreateOpen(false)} className="h-11 w-full rounded border border-gray-200 text-sm sm:w-auto">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editOpen && detail && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:px-4"
+          onClick={() => setEditOpen(false)}
+        >
+          <div
+            className="h-full w-full overflow-y-auto bg-white p-4 sm:h-auto sm:max-w-2xl sm:rounded-xl sm:p-6"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Edit Event</h3>
+              <button onClick={() => setEditOpen(false)} className="h-11 w-11 rounded border border-gray-200">✕</button>
+            </div>
+            <form onSubmit={saveEditedEvent} className="grid gap-3 sm:grid-cols-2">
+              <input value={editForm.name} onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))} placeholder="Event name" className="h-11 border rounded px-3" required />
+              <input value={editForm.slug} onChange={(e) => setEditForm((prev) => ({ ...prev, slug: e.target.value }))} placeholder="Slug" className="h-11 border rounded px-3" />
+              <input type="date" value={editForm.date} onChange={(e) => setEditForm((prev) => ({ ...prev, date: e.target.value }))} className="h-11 border rounded px-3" required />
+              <input type="time" value={editForm.startTime} onChange={(e) => setEditForm((prev) => ({ ...prev, startTime: e.target.value }))} className="h-11 border rounded px-3" required />
+              <input type="time" value={editForm.endTime} onChange={(e) => setEditForm((prev) => ({ ...prev, endTime: e.target.value }))} className="h-11 border rounded px-3" />
+              <input type="number" step="0.01" min="0" value={editForm.ticketPriceDollars} onChange={(e) => setEditForm((prev) => ({ ...prev, ticketPriceDollars: e.target.value }))} placeholder="Ticket price (USD)" className="h-11 border rounded px-3" required />
+              <input type="number" min="1" value={editForm.maxTickets} onChange={(e) => setEditForm((prev) => ({ ...prev, maxTickets: e.target.value }))} placeholder="Max tickets" className="h-11 border rounded px-3" required />
+              <input value={editForm.imageUrl} onChange={(e) => setEditForm((prev) => ({ ...prev, imageUrl: e.target.value }))} placeholder="Image URL" className="h-11 border rounded px-3" />
+              <textarea value={editForm.description} onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))} placeholder="Description" className="sm:col-span-2 border rounded px-3 py-2" rows={3} />
+              <label className="sm:col-span-2 inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={editForm.isActive} onChange={(e) => setEditForm((prev) => ({ ...prev, isActive: e.target.checked }))} className="h-4 w-4" />
+                Event is active
+              </label>
+              <div className="sm:col-span-2 flex flex-col gap-2 sm:flex-row">
+                <button type="submit" className="h-11 w-full rounded bg-blue-600 text-sm font-medium text-white sm:w-auto">Save Changes</button>
+                <button type="button" onClick={() => setEditOpen(false)} className="h-11 w-full rounded border border-gray-200 text-sm sm:w-auto">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {qrOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:px-4" onClick={() => setQrOpen(false)}>

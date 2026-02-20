@@ -8,6 +8,7 @@ interface EventData {
   id: number;
   name: string;
   description: string | null;
+  imageUrl: string | null;
   date: string;
   startTime: string;
   endTime: string | null;
@@ -279,6 +280,19 @@ export function EventDetailPageClient({ slug }: { slug: string }) {
     <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 px-4 py-10">
       <div className="max-w-3xl mx-auto space-y-4">
         <div className="bg-white rounded-2xl shadow p-6">
+          <div className="mb-4 h-52 w-full overflow-hidden rounded-xl bg-gradient-to-br from-slate-100 to-slate-200">
+            {event.imageUrl ? (
+              <img
+                src={event.imageUrl}
+                alt={event.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-500">
+                Event Preview
+              </div>
+            )}
+          </div>
           <div className="flex items-start justify-between gap-3">
             <div>
               <h1 className="text-3xl font-bold">{event.name}</h1>
@@ -321,7 +335,12 @@ export function EventDetailPageClient({ slug }: { slug: string }) {
         ) : (
           <div className="bg-white rounded-2xl shadow p-6 space-y-3">
             {soldOut ? (
-              <p className="text-red-600 font-medium">This event is sold out.</p>
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                <p className="font-semibold text-red-700">This event is sold out.</p>
+                <p className="mt-1 text-sm text-red-700/80">
+                  Tickets are currently unavailable. Check back later in case additional spots open.
+                </p>
+              </div>
             ) : step === "form" ? (
               <form onSubmit={beginStripePurchase} className="space-y-3">
                 <input

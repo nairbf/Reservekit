@@ -20,6 +20,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     where: { eventId: Math.trunc(eventId), code },
   });
   if (!ticket) return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+  if (ticket.status !== "confirmed") {
+    return NextResponse.json({ error: "Only confirmed tickets can be checked in" }, { status: 409 });
+  }
 
   const updated = await prisma.eventTicket.update({
     where: { id: ticket.id },

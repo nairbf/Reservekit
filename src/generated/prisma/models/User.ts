@@ -40,6 +40,7 @@ export type UserMinAggregateOutputType = {
   passwordHash: string | null
   name: string | null
   role: string | null
+  permissions: string | null
   isActive: boolean | null
   createdAt: Date | null
 }
@@ -50,6 +51,7 @@ export type UserMaxAggregateOutputType = {
   passwordHash: string | null
   name: string | null
   role: string | null
+  permissions: string | null
   isActive: boolean | null
   createdAt: Date | null
 }
@@ -60,6 +62,7 @@ export type UserCountAggregateOutputType = {
   passwordHash: number
   name: number
   role: number
+  permissions: number
   isActive: number
   createdAt: number
   _all: number
@@ -80,6 +83,7 @@ export type UserMinAggregateInputType = {
   passwordHash?: true
   name?: true
   role?: true
+  permissions?: true
   isActive?: true
   createdAt?: true
 }
@@ -90,6 +94,7 @@ export type UserMaxAggregateInputType = {
   passwordHash?: true
   name?: true
   role?: true
+  permissions?: true
   isActive?: true
   createdAt?: true
 }
@@ -100,6 +105,7 @@ export type UserCountAggregateInputType = {
   passwordHash?: true
   name?: true
   role?: true
+  permissions?: true
   isActive?: true
   createdAt?: true
   _all?: true
@@ -197,6 +203,7 @@ export type UserGroupByOutputType = {
   passwordHash: string
   name: string
   role: string
+  permissions: string | null
   isActive: boolean
   createdAt: Date
   _count: UserCountAggregateOutputType | null
@@ -230,6 +237,7 @@ export type UserWhereInput = {
   passwordHash?: Prisma.StringFilter<"User"> | string
   name?: Prisma.StringFilter<"User"> | string
   role?: Prisma.StringFilter<"User"> | string
+  permissions?: Prisma.StringNullableFilter<"User"> | string | null
   isActive?: Prisma.BoolFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   reservations?: Prisma.ReservationListRelationFilter
@@ -241,6 +249,7 @@ export type UserOrderByWithRelationInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  permissions?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   reservations?: Prisma.ReservationOrderByRelationAggregateInput
@@ -255,6 +264,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   passwordHash?: Prisma.StringFilter<"User"> | string
   name?: Prisma.StringFilter<"User"> | string
   role?: Prisma.StringFilter<"User"> | string
+  permissions?: Prisma.StringNullableFilter<"User"> | string | null
   isActive?: Prisma.BoolFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeFilter<"User"> | Date | string
   reservations?: Prisma.ReservationListRelationFilter
@@ -266,6 +276,7 @@ export type UserOrderByWithAggregationInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  permissions?: Prisma.SortOrderInput | Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.UserCountOrderByAggregateInput
@@ -284,6 +295,7 @@ export type UserScalarWhereWithAggregatesInput = {
   passwordHash?: Prisma.StringWithAggregatesFilter<"User"> | string
   name?: Prisma.StringWithAggregatesFilter<"User"> | string
   role?: Prisma.StringWithAggregatesFilter<"User"> | string
+  permissions?: Prisma.StringNullableWithAggregatesFilter<"User"> | string | null
   isActive?: Prisma.BoolWithAggregatesFilter<"User"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"User"> | Date | string
 }
@@ -293,6 +305,7 @@ export type UserCreateInput = {
   passwordHash: string
   name: string
   role?: string
+  permissions?: string | null
   isActive?: boolean
   createdAt?: Date | string
   reservations?: Prisma.ReservationCreateNestedManyWithoutCreatedByInput
@@ -304,6 +317,7 @@ export type UserUncheckedCreateInput = {
   passwordHash: string
   name: string
   role?: string
+  permissions?: string | null
   isActive?: boolean
   createdAt?: Date | string
   reservations?: Prisma.ReservationUncheckedCreateNestedManyWithoutCreatedByInput
@@ -314,6 +328,7 @@ export type UserUpdateInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  permissions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reservations?: Prisma.ReservationUpdateManyWithoutCreatedByNestedInput
@@ -325,6 +340,7 @@ export type UserUncheckedUpdateInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  permissions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   reservations?: Prisma.ReservationUncheckedUpdateManyWithoutCreatedByNestedInput
@@ -336,6 +352,7 @@ export type UserCreateManyInput = {
   passwordHash: string
   name: string
   role?: string
+  permissions?: string | null
   isActive?: boolean
   createdAt?: Date | string
 }
@@ -345,6 +362,7 @@ export type UserUpdateManyMutationInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  permissions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -355,6 +373,7 @@ export type UserUncheckedUpdateManyInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  permissions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -365,6 +384,7 @@ export type UserCountOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  permissions?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -379,6 +399,7 @@ export type UserMaxOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  permissions?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -389,6 +410,7 @@ export type UserMinOrderByAggregateInput = {
   passwordHash?: Prisma.SortOrder
   name?: Prisma.SortOrder
   role?: Prisma.SortOrder
+  permissions?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -404,6 +426,10 @@ export type UserNullableScalarRelationFilter = {
 
 export type StringFieldUpdateOperationsInput = {
   set?: string
+}
+
+export type NullableStringFieldUpdateOperationsInput = {
+  set?: string | null
 }
 
 export type BoolFieldUpdateOperationsInput = {
@@ -443,6 +469,7 @@ export type UserCreateWithoutReservationsInput = {
   passwordHash: string
   name: string
   role?: string
+  permissions?: string | null
   isActive?: boolean
   createdAt?: Date | string
 }
@@ -453,6 +480,7 @@ export type UserUncheckedCreateWithoutReservationsInput = {
   passwordHash: string
   name: string
   role?: string
+  permissions?: string | null
   isActive?: boolean
   createdAt?: Date | string
 }
@@ -478,6 +506,7 @@ export type UserUpdateWithoutReservationsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  permissions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -488,6 +517,7 @@ export type UserUncheckedUpdateWithoutReservationsInput = {
   passwordHash?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   role?: Prisma.StringFieldUpdateOperationsInput | string
+  permissions?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -529,6 +559,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   passwordHash?: boolean
   name?: boolean
   role?: boolean
+  permissions?: boolean
   isActive?: boolean
   createdAt?: boolean
   reservations?: boolean | Prisma.User$reservationsArgs<ExtArgs>
@@ -541,6 +572,7 @@ export type UserSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   passwordHash?: boolean
   name?: boolean
   role?: boolean
+  permissions?: boolean
   isActive?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -551,6 +583,7 @@ export type UserSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   passwordHash?: boolean
   name?: boolean
   role?: boolean
+  permissions?: boolean
   isActive?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["user"]>
@@ -561,11 +594,12 @@ export type UserSelectScalar = {
   passwordHash?: boolean
   name?: boolean
   role?: boolean
+  permissions?: boolean
   isActive?: boolean
   createdAt?: boolean
 }
 
-export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "name" | "role" | "isActive" | "createdAt", ExtArgs["result"]["user"]>
+export type UserOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "passwordHash" | "name" | "role" | "permissions" | "isActive" | "createdAt", ExtArgs["result"]["user"]>
 export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   reservations?: boolean | Prisma.User$reservationsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -584,6 +618,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     passwordHash: string
     name: string
     role: string
+    permissions: string | null
     isActive: boolean
     createdAt: Date
   }, ExtArgs["result"]["user"]>
@@ -1015,6 +1050,7 @@ export interface UserFieldRefs {
   readonly passwordHash: Prisma.FieldRef<"User", 'String'>
   readonly name: Prisma.FieldRef<"User", 'String'>
   readonly role: Prisma.FieldRef<"User", 'String'>
+  readonly permissions: Prisma.FieldRef<"User", 'String'>
   readonly isActive: Prisma.FieldRef<"User", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"User", 'DateTime'>
 }

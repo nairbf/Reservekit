@@ -5,6 +5,7 @@ import { getEnabledFeatures } from "@/lib/features";
 import { PermissionsProvider } from "@/hooks/use-permissions";
 import DashboardNav from "./DashboardNav";
 import SetupTourCoach from "./SetupTourCoach";
+import { DemoModeBanner } from "./demo-mode-banner";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -23,14 +24,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         features={features}
       />
       <main className="flex-1 min-w-0 p-4 sm:p-6">
-        {isDemoEnv ? (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-800">
-            Demo mode: data resets daily.{" "}
-            <a href="https://reservesit.com/pricing" className="font-semibold underline">
-              Get your own instance →
-            </a>
-          </div>
-        ) : null}
+        {isDemoEnv ? <DemoModeBanner /> : null}
         <div className="max-w-6xl mx-auto">
           <PermissionsProvider permissions={permissionList}>{children}</PermissionsProvider>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Menu, PanelLeftClose } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { PermissionKey } from "@/lib/permissions";
@@ -185,7 +186,7 @@ export default function DashboardNav({
               className="h-9 w-9 rounded-lg border border-gray-200 text-sm text-gray-700 transition-all duration-200"
               title={effectiveCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
-              {effectiveCollapsed ? "→" : "←"}
+              {effectiveCollapsed ? <Menu className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
           )}
         </div>

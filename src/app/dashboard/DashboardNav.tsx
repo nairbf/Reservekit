@@ -122,9 +122,7 @@ export default function DashboardNav({
           className="h-10 w-10 rounded-lg border border-gray-200 flex items-center justify-center transition-all duration-200"
           aria-label="Open menu"
         >
-          <span className="block w-5 h-0.5 bg-gray-800" />
-          <span className="block w-5 h-0.5 bg-gray-800 mt-1" />
-          <span className="block w-5 h-0.5 bg-gray-800 mt-1" />
+          <Menu className="h-5 w-5 text-gray-800" />
         </button>
         <div className="font-semibold truncate max-w-[70%]">{restaurantName}</div>
         <button

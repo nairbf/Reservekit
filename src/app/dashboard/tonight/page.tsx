@@ -530,7 +530,7 @@ export default function TonightPage() {
                       {(r.guest?.totalVisits ?? 0) > 1 && <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">↩ {nth(r.guest?.totalVisits ?? 0)} visit</span>}
                       {r.guest?.vipStatus === "vip" && <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">★ VIP</span>}
                       {r.guest?.allergyNotes && <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700">⚠ Allergies</span>}
-                      {noShowRisk && noShowRisk.score >= 25 && r.status !== "seated" ? (
+                      {noShowRisk && noShowRisk.level !== "low" && r.status !== "seated" ? (
                         <span
                           className={`text-[11px] px-2 py-0.5 rounded-full ${getRiskBadgeClass(noShowRisk.level)}`}
                           title={noShowRisk.reasons.join(" · ")}

@@ -20,45 +20,24 @@ export async function calculateNoShowRisk(reservationId: number): Promise<NoShow
 
   if (!reservation) return { score: 0, level: "low", reasons: [] };
 
-  let score = 10;
+  let score = 5;
   const reasons: string[] = [];
 
   if (reservation.guestId) {
-    const [pastNoShows, pastTotal, priorVisits] = await Promise.all([
-      prisma.reservation.count({
-        where: {
-          guestId: reservation.guestId,
-          status: "no_show",
-        },
-      }),
-      prisma.reservation.count({
-        where: {
-          guestId: reservation.guestId,
-          status: { in: ["completed", "no_show", "cancelled"] },
-        },
-      }),
-      prisma.reservation.count({
-        where: {
-          guestId: reservation.guestId,
-          status: "completed",
-          id: { not: reservationId },
-        },
-      }),
-    ]);
+    const pastNoShows = await prisma.reservation.count({
+      where: {
+        guestId: reservation.guestId,
+        status: "no_show",
+      },
+    });
 
-    if (pastNoShows > 0) {
-      const noShowRate = pastTotal > 0 ? pastNoShows / pastTotal : 0;
-      score += Math.round(noShowRate * 40);
-      reasons.push(`${pastNoShows} previous no-show${pastNoShows > 1 ? "s" : ""}`);
+    if (pastNoShows >= 2) {
+      score += 40;
+      reasons.push(`${pastNoShows} previous no-shows`);
+    } else if (pastNoShows === 1) {
+      score += 25;
+      reasons.push("1 previous no-show");
     }
-
-    if (priorVisits === 0) {
-      score += 10;
-      reasons.push("First-time guest");
-    }
-  } else {
-    score += 10;
-    reasons.push("No guest profile");
   }
 
   if (reservation.partySize >= 6) {
@@ -82,7 +61,7 @@ export async function calculateNoShowRisk(reservationId: number): Promise<NoShow
   }
 
   score = Math.min(score, 100);
-  const level: NoShowRisk["level"] = score >= 50 ? "high" : score >= 25 ? "medium" : "low";
+  const level: NoShowRisk["level"] = score >= 60 ? "high" : score >= 35 ? "medium" : "low";
   return { score, level, reasons };
 }
 

@@ -109,8 +109,8 @@ const savingsRows = [
   { label: "ReserveSit Core", year1: "$2,199", year2: "$299", year3: "$299", total: "$2,797", reserveSit: true },
   { label: "ReserveSit Pro", year1: "$2,999", year2: "$399", year3: "$399", total: "$3,797", reserveSit: true },
   { label: "ReserveSit Full", year1: "$3,799", year2: "$399", year3: "$399", total: "$4,597", reserveSit: true },
-  { label: "OpenTable", year1: "$6,000+", year2: "$6,000+", year3: "$6,000+", total: "$18,000+", reserveSit: false },
-  { label: "Resy", year1: "$5,988+", year2: "$5,988+", year3: "$5,988+", total: "$17,964+", reserveSit: false },
+  { label: "OpenTable", year1: "~$3,600", year2: "~$3,600", year3: "~$3,600", total: "~$10,800", reserveSit: false },
+  { label: "Resy", year1: "~$3,000", year2: "~$3,000", year3: "~$3,000", total: "~$9,000", reserveSit: false },
 ];
 
 function usd(value: number) {
@@ -207,7 +207,7 @@ export default function PricingPageClient() {
           </p>
 
           <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900 sm:p-5">
-            <p className="font-semibold">OpenTable can run $3,000-$7,000/year for busy restaurants. ReserveSit charges once.</p>
+            <p className="font-semibold">OpenTable and similar platforms start around ~$3,000-$3,600/year on entry plans and go up from there.</p>
             <p className="mt-1 text-rose-800">Keep your margins and keep ownership of your guest data.</p>
           </div>
         </section>
@@ -339,6 +339,9 @@ export default function PricingPageClient() {
                   </tbody>
                 </table>
               </div>
+              <p className="mt-3 px-1 text-xs text-slate-500">
+                Competitor estimates based on published entry-level plan pricing. Actual costs vary by volume, plan tier, and cover fees.
+              </p>
               <p className="mt-4 text-sm font-semibold text-blue-800">
                 Your annual hosting costs less than one month of OpenTable.
               </p>

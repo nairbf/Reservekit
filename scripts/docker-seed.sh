@@ -1,6 +1,9 @@
 #!/bin/sh
 cd /app
 npx prisma db push --accept-data-loss
+DB_PATH="${DATABASE_URL:-file:./data/reservekit.db}"
+DB_PATH="${DB_PATH#file:}"
+sqlite3 "$DB_PATH" "ALTER TABLE \"User\" ADD COLUMN \"permissions\" TEXT DEFAULT '';" 2>/dev/null || true
 node -e "
 const { PrismaClient } = require('./src/generated/prisma/client');
 const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3');

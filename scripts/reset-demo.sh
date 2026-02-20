@@ -14,6 +14,7 @@ pm2 stop "$DEMO_PROCESS_NAME" >/dev/null 2>&1 || true
 
 cp "$DB" "$TEMPLATE_DB"
 cp "$TEMPLATE_DB" "$DB"
+sqlite3 "$DB" "ALTER TABLE \"User\" ADD COLUMN \"permissions\" TEXT DEFAULT '';" 2>/dev/null || true
 
 TODAY="$(date +%Y-%m-%d)"
 TOMORROW="$(date -d "+1 day" +%Y-%m-%d)"

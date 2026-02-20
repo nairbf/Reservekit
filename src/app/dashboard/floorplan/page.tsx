@@ -83,6 +83,13 @@ const STATUS_STYLES: Record<string, string> = {
   almost_done: "bg-orange-50 border-orange-400 text-orange-800",
 };
 
+function firstNameLabel(fullName: string): string {
+  const first = (fullName || "").trim().split(/\s+/)[0] || "";
+  if (!first) return "";
+  if (first.length <= 6) return first;
+  return `${first.slice(0, 6)}…`;
+}
+
 function formatMoney(value: string): string {
   const num = Number(value);
   if (Number.isFinite(num)) return `$${num.toFixed(2)}`;
@@ -108,6 +115,13 @@ function formatTime12(value: string): string {
 }
 
 function formatClock(dt: Date): string {
+  return dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function formatDateTime(value: string | null | undefined): string {
+  if (!value) return "N/A";
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return value;
   return dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
@@ -587,6 +601,7 @@ export default function FloorPlanPage() {
               const turnEstimate = mode === "live" && smartTurnTimeEnabled && res?.status === "seated"
                 ? getTurnEstimate(res, t.id, turnTimes)
                 : { remaining: null as number | null, availableAt: null as Date | null };
+              const guestFirst = res ? firstNameLabel(res.guestName) : "";
               const shapeClass = t.shape === "rect" ? "rounded-lg" : "rounded-full";
               const statusClass = mode === "edit" ? "bg-white border-gray-200 text-gray-700" : STATUS_STYLES[status];
               return (
@@ -616,7 +631,7 @@ export default function FloorPlanPage() {
                     if (mode === "edit") setSelectedId(t.id);
                     else setDetailsId(t.id);
                   }}
-                  className={`absolute flex flex-col items-center justify-center text-center border shadow-sm ${shapeClass} ${statusClass} ${selectedId === t.id ? "ring-2 ring-blue-500" : ""} ${untracked ? "ring-2 ring-orange-400" : ""} ${draggingId === t.id ? "cursor-grabbing transition-none" : mode === "edit" ? "cursor-grab transition-all duration-150" : "transition-all duration-200"}`}
+                  className={`group absolute flex flex-col items-center justify-center text-center border shadow-sm ${shapeClass} ${statusClass} ${selectedId === t.id ? "ring-2 ring-blue-500" : ""} ${untracked ? "ring-2 ring-orange-400" : ""} ${draggingId === t.id ? "cursor-grabbing transition-none" : mode === "edit" ? "cursor-grab transition-all duration-150" : "transition-all duration-200"}`}
                   style={{
                     left: `${t.posX ?? 0}%`,
                     top: `${t.posY ?? 0}%`,
@@ -624,31 +639,51 @@ export default function FloorPlanPage() {
                     height: `${t.height ?? 8}%`,
                     transform: `rotate(${t.rotation ?? 0}deg)`,
                     touchAction: mode === "edit" ? "none" : "auto",
+                    minWidth: mode === "live" ? "60px" : undefined,
+                    minHeight: mode === "live" ? "50px" : undefined,
                   }}
                 >
                   {mode === "live" && pos && (
-                    <span className={`absolute -top-2 -right-2 rounded-full px-2 py-0.5 text-[9px] font-semibold border ${longCheck ? "bg-orange-100 text-orange-800 border-orange-300" : "bg-emerald-100 text-emerald-800 border-emerald-300"}`}>
-                      {formatMoney(pos.checkTotal)}
+                    <span
+                      className={`absolute -right-1.5 -top-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-semibold ${
+                        longCheck
+                          ? "border-orange-300 bg-orange-100 text-orange-800"
+                          : "border-emerald-300 bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      $
                     </span>
                   )}
                   {mode === "live" && untracked && (
-                    <span className="absolute -top-2 -left-2 rounded-full px-1.5 py-0.5 text-[9px] font-semibold border bg-orange-100 text-orange-800 border-orange-300">
+                    <span className="absolute -left-1.5 -top-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full border border-orange-300 bg-orange-100 text-[9px] font-semibold text-orange-800">
                       ⚠
                     </span>
                   )}
-                  <span className="text-[10px] sm:text-xs font-semibold leading-tight">{t.name}</span>
+                  <span className="leading-tight text-[11px] font-semibold sm:text-xs">{t.name}</span>
                   <span className="text-[10px] text-gray-500">{t.maxCapacity}-top</span>
                   {mode === "live" && res && (
-                    <span className="text-[9px] text-gray-500 truncate max-w-full px-1">{res.guestName}</span>
+                    <span className="max-w-full truncate px-1 text-[10px] text-gray-600">{guestFirst}</span>
                   )}
-                  {mode === "live" && turnEstimate.remaining !== null ? (
-                    <span className="text-[9px] text-gray-500 truncate max-w-full px-1">
-                      {turnEstimate.remaining > 0
-                        ? `~${turnEstimate.remaining}m`
-                        : turnEstimate.availableAt
-                          ? `Est ${formatClock(turnEstimate.availableAt)}`
-                          : ""}
-                    </span>
+
+                  {mode === "live" && !isMobile && (res || pos) ? (
+                    <div className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 hidden w-52 -translate-x-1/2 rounded-lg border border-slate-200 bg-white p-2 text-left text-[11px] text-slate-600 shadow-md lg:group-hover:block">
+                      <div className="font-semibold text-slate-900">{t.name}</div>
+                      {res ? (
+                        <>
+                          <div className="mt-1">{res.guestName} · Party {res.partySize}</div>
+                          <div>{res.status.replace(/_/g, " ")} · {formatTime12(res.time)}</div>
+                          {res.seatedAt ? <div>Seated: {formatDateTime(res.seatedAt)}</div> : null}
+                        </>
+                      ) : (
+                        <div className="mt-1">No active reservation</div>
+                      )}
+                      {pos ? (
+                        <div className="mt-1">
+                          POS: {formatMoney(pos.checkTotal)}
+                          {openMinutes !== null ? ` · ${openMinutes}m` : ""}
+                        </div>
+                      ) : null}
+                    </div>
                   ) : null}
                 </button>
               );
@@ -696,76 +731,109 @@ export default function FloorPlanPage() {
       )}
 
       {detailsId && mode === "live" && (
-        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
-          <div className="h-full w-full overflow-y-auto bg-white p-4 sm:h-auto sm:max-w-sm sm:rounded-xl sm:p-5">
+        <div className="fixed inset-0 z-50">
+          <button className="absolute inset-0 bg-black/40" onClick={() => setDetailsId(null)} aria-label="Close details" />
+          <div className="absolute inset-y-0 right-0 w-full overflow-y-auto bg-white p-4 shadow-2xl sm:max-w-md sm:p-6">
             {(() => {
               const entry = liveMap.get(detailsId);
+              const table = entry?.table ?? tables.find(t => t.id === detailsId);
               const res = entry?.reservation || null;
               const pos = posStatusMap[detailsId];
               const openMinutes = pos ? minutesSince(pos.openedAt) : null;
               const turnEstimate = res?.status === "seated" && smartTurnTimeEnabled
                 ? getTurnEstimate(res, detailsId, turnTimes)
                 : { remaining: null as number | null, availableAt: null as Date | null };
-              if (!res) return (
-                <div>
-                  <div className="text-lg font-bold mb-2">Table Details</div>
-                  <p className="text-sm text-gray-600 mb-3">No active reservation.</p>
-                  {pos && (
-                    <div className="rounded-lg border border-orange-200 bg-orange-50 text-orange-800 text-sm p-3 mb-4">
-                      <div className="font-semibold">Untracked POS check detected</div>
-                      <div className="text-xs mt-1">
-                        Open check {formatMoney(pos.checkTotal)}
-                        {openMinutes !== null ? ` • ${openMinutes} min` : ""}
-                        {pos.serverName ? ` • ${pos.serverName}` : ""}
-                      </div>
-                    </div>
-                  )}
-                  {pos && (
-                    <button
-                      onClick={() => createWalkinFromPos(detailsId)}
-                      className="h-11 w-full rounded bg-orange-500 text-white text-sm mb-2 transition-all duration-200"
-                    >
-                      Create walk-in
-                    </button>
-                  )}
-                  <button onClick={() => setDetailsId(null)} className="h-11 w-full rounded bg-gray-900 text-white text-sm">Close</button>
-                </div>
-              );
+
               return (
-                <div>
-                  <div className="text-lg font-bold mb-1">{res.guestName}</div>
-                  <div className="text-sm text-gray-500 mb-4">Party of {res.partySize} · {formatTime12(res.time)} · {res.code}</div>
-                  {pos && (
-                    <div className="text-xs text-gray-600 mb-3">
-                      POS: Open check {formatMoney(pos.checkTotal)}
-                      {openMinutes !== null ? ` (${openMinutes} min)` : ""}
-                      {pos.serverName ? ` • ${pos.serverName}` : ""}
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm text-slate-500">Table</div>
+                      <div className="text-xl font-bold text-slate-900">{table?.name || `#${detailsId}`}</div>
                     </div>
-                  )}
-                  {turnEstimate.availableAt ? (
-                    <div className="text-xs text-gray-600 mb-3">
-                      Est. available: {formatClock(turnEstimate.availableAt)}
-                      {turnEstimate.remaining !== null ? ` (${Math.max(0, turnEstimate.remaining)} min)` : ""}
-                    </div>
-                  ) : null}
-                  {!pos && res.status === "seated" && (
-                    <div className="text-xs text-orange-700 mb-3">⚠ No POS check found</div>
-                  )}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {(["approved", "confirmed"].includes(res.status)) && (
-                      <button onClick={() => doAction(res.id, "arrive")} className="h-11 sm:h-10 px-4 sm:px-3 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 text-sm transition-all duration-200">Arrive</button>
-                    )}
-                    {(["arrived", "approved", "confirmed"].includes(res.status)) && (
-                      <button onClick={() => doAction(res.id, "seat", detailsId)} className="h-11 sm:h-10 px-4 sm:px-3 rounded bg-green-50 text-green-800 border border-green-200 text-sm transition-all duration-200">Seat</button>
-                    )}
-                    {res.status === "seated" && (
-                      <button onClick={() => doAction(res.id, "complete")} className="h-11 sm:h-10 px-4 sm:px-3 rounded bg-gray-100 text-gray-700 border border-gray-200 text-sm transition-all duration-200">Complete</button>
-                    )}
-                    {(["approved", "confirmed"].includes(res.status)) && (
-                      <button onClick={() => doAction(res.id, "noshow")} className="h-11 sm:h-10 px-4 sm:px-3 rounded bg-red-50 text-red-700 border border-red-200 text-sm transition-all duration-200">No-show</button>
-                    )}
+                    <button onClick={() => setDetailsId(null)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-600">
+                      Close
+                    </button>
                   </div>
-                  <button onClick={() => setDetailsId(null)} className="h-11 w-full rounded bg-gray-900 text-white text-sm">Close</button>
+
+                  {!res ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-slate-600">No active reservation.</p>
+                      {pos ? (
+                        <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">
+                          <div className="font-semibold">Untracked POS check detected</div>
+                          <div className="mt-1 text-xs">
+                            Open check {formatMoney(pos.checkTotal)}
+                            {openMinutes !== null ? ` • ${openMinutes} min` : ""}
+                            {pos.serverName ? ` • ${pos.serverName}` : ""}
+                          </div>
+                        </div>
+                      ) : null}
+                      {pos ? (
+                        <button
+                          onClick={() => createWalkinFromPos(detailsId)}
+                          className="h-11 w-full rounded-lg bg-orange-500 text-sm font-medium text-white transition-all duration-200"
+                        >
+                          Create walk-in
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                        <div className="text-lg font-semibold text-slate-900">{res.guestName}</div>
+                        <div className="mt-1 text-sm text-slate-600">
+                          Party of {res.partySize} · {formatTime12(res.time)} · {res.code}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-500">Status: {res.status.replace(/_/g, " ")}</div>
+                      </div>
+
+                      {res.seatedAt ? (
+                        <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm">
+                          <div className="font-medium text-slate-900">Service Timing</div>
+                          <div className="mt-1 text-slate-600">Seated at: {formatDateTime(res.seatedAt)}</div>
+                          {turnEstimate.availableAt ? (
+                            <div className="mt-1 text-slate-600">
+                              Est. available: {formatClock(turnEstimate.availableAt)}
+                              {turnEstimate.remaining !== null
+                                ? turnEstimate.remaining > 0
+                                  ? ` (${turnEstimate.remaining} min remaining)`
+                                  : " (Should be available now)"
+                                : ""}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
+
+                      {pos ? (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
+                          <div className="font-medium text-emerald-900">POS Check</div>
+                          <div className="mt-1 text-emerald-800">Total: {formatMoney(pos.checkTotal)}</div>
+                          <div className="text-emerald-700">
+                            Open: {openMinutes !== null ? `${openMinutes} min` : "N/A"}
+                            {pos.serverName ? ` • Server: ${pos.serverName}` : ""}
+                          </div>
+                        </div>
+                      ) : res.status === "seated" ? (
+                        <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-700">⚠ No POS check found for this table.</div>
+                      ) : null}
+
+                      <div className="flex flex-wrap gap-2">
+                        {(["approved", "confirmed"].includes(res.status)) && (
+                          <button onClick={() => doAction(res.id, "arrive")} className="h-11 rounded border border-yellow-200 bg-yellow-50 px-4 text-sm text-yellow-800 transition-all duration-200">Arrive</button>
+                        )}
+                        {(["arrived", "approved", "confirmed"].includes(res.status)) && (
+                          <button onClick={() => doAction(res.id, "seat", detailsId)} className="h-11 rounded border border-green-200 bg-green-50 px-4 text-sm text-green-800 transition-all duration-200">Seat</button>
+                        )}
+                        {res.status === "seated" && (
+                          <button onClick={() => doAction(res.id, "complete")} className="h-11 rounded border border-slate-200 bg-slate-100 px-4 text-sm text-slate-700 transition-all duration-200">Complete</button>
+                        )}
+                        {(["approved", "confirmed"].includes(res.status)) && (
+                          <button onClick={() => doAction(res.id, "noshow")} className="h-11 rounded border border-rose-200 bg-rose-50 px-4 text-sm text-rose-700 transition-all duration-200">No-show</button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })()}

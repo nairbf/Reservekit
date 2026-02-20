@@ -17,6 +17,7 @@ const PUBLIC_API_EXACT = new Set([
   "/api/waitlist/status",
   "/api/cron/reminders",
   "/api/cron/spoton-sync",
+  "/api/cron/daily-prep",
   "/api/checkout",
   "/api/health",
   "/api/stripe/callback",

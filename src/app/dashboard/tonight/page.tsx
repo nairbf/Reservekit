@@ -80,6 +80,15 @@ interface SmartReservationData {
   guestTags?: SmartGuestTag[];
 }
 
+interface PacingAlert {
+  timeSlot: string;
+  reservations: number;
+  tableCapacity: number;
+  utilizationPct: number;
+  level: "warning" | "critical";
+  message: string;
+}
+
 interface SmartTonightResponse {
   features: {
     smartTurnTime: boolean;
@@ -91,6 +100,7 @@ interface SmartTonightResponse {
   };
   reservations: Record<string, SmartReservationData>;
   turnTimes: TurnTimeStats | null;
+  pacingAlerts: PacingAlert[] | null;
   date: string;
 }
 const SC: Record<string, string> = {
@@ -196,6 +206,7 @@ export default function TonightPage() {
   const [loadingUpcoming, setLoadingUpcoming] = useState(false);
   const [expandedPreOrders, setExpandedPreOrders] = useState<Record<number, boolean>>({});
   const [smartData, setSmartData] = useState<SmartTonightResponse | null>(null);
+  const [dismissPacingAlerts, setDismissPacingAlerts] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [today, setToday] = useState(() => dateInTimezone("America/New_York"));
   const [selectedDate, setSelectedDate] = useState(() => dateInTimezone("America/New_York"));
@@ -305,6 +316,10 @@ export default function TonightPage() {
     await fetch("/api/reservations/staff-create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ guestName: name, partySize: parseInt(size), source: "walkin", tableId: tid ? parseInt(tid) : null }) });
     Promise.all([load(), loadUpcoming()]);
   }
+
+  const visiblePacingAlerts = smartData?.features?.smartPacingAlerts
+    ? (smartData?.pacingAlerts || [])
+    : [];
 
   function printDaySheet() {
     const active = reservations
@@ -416,6 +431,32 @@ export default function TonightPage() {
           <button onClick={addWalkin} className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">+ Walk-in</button>
         </div>
       </div>
+
+      {visiblePacingAlerts.length > 0 && !dismissPacingAlerts && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-amber-900">Pacing alerts for tonight</h2>
+            <button
+              type="button"
+              onClick={() => setDismissPacingAlerts(true)}
+              className="text-xs text-amber-800 underline"
+            >
+              Dismiss
+            </button>
+          </div>
+          <div className="space-y-1 text-sm">
+            {visiblePacingAlerts.map((alert) => (
+              <div
+                key={`${alert.timeSlot}-${alert.level}`}
+                className={alert.level === "critical" ? "text-red-700" : "text-amber-800"}
+              >
+                {alert.level === "critical" ? "⚠ Overbooked: " : "📊 Nearly full: "}
+                {formatTime12(alert.timeSlot)} has {alert.reservations} reservations for {alert.tableCapacity} tables
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showUpcoming && (
         <div className="bg-white rounded-xl shadow p-4 mb-6">

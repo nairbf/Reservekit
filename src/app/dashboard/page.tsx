@@ -35,6 +35,14 @@ interface Reservation {
   } | null;
 }
 interface TableItem { id: number; name: string; maxCapacity: number }
+interface PacingAlert {
+  timeSlot: string;
+  reservations: number;
+  tableCapacity: number;
+  utilizationPct: number;
+  level: "warning" | "critical";
+  message: string;
+}
 
 const STATUS_PILL: Record<string, string> = {
   pending: "bg-blue-50 text-blue-700",
@@ -123,6 +131,9 @@ export default function InboxPage() {
   const searchParams = useSearchParams();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [tables, setTables] = useState<TableItem[]>([]);
+  const [pacingAlerts, setPacingAlerts] = useState<PacingAlert[]>([]);
+  const [smartPacingEnabled, setSmartPacingEnabled] = useState(false);
+  const [dismissPacingAlerts, setDismissPacingAlerts] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -132,9 +143,10 @@ export default function InboxPage() {
     setRefreshing(true);
     setLoadError("");
     try {
-      const [r, t] = await Promise.all([
+      const [r, t, smart] = await Promise.all([
         fetch("/api/reservations?status=pending,counter_offered"),
         fetch("/api/tables"),
+        fetch("/api/smart/tonight").catch(() => null),
       ]);
       if (!r.ok) {
         let detail = "";
@@ -142,22 +154,38 @@ export default function InboxPage() {
         setLoadError(detail || `Reservation feed failed (${r.status}). If this is after an update, run: npx prisma db push`);
         setReservations([]);
         setTables([]);
+        setPacingAlerts([]);
+        setSmartPacingEnabled(false);
         return;
       }
       if (!t.ok) {
         setLoadError(`Tables feed failed (${t.status}).`);
         setReservations([]);
         setTables([]);
+        setPacingAlerts([]);
+        setSmartPacingEnabled(false);
         return;
       }
       const reservationsData = await r.json();
       const tablesData = await t.json();
       setReservations(Array.isArray(reservationsData) ? reservationsData : []);
       setTables(Array.isArray(tablesData) ? tablesData : []);
+
+      if (smart && smart.ok) {
+        const smartData = await smart.json();
+        const nextAlerts = Array.isArray(smartData?.pacingAlerts) ? (smartData.pacingAlerts as PacingAlert[]) : [];
+        setSmartPacingEnabled(Boolean(smartData?.features?.smartPacingAlerts));
+        setPacingAlerts(nextAlerts);
+      } else {
+        setSmartPacingEnabled(false);
+        setPacingAlerts([]);
+      }
     } catch (err) {
       setLoadError("Could not load inbox data. Please refresh and try again.");
       setReservations([]);
       setTables([]);
+      setPacingAlerts([]);
+      setSmartPacingEnabled(false);
     } finally {
       setRefreshing(false);
       setLoaded(true);
@@ -188,6 +216,8 @@ export default function InboxPage() {
     );
   }
 
+  const visiblePacingAlerts = smartPacingEnabled ? pacingAlerts : [];
+
   return (
     <div className={showTourHighlight ? "rounded-2xl ring-2 ring-blue-300 p-2" : ""}>
       <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -202,6 +232,32 @@ export default function InboxPage() {
           </div>
         )}
       </div>
+
+      {visiblePacingAlerts.length > 0 && !dismissPacingAlerts && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-amber-900">Pacing alerts for tonight</h2>
+            <button
+              type="button"
+              onClick={() => setDismissPacingAlerts(true)}
+              className="text-xs text-amber-800 underline"
+            >
+              Dismiss
+            </button>
+          </div>
+          <div className="space-y-1 text-sm">
+            {visiblePacingAlerts.map((alert) => (
+              <div
+                key={`${alert.timeSlot}-${alert.level}`}
+                className={alert.level === "critical" ? "text-red-700" : "text-amber-800"}
+              >
+                {alert.level === "critical" ? "⚠ Overbooked: " : "📊 Nearly full: "}
+                {fmt12(alert.timeSlot)} has {alert.reservations} reservations for {alert.tableCapacity} tables
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {loadError && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-900 px-3 py-2 text-sm">

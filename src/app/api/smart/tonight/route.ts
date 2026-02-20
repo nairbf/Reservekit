@@ -5,6 +5,7 @@ import { getRestaurantTimezone, getTodayInTimezone } from "@/lib/timezone";
 import { calculateTurnTimes } from "@/lib/smart/turn-time";
 import { calculateNoShowRisk, type NoShowRisk } from "@/lib/smart/no-show-risk";
 import { getGuestTags, type GuestTag } from "@/lib/smart/guest-intel";
+import { checkPacingAlerts, type PacingAlert } from "@/lib/smart/pacing";
 import type { TurnTimeStats } from "@/lib/smart/turn-time";
 
 export const runtime = "nodejs";
@@ -36,8 +37,9 @@ export async function GET(req: NextRequest) {
   }
 
   const timezone = await getRestaurantTimezone();
+  const today = getTodayInTimezone(timezone);
   const requestedDate = String(req.nextUrl.searchParams.get("date") || "").trim();
-  const date = requestedDate || getTodayInTimezone(timezone);
+  const date = requestedDate || today;
 
   const [featureRows, reservations] = await Promise.all([
     prisma.setting.findMany({ where: { key: { in: [...FEATURE_KEYS] } } }),
@@ -69,6 +71,11 @@ export async function GET(req: NextRequest) {
     turnTimes = await calculateTurnTimes();
   }
 
+  let pacingAlerts: PacingAlert[] | null = null;
+  if (features.smartPacingAlerts && date === today) {
+    pacingAlerts = await checkPacingAlerts();
+  }
+
   const entries = await Promise.all(
     reservations.map(async (reservation) => {
       const data: ReservationSmartData = {};
@@ -94,6 +101,7 @@ export async function GET(req: NextRequest) {
     features,
     reservations: result,
     turnTimes,
+    pacingAlerts,
     date,
   });
 }

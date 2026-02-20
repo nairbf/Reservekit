@@ -26,6 +26,12 @@ interface AddFormState {
   notes: string;
 }
 
+interface SmartEstimate {
+  estimatedMinutes: number;
+  estimatedTime: string;
+  smart: boolean;
+}
+
 function statusClass(status: string): string {
   if (status === "waiting") return "bg-white border-gray-200";
   if (status === "notified") return "bg-yellow-50 border-yellow-300 animate-pulse";
@@ -42,6 +48,8 @@ function elapsedMinutes(iso: string): number {
 export default function WaitlistPage() {
   const canManageWaitlist = useHasPermission("manage_waitlist");
   const [entries, setEntries] = useState<WaitlistEntry[]>([]);
+  const [smartEstimates, setSmartEstimates] = useState<Record<number, SmartEstimate>>({});
+  const [smartWaitlistEnabled, setSmartWaitlistEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -52,13 +60,59 @@ export default function WaitlistPage() {
     notes: "",
   });
 
+  const loadSmartEstimates = useCallback(async (rows: WaitlistEntry[]) => {
+    const activeRows = rows
+      .filter((row) => ["waiting", "notified"].includes(row.status))
+      .sort((a, b) => a.position - b.position || a.id - b.id);
+
+    if (activeRows.length === 0) {
+      setSmartEstimates({});
+      setSmartWaitlistEnabled(false);
+      return;
+    }
+
+    try {
+      const pairs = await Promise.all(
+        activeRows.map(async (row) => {
+          const response = await fetch(
+            `/api/waitlist/estimate?partySize=${row.partySize}&position=${Math.max(1, row.position)}`,
+          );
+          if (!response.ok) return [row.id, null] as const;
+          const payload = await response.json();
+          const estimate: SmartEstimate = {
+            estimatedMinutes: Math.max(0, Number(payload.estimatedMinutes || 0)),
+            estimatedTime: String(payload.estimatedTime || ""),
+            smart: Boolean(payload.smart),
+          };
+          return [row.id, estimate] as const;
+        }),
+      );
+
+      const nextEstimates: Record<number, SmartEstimate> = {};
+      let enabled = false;
+      for (const [entryId, estimate] of pairs) {
+        if (!estimate) continue;
+        nextEstimates[entryId] = estimate;
+        if (estimate.smart) enabled = true;
+      }
+
+      setSmartEstimates(nextEstimates);
+      setSmartWaitlistEnabled(enabled);
+    } catch {
+      setSmartEstimates({});
+      setSmartWaitlistEnabled(false);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     const res = await fetch("/api/waitlist");
     if (!res.ok) return;
     const data = await res.json();
-    setEntries(Array.isArray(data) ? data : []);
+    const rows = Array.isArray(data) ? data : [];
+    setEntries(rows);
+    loadSmartEstimates(rows).catch(() => undefined);
     setLoading(false);
-  }, []);
+  }, [loadSmartEstimates]);
 
   useEffect(() => {
     load();
@@ -78,7 +132,13 @@ export default function WaitlistPage() {
   }, [entries]);
 
   const waitingEntries = visibleEntries.filter(e => e.status === "waiting");
-  const longestWait = waitingEntries.reduce((max, e) => Math.max(max, e.estimatedWait || 0), 0);
+  const longestWait = waitingEntries.reduce((max, entry) => {
+    const smartEstimate = smartEstimates[entry.id];
+    if (smartWaitlistEnabled && smartEstimate?.smart) {
+      return Math.max(max, smartEstimate.estimatedMinutes);
+    }
+    return Math.max(max, entry.estimatedWait || 0);
+  }, 0);
 
   if (!canManageWaitlist) return <AccessDenied />;
 
@@ -191,7 +251,13 @@ export default function WaitlistPage() {
                   <div className="text-sm text-gray-500">#{entry.position}</div>
                   <div className="text-lg font-bold">{entry.guestName}</div>
                   <div className="text-sm text-gray-600">Party of {entry.partySize} · waiting {elapsedMinutes(entry.quotedAt)} min</div>
-                  <div className="text-xs text-gray-500 mt-1">Est. wait: {entry.estimatedWait ?? 0} min</div>
+                  {smartWaitlistEnabled && smartEstimates[entry.id]?.smart ? (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Est. ~{smartEstimates[entry.id].estimatedMinutes} min ({smartEstimates[entry.id].estimatedTime})
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500 mt-1">Est. wait: {entry.estimatedWait ?? 0} min</div>
+                  )}
                 </div>
                 <span className="text-xs px-2 py-1 rounded-full bg-white border capitalize">{entry.status.replace("_", " ")}</span>
               </div>

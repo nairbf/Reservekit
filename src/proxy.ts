@@ -26,6 +26,7 @@ const PUBLIC_API_EXACT = new Set([
   "/api/events",
   "/api/preorder",
   "/api/license/validate",
+  "/api/demo/reset",
 ]);
 
 function isPublicApi(pathname: string): boolean {

@@ -7,6 +7,7 @@ export const runtime = "nodejs";
 interface CheckoutBody {
   plan?: PlanKey;
   addons?: AddonKey[];
+  selfHost?: boolean;
   customerEmail?: string;
   customerName?: string;
   restaurantName?: string;
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
   }
 
   const plan = body.plan;
+  const selfHost = body.selfHost === true;
   const customerEmail = String(body.customerEmail || "").trim().toLowerCase();
   const customerName = String(body.customerName || "").trim();
   const restaurantName = String(body.restaurantName || "").trim();
@@ -73,9 +75,10 @@ export async function POST(request: NextRequest) {
     metadata: {
       plan,
       addons: JSON.stringify(addons),
-      hosting: "true",
-      hostingTier: hostingTierForPlan(plan),
-      hostingRenewalDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      hosting: selfHost ? "false" : "true",
+      hostingTier: selfHost ? "self_hosted" : hostingTierForPlan(plan),
+      hostingRenewalDate: selfHost ? "" : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      selfHost: selfHost ? "true" : "false",
       customerName,
       customerEmail,
       restaurantName,

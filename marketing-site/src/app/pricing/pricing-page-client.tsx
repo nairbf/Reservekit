@@ -124,6 +124,8 @@ function usd(value: number) {
 export default function PricingPageClient() {
   const [plan, setPlan] = useState<PlanKey>("servicePro");
   const [selectedAddons, setSelectedAddons] = useState<AddonKey[]>([]);
+  const [showSelfHostDetails, setShowSelfHostDetails] = useState(false);
+  const [selfHost, setSelfHost] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
@@ -175,6 +177,7 @@ export default function PricingPageClient() {
         body: JSON.stringify({
           plan,
           addons: billableSelectedAddons,
+          selfHost,
           customerEmail,
           customerName,
           restaurantName,
@@ -254,6 +257,36 @@ export default function PricingPageClient() {
                   );
                 })}
               </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-6">
+              <button
+                type="button"
+                onClick={() => setShowSelfHostDetails((prev) => !prev)}
+                className="text-sm font-semibold text-blue-700 hover:text-blue-800"
+              >
+                {showSelfHostDetails ? "Hide self-host details" : "Prefer to self-host?"}
+              </button>
+              {showSelfHostDetails ? (
+                <div className="mt-4 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm text-slate-700">
+                    Every plan includes the full software - you can run it on your own server instead of using our managed hosting.
+                    No hosting fee required.
+                  </p>
+                  <label className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={selfHost}
+                      onChange={(e) => setSelfHost(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                    I&apos;ll self-host (skip managed hosting)
+                  </label>
+                  <p className="text-xs text-slate-600">
+                    Self-hosted instances don&apos;t include backups, monitoring, updates, or support. Most restaurants prefer managed hosting so we can handle everything while your team focuses on guests.
+                  </p>
+                </div>
+              ) : null}
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -379,13 +412,21 @@ export default function PricingPageClient() {
                   <p className="mt-1 text-xs text-slate-500">License + selected add-ons</p>
                 </div>
 
-                <div className="rounded-lg bg-slate-50 p-3">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Managed Hosting</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">
-                    Starting year 2: {usd(selectedPlan.hostingPrice)}/yr managed hosting
-                  </p>
-                  <p className="mt-1 text-xs text-slate-600">First year is included free with every plan.</p>
-                </div>
+                {selfHost ? (
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Hosting</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">Self-hosted - no managed hosting fee</p>
+                    <p className="mt-1 text-xs text-slate-600">You&apos;ll run updates, backups, and monitoring on your own infrastructure.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg bg-slate-50 p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Managed Hosting</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      Starting year 2: {usd(selectedPlan.hostingPrice)}/yr managed hosting
+                    </p>
+                    <p className="mt-1 text-xs text-slate-600">First year is included free with every plan.</p>
+                  </div>
+                )}
               </div>
 
               <button

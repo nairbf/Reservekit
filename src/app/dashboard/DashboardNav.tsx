@@ -7,7 +7,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { PermissionKey } from "@/lib/permissions";
 
 const NAV = [
-  { href: "/dashboard", label: "Inbox", icon: "IN", permission: "view_dashboard" },
+  { href: "/dashboard/overview", label: "Dashboard", icon: "DB", permission: "view_dashboard" },
+  { href: "/dashboard", label: "Reservations", icon: "RS", permission: "view_dashboard" },
   { href: "/dashboard/tonight", label: "Tonight", icon: "TN", permission: "tonight_view" },
   { href: "/dashboard/kitchen", label: "Kitchen", icon: "KT", permission: "manage_menu" },
   { href: "/dashboard/waitlist", label: "Waitlist", icon: "WL", permission: "manage_waitlist" },

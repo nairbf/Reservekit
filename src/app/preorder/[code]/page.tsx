@@ -82,9 +82,7 @@ const CATEGORY_GROUPS: Array<{ key: CategoryGroupKey; title: string; icon: strin
   { key: "other", title: "Other", icon: "📋" },
 ];
 
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  : null;
+const ENV_STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || null;
 
 function formatCents(cents: number): string {
   return `$${(Math.max(0, Math.trunc(cents)) / 100).toFixed(2)}`;
@@ -123,7 +121,7 @@ function PaymentStep({
   onBack,
 }: {
   subtotal: number;
-  onConfirmed: () => Promise<void>;
+  onConfirmed: (paymentIntentId: string | null) => Promise<void>;
   onBack: () => void;
 }) {
   const stripe = useStripe();
@@ -146,11 +144,11 @@ function PaymentStep({
         return;
       }
       const status = result.paymentIntent?.status;
-      if (status !== "succeeded" && status !== "requires_capture" && status !== "processing") {
+      if (status !== "succeeded") {
         setError("Payment is not complete yet.");
         return;
       }
-      await onConfirmed();
+      await onConfirmed(result.paymentIntent?.id || null);
     } finally {
       setProcessing(false);
     }
@@ -207,6 +205,12 @@ export default function PreOrderPage() {
   const [step, setStep] = useState<"editor" | "payment" | "done">("editor");
   const [clientSecret, setClientSecret] = useState("");
   const [currentPreOrderId, setCurrentPreOrderId] = useState<number | null>(null);
+  const [stripePublishableKey, setStripePublishableKey] = useState<string | null>(ENV_STRIPE_PUBLISHABLE_KEY);
+
+  const stripePromise = useMemo(
+    () => (stripePublishableKey ? loadStripe(stripePublishableKey) : null),
+    [stripePublishableKey],
+  );
 
   const subtotal = useMemo(
     () => lines.reduce((sum, line) => sum + line.price * line.quantity, 0),
@@ -225,6 +229,24 @@ export default function PreOrderPage() {
     if (!config) return;
     if (config.payment === "precharge") setPayNow(true);
   }, [config]);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/payments/deposit-config")
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const data = (await response.json().catch(() => ({}))) as { stripePublishableKey?: string };
+        return String(data.stripePublishableKey || "").trim() || null;
+      })
+      .then((key) => {
+        if (!mounted || !key) return;
+        setStripePublishableKey(key);
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   async function verifyReservation() {
     if (!phone.trim()) return;
@@ -377,7 +399,7 @@ export default function PreOrderPage() {
     }
   }
 
-  async function markPaidAndFinish() {
+  async function markPaidAndFinish(stripePaymentIntentId?: string | null) {
     if (!currentPreOrderId || !reservation) return;
     const res = await fetch(`/api/preorder/${currentPreOrderId}`, {
       method: "PUT",
@@ -386,6 +408,7 @@ export default function PreOrderPage() {
         action: "mark_paid",
         code: reservation.code,
         phone,
+        stripePaymentIntentId: stripePaymentIntentId || undefined,
       }),
     });
     const data = await res.json();

@@ -177,6 +177,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const intent = await stripePaymentStatus(paymentIntentId);
+    if (String(intent.metadata?.eventId || "") !== String(event.id)) {
+      return NextResponse.json({ error: "Payment intent does not match this event" }, { status: 400 });
+    }
     if (intent.status !== "succeeded") {
       return NextResponse.json({ error: "Payment is not completed" }, { status: 409 });
     }

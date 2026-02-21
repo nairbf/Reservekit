@@ -31,9 +31,7 @@ interface PurchasedTicket {
   totalPaid: number;
 }
 
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
-  : null;
+const ENV_STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || null;
 
 function formatTime12(value: string): string {
   const [h, m] = String(value || "00:00").split(":").map(Number);
@@ -122,6 +120,30 @@ export function EventDetailPageClient({ slug }: { slug: string }) {
   const [paymentIntentId, setPaymentIntentId] = useState("");
   const [tickets, setTickets] = useState<PurchasedTicket[]>([]);
   const [calendarIcs, setCalendarIcs] = useState("");
+  const [stripePublishableKey, setStripePublishableKey] = useState<string | null>(ENV_STRIPE_PUBLISHABLE_KEY);
+
+  const stripePromise = useMemo(
+    () => (stripePublishableKey ? loadStripe(stripePublishableKey) : null),
+    [stripePublishableKey],
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    fetch("/api/payments/deposit-config")
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const data = (await response.json().catch(() => ({}))) as { stripePublishableKey?: string };
+        return String(data.stripePublishableKey || "").trim() || null;
+      })
+      .then((key) => {
+        if (!mounted || !key) return;
+        setStripePublishableKey(key);
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -147,7 +169,7 @@ export function EventDetailPageClient({ slug }: { slug: string }) {
     [event?.ticketPrice, form.quantity],
   );
 
-  const stripeEnabled = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+  const stripeEnabled = Boolean(stripePromise);
   const requiresStripe = Boolean(event && event.ticketPrice > 0 && stripeEnabled);
   const paidEventWithoutCheckout = Boolean(event && event.ticketPrice > 0 && !stripeEnabled);
 

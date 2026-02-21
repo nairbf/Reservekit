@@ -115,6 +115,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!preOrderId) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   const body = await req.json();
+  const requestedPaymentIntentId = String(body?.stripePaymentIntentId || "").trim();
   const preOrder = await loadPreOrder(preOrderId);
   if (!preOrder) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
@@ -154,15 +155,43 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   if (body?.action === "mark_paid") {
-    if (!staff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const paymentIntentId = requestedPaymentIntentId || preOrder.stripePaymentIntentId || "";
+    if (requestedPaymentIntentId && preOrder.stripePaymentIntentId && requestedPaymentIntentId !== preOrder.stripePaymentIntentId) {
+      return NextResponse.json({ error: "Payment intent does not match this pre-order" }, { status: 400 });
+    }
+
+    if (!staff && !paymentIntentId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     let paidAmount = preOrder.subtotal;
-    if (preOrder.stripePaymentIntentId) {
+    if (paymentIntentId) {
       try {
         const stripe = await getStripeClient();
-        const intent = await stripe.paymentIntents.retrieve(preOrder.stripePaymentIntentId);
-        paidAmount = intent.amount_received || paidAmount;
-      } catch {
-        // fall back to manual paid amount if Stripe lookup fails
+        const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+        const amountReceived = intent.amount_received || 0;
+        if (!staff) {
+          const metadataReservationId = String(intent.metadata?.reservationId || "").trim();
+          const metadataReservationCode = String(intent.metadata?.reservationCode || "").trim().toUpperCase();
+          const matchesReservation = (
+            metadataReservationId === String(preOrder.reservationId)
+            || metadataReservationCode === String(preOrder.reservation.code || "").trim().toUpperCase()
+          );
+          if (!matchesReservation) {
+            return NextResponse.json({ error: "Payment intent does not match this pre-order" }, { status: 400 });
+          }
+        }
+        if (!staff && (intent.status !== "succeeded" || amountReceived < preOrder.subtotal)) {
+          return NextResponse.json({ error: "Payment not confirmed" }, { status: 402 });
+        }
+        paidAmount = amountReceived || paidAmount;
+      } catch (error) {
+        if (!staff && error instanceof Error && error.message === "Stripe not configured") {
+          return NextResponse.json({ error: "Payment processing not configured" }, { status: 503 });
+        }
+        if (!staff) {
+          return NextResponse.json({ error: "Payment not confirmed" }, { status: 402 });
+        }
       }
     }
     const updated = await prisma.preOrder.update({
@@ -171,6 +200,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         isPaid: true,
         paidAmount,
         paidAt: new Date(),
+        stripePaymentIntentId: paymentIntentId || preOrder.stripePaymentIntentId,
       },
       include: {
         reservation: true,

@@ -8,6 +8,10 @@ interface UpgradeBody {
   currentPlan?: PlanKey;
   targetPlan?: PlanKey;
   customerEmail?: string;
+  customerName?: string;
+  restaurantName?: string;
+  addons?: string[] | string;
+  existingAddons?: string[] | string;
 }
 
 export async function POST(request: NextRequest) {
@@ -21,6 +25,12 @@ export async function POST(request: NextRequest) {
   const currentPlan = body.currentPlan;
   const targetPlan = body.targetPlan;
   const customerEmail = String(body.customerEmail || "").trim().toLowerCase();
+  const customerName = String(body.customerName || "").trim();
+  const restaurantName = String(body.restaurantName || "").trim();
+  const addonsSource = body.existingAddons ?? body.addons ?? "";
+  const addons = Array.isArray(addonsSource)
+    ? addonsSource.map((item) => String(item || "").trim()).filter(Boolean).join(",")
+    : String(addonsSource || "").trim();
 
   if (!currentPlan || !targetPlan) {
     return NextResponse.json({ error: "currentPlan and targetPlan are required" }, { status: 400 });
@@ -59,9 +69,13 @@ export async function POST(request: NextRequest) {
     success_url: `${baseUrl}/purchase/success?session_id={CHECKOUT_SESSION_ID}&upgrade=true`,
     cancel_url: `${baseUrl}/pricing`,
     metadata: {
+      plan: targetPlan,
       type: "upgrade",
       currentPlan,
       targetPlan,
+      addons,
+      customerName,
+      restaurantName,
       customerEmail,
     },
     allow_promotion_codes: true,

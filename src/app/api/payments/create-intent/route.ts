@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { createPaymentIntent, type ReservationPaymentType } from "@/lib/payments";
+import { getStripeInstance } from "@/lib/stripe";
+
+function last4(value: string): string {
+  return String(value || "").replace(/\D/g, "").slice(-4);
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,6 +21,15 @@ export async function POST(req: NextRequest) {
       include: { payment: true },
     });
     if (!reservation) return NextResponse.json({ error: "Reservation not found" }, { status: 404 });
+
+    const reservationCode = String(body?.reservationCode || "").trim().toUpperCase();
+    const guestPhone = String(body?.guestPhone || "").trim();
+    if (!reservationCode || last4(guestPhone).length !== 4) {
+      return NextResponse.json({ error: "reservationCode and guestPhone are required" }, { status: 400 });
+    }
+    if (reservation.code !== reservationCode || last4(reservation.guestPhone || "") !== last4(guestPhone)) {
+      return NextResponse.json({ error: "Reservation verification failed" }, { status: 403 });
+    }
 
     const settings = await getSettings();
     const requestedType = body?.type === "deposit" ? "deposit" : body?.type === "hold" ? "hold" : settings.depositType;
@@ -32,6 +46,42 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Payment already processed for this reservation" }, { status: 409 });
     }
 
+    if (reservation.payment?.status === "pending" && reservation.payment.stripePaymentIntentId) {
+      const existingIntentId = reservation.payment.stripePaymentIntentId;
+      const stripe = await getStripeInstance();
+      if (stripe) {
+        try {
+          const existingIntent = await stripe.paymentIntents.retrieve(existingIntentId);
+          if (
+            ["requires_payment_method", "requires_confirmation", "requires_action", "processing"].includes(existingIntent.status)
+            && reservation.payment.amount === amount
+            && reservation.payment.type === type
+          ) {
+            return NextResponse.json({
+              clientSecret: existingIntent.client_secret,
+              payment: reservation.payment,
+            });
+          }
+          if (["requires_payment_method", "requires_confirmation", "requires_action", "processing", "requires_capture"].includes(existingIntent.status)) {
+            try {
+              await stripe.paymentIntents.cancel(existingIntentId);
+            } catch {
+              // Ignore cancellation failures and continue with a fresh intent.
+            }
+          }
+        } catch {
+          // Payment intent no longer exists, create a new one below.
+        }
+        await prisma.reservationPayment.update({
+          where: { id: reservation.payment.id },
+          data: {
+            status: "cancelled",
+            updatedAt: new Date(),
+          },
+        });
+      }
+    }
+
     const intent = await createPaymentIntent({
       amount,
       currency: "usd",
@@ -39,7 +89,7 @@ export async function POST(req: NextRequest) {
       metadata: {
         reservationId: String(reservation.id),
         reservationCode: reservation.code,
-        guestPhone: reservation.guestPhone || "",
+        guestPhone: reservation.guestPhone || guestPhone,
       },
     });
 

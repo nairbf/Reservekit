@@ -652,6 +652,8 @@ export default function ReserveWidgetClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             reservationId: d.id,
+            reservationCode: d.code,
+            guestPhone: phone,
             amount,
             type: liveDeposit.type || "hold",
           }),

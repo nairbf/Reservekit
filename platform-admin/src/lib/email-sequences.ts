@@ -10,6 +10,8 @@ export interface PurchaseInfo {
   licenseKey: string;
   instanceUrl: string;
   hosted: boolean;
+  loginEmail?: string;
+  loginPassword?: string;
 }
 
 type SequenceStatus = "pending" | "sent" | "failed" | "cancelled";
@@ -30,7 +32,20 @@ const PURCHASE_SEQUENCE = [
     step: 0,
     delayHours: 0,
     subject: (info: PurchaseInfo) => `Welcome to ReserveSit, ${info.ownerName}!`,
-    body: (info: PurchaseInfo) => `
+    body: (info: PurchaseInfo) => {
+      const loginEmail = info.loginEmail || info.ownerEmail;
+      const credentialsSection = info.hosted && info.loginPassword
+        ? `
+Your Dashboard Access:
+- URL: ${info.instanceUrl}
+- Email: ${loginEmail}
+- Password: ${info.loginPassword}
+
+You can change your password after logging in.
+`
+        : "";
+
+      return `
 Hi ${info.ownerName},
 
 Thank you for purchasing ReserveSit ${info.plan} for ${info.restaurantName}!
@@ -38,6 +53,8 @@ Thank you for purchasing ReserveSit ${info.plan} for ${info.restaurantName}!
 Here's everything you need to get started:
 
 ${info.hosted ? `Your Dashboard: ${info.instanceUrl}/login` : `Your License Key: ${info.licenseKey}`}
+
+${credentialsSection}
 
 ${info.hosted ? `We're setting up your hosted instance now. You'll receive a follow-up email within 24 hours with your login credentials and a link to complete your setup.` : `Please follow the self-hosting guide included in your welcome package to install ReserveSit on your server.`}
 
@@ -52,7 +69,8 @@ Need help? Reply to this email or contact support@reservesit.com.
 
 Best,
 The ReserveSit Team
-    `.trim(),
+    `.trim();
+    },
   },
   {
     step: 1,
@@ -150,7 +168,9 @@ export async function sendDirectEmail(input: { to: string; subject: string; body
 export async function createPurchaseSequence(info: PurchaseInfo) {
   const now = new Date();
   for (const template of PURCHASE_SEQUENCE) {
-    const scheduledAt = new Date(now.getTime() + template.delayHours * 60 * 60 * 1000);
+    const scheduledAt = template.step === 0
+      ? new Date(Date.now() + 60 * 1000)
+      : new Date(now.getTime() + template.delayHours * 60 * 60 * 1000);
     await prisma.emailSequenceEvent.create({
       data: {
         restaurantId: info.restaurantId,

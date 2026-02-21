@@ -195,6 +195,8 @@ export async function POST(request: NextRequest) {
     performedBy: "stripe-webhook",
   });
 
+  let generatedPassword: string | undefined;
+
   // Run setup script to create customer folder and database on disk
   try {
     const { stdout, stderr } = await execFileAsync(SETUP_SCRIPT, [
@@ -205,6 +207,13 @@ export async function POST(request: NextRequest) {
     ]);
     console.log("[STRIPE-PURCHASE] Setup script completed for", slug, stdout);
     if (stderr) console.warn("[STRIPE-PURCHASE] Setup script stderr:", stderr);
+
+    try {
+      const match = stdout.match(/Login:\s*\S+\s*\/\s*(\S+)/i);
+      generatedPassword = match?.[1];
+    } catch {
+      // ignore
+    }
   } catch (err) {
     // Log but do not fail — Stripe must receive 200 or it will retry
     console.error("[STRIPE-PURCHASE] Setup script failed for", slug, err);
@@ -219,6 +228,7 @@ export async function POST(request: NextRequest) {
     licenseKey,
     instanceUrl,
     hosted: hosting.hosted,
+    loginPassword: generatedPassword,
   });
 
   return NextResponse.json({

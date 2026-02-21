@@ -149,6 +149,7 @@ export function EventDetailPageClient({ slug }: { slug: string }) {
 
   const stripeEnabled = Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const requiresStripe = Boolean(event && event.ticketPrice > 0 && stripeEnabled);
+  const paidEventWithoutCheckout = Boolean(event && event.ticketPrice > 0 && !stripeEnabled);
 
   async function reserveWithoutPayment() {
     if (!event) return;
@@ -184,6 +185,10 @@ export function EventDetailPageClient({ slug }: { slug: string }) {
   async function beginStripePurchase(e: React.FormEvent) {
     e.preventDefault();
     if (!event) return;
+    if (paidEventWithoutCheckout) {
+      setError("Online ticket sales are not available at this time. Please contact the restaurant directly.");
+      return;
+    }
     if (!requiresStripe) {
       await reserveWithoutPayment();
       return;
@@ -380,18 +385,22 @@ export function EventDetailPageClient({ slug }: { slug: string }) {
 
                 <button
                   type="submit"
-                  disabled={processing}
+                  disabled={processing || paidEventWithoutCheckout}
                   className="w-full h-11 rounded bg-blue-600 text-white font-medium transition-all duration-200 disabled:opacity-60"
                 >
                   {processing
                     ? "Please wait..."
+                    : paidEventWithoutCheckout
+                      ? "Unavailable"
                     : requiresStripe
                       ? "Continue to Payment"
                       : "Reserve Tickets"}
                 </button>
 
-                {!requiresStripe && (
-                  <p className="text-xs text-gray-500">Stripe is not configured. Tickets will be reserved without online payment.</p>
+                {paidEventWithoutCheckout && (
+                  <p className="text-xs text-red-600">
+                    Online ticket sales are not available at this time. Please contact the restaurant directly.
+                  </p>
                 )}
               </form>
             ) : (

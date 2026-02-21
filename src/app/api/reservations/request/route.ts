@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSettings, getDiningDuration, getEffectiveDepositForRequest } from "@/lib/settings";
 import { generateCode } from "@/lib/codes";
-import { timeToMinutes, minutesToTime } from "@/lib/availability";
+import { getAvailableSlots, timeToMinutes, minutesToTime } from "@/lib/availability";
 import { notifyRequestReceived } from "@/lib/notifications";
 import { linkGuestToReservation } from "@/lib/guest";
 import { saveLoyaltyConsent } from "@/lib/loyalty";
@@ -34,11 +34,25 @@ export async function POST(req: NextRequest) {
   const settings = await getSettings();
   if (partySize < 1 || partySize > settings.maxPartySize) return NextResponse.json({ error: `Party size must be 1-${settings.maxPartySize}` }, { status: 400 });
 
-  const dupe = await prisma.reservation.findFirst({ where: { guestPhone, date, time, status: { notIn: ["cancelled", "declined", "expired"] } } });
+  const requestedMinutes = timeToMinutes(time);
+  if (!Number.isFinite(requestedMinutes) || requestedMinutes < 0) {
+    return NextResponse.json({ error: "Invalid reservation time" }, { status: 400 });
+  }
+  const normalizedTime = minutesToTime(requestedMinutes);
+
+  const dupe = await prisma.reservation.findFirst({
+    where: { guestPhone, date, time: normalizedTime, status: { notIn: ["cancelled", "declined", "expired"] } },
+  });
   if (dupe) return NextResponse.json({ error: "You already have a request for this time" }, { status: 409 });
 
+  const availability = await getAvailableSlots(date, partySize);
+  const requestedSlot = availability.find((slot) => slot.time === normalizedTime);
+  if (!requestedSlot || !requestedSlot.available) {
+    return NextResponse.json({ error: "No availability for the requested time" }, { status: 409 });
+  }
+
   const duration = getDiningDuration(settings.diningDurations, partySize);
-  const endTime = minutesToTime(timeToMinutes(time) + duration);
+  const endTime = minutesToTime(requestedMinutes + duration);
   const deposit = getEffectiveDepositForRequest(settings, date, partySize);
   let code = generateCode();
   while (await prisma.reservation.findUnique({ where: { code } })) code = generateCode();
@@ -51,7 +65,7 @@ export async function POST(req: NextRequest) {
       guestEmail,
       partySize,
       date,
-      time,
+      time: normalizedTime,
       endTime,
       durationMin: duration,
       specialRequests: specialRequests || null,

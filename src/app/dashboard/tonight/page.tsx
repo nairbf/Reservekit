@@ -8,11 +8,17 @@ interface Reservation {
   id: number;
   code: string;
   guestName: string;
+  guestPhone?: string;
+  guestEmail?: string | null;
   partySize: number;
   date: string;
   time: string;
+  endTime?: string;
+  durationMin?: number;
+  specialRequests?: string | null;
   status: string;
   source: string;
+  tableId?: number | null;
   table: { id: number; name: string } | null;
   seatedAt?: string | null;
   guest: {
@@ -211,6 +217,16 @@ function formatTime12(value: string): string {
   return `${h}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
 }
 
+function normalizeTimeInput(value: string): string {
+  const match = (value || "").trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return "";
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return "";
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return "";
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 function formatMoney(value: string): string {
   const num = Number(value);
   if (Number.isFinite(num)) return `$${num.toFixed(2)}`;
@@ -279,6 +295,17 @@ export default function TonightPage() {
   const [loaded, setLoaded] = useState(false);
   const [today, setToday] = useState(() => dateInTimezone("America/New_York"));
   const [selectedDate, setSelectedDate] = useState(() => dateInTimezone("America/New_York"));
+  const [editingReservation, setEditingReservation] = useState<{
+    id: number;
+    guestName: string;
+    partySize: number;
+    date: string;
+    time: string;
+    specialRequests: string;
+    tableId: string;
+  } | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "tonight";
 
   if (!canViewTonight) return <AccessDenied />;
@@ -384,6 +411,57 @@ export default function TonightPage() {
     const tid = prompt("Table ID (or leave blank):");
     await fetch("/api/reservations/staff-create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ guestName: name, partySize: parseInt(size), source: "walkin", tableId: tid ? parseInt(tid) : null }) });
     Promise.all([load(), loadUpcoming()]);
+  }
+
+  function openEditModal(reservation: Reservation) {
+    setEditError("");
+    setEditingReservation({
+      id: reservation.id,
+      guestName: reservation.guestName || "",
+      partySize: Math.max(1, reservation.partySize || 1),
+      date: reservation.date || selectedDate,
+      time: normalizeTimeInput(reservation.time) || "19:00",
+      specialRequests: reservation.specialRequests || "",
+      tableId: reservation.table?.id ? String(reservation.table.id) : "",
+    });
+  }
+
+  function closeEditModal() {
+    if (editSaving) return;
+    setEditingReservation(null);
+    setEditError("");
+  }
+
+  async function saveReservationEdit() {
+    if (!editingReservation) return;
+    setEditSaving(true);
+    setEditError("");
+    try {
+      const res = await fetch(`/api/reservations/${editingReservation.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guestName: editingReservation.guestName,
+          partySize: editingReservation.partySize,
+          date: editingReservation.date,
+          time: editingReservation.time,
+          specialRequests: editingReservation.specialRequests || null,
+          tableId: editingReservation.tableId ? Number(editingReservation.tableId) : null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(String(data?.error || "Unable to save reservation changes."));
+        return;
+      }
+      setEditingReservation(null);
+      await Promise.all([load(), loadUpcoming()]);
+      loadSmartData();
+    } catch {
+      setEditError("Unable to save reservation changes.");
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   const visiblePacingAlerts = smartData?.features?.smartPacingAlerts
@@ -697,6 +775,14 @@ export default function TonightPage() {
                     })()}
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {!["completed", "cancelled"].includes(r.status) && (
+                      <button
+                        onClick={() => openEditModal(r)}
+                        className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-white text-gray-700 border border-gray-200 text-xs transition-all duration-200"
+                      >
+                        Edit
+                      </button>
+                    )}
                     {(["approved", "confirmed"].includes(r.status)) && (
                       <button onClick={() => doAction(r.id, "arrive")} className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 text-xs transition-all duration-200">Arrived</button>
                     )}
@@ -719,6 +805,118 @@ export default function TonightPage() {
 
       {flowSections.length === 0 && (
         <div className="bg-white rounded-xl shadow p-8 text-center text-gray-500">No reservations for today yet.</div>
+      )}
+
+      {editingReservation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-4 shadow-xl sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Edit Reservation</h2>
+                <p className="text-xs text-gray-500">Update booking details and table assignment.</p>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditModal}
+                className="h-9 w-9 rounded border border-gray-200 text-gray-600"
+                aria-label="Close edit modal"
+              >X</button>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-gray-700">Guest name</span>
+                <input
+                  value={editingReservation.guestName}
+                  onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, guestName: event.target.value } : prev))}
+                  className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                />
+              </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-gray-700">Date</span>
+                  <input
+                    type="date"
+                    value={editingReservation.date}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, date: event.target.value } : prev))}
+                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-gray-700">Time</span>
+                  <input
+                    type="time"
+                    value={editingReservation.time}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, time: event.target.value } : prev))}
+                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-gray-700">Party size</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={editingReservation.partySize}
+                    onChange={(event) => {
+                      const parsed = Math.max(1, Math.trunc(Number(event.target.value) || 1));
+                      setEditingReservation((prev) => (prev ? { ...prev, partySize: parsed } : prev));
+                    }}
+                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-gray-700">Table</span>
+                  <select
+                    value={editingReservation.tableId}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, tableId: event.target.value } : prev))}
+                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                  >
+                    <option value="">Unassigned</option>
+                    {tables.map((table) => (
+                      <option key={table.id} value={table.id}>
+                        {table.name} ({table.maxCapacity}-top)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-gray-700">Special requests</span>
+                <textarea
+                  rows={3}
+                  value={editingReservation.specialRequests}
+                  onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, specialRequests: event.target.value } : prev))}
+                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+
+            {editError && <p className="mt-3 text-sm text-red-600">{editError}</p>}
+
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeEditModal}
+                className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveReservationEdit}
+                disabled={editSaving}
+                className="h-10 w-full rounded bg-blue-600 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
+              >
+                {editSaving ? "Saving..." : "Save changes"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

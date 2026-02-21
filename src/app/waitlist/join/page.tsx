@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 interface JoinResult {
   id: number;
@@ -15,14 +16,27 @@ interface WaitlistStatus {
 }
 
 export default function WaitlistJoinPage() {
+  const searchParams = useSearchParams();
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [partySize, setPartySize] = useState("2");
+  const [preferredDate, setPreferredDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [joined, setJoined] = useState<JoinResult | null>(null);
   const [status, setStatus] = useState<WaitlistStatus | null>(null);
   const [estimate, setEstimate] = useState<{ estimatedMinutes: number; partiesAhead: number } | null>(null);
+
+  useEffect(() => {
+    const partySizeParam = Number(searchParams.get("partySize") || "");
+    if (Number.isFinite(partySizeParam) && partySizeParam > 0) {
+      setPartySize(String(Math.max(1, Math.trunc(partySizeParam))));
+    }
+    const dateParam = String(searchParams.get("date") || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      setPreferredDate(dateParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const size = Math.max(1, parseInt(partySize, 10) || 1);
@@ -57,6 +71,7 @@ export default function WaitlistJoinPage() {
           guestName,
           guestPhone,
           partySize: Math.max(1, parseInt(partySize, 10) || 1),
+          notes: preferredDate ? `Requested date: ${preferredDate}` : undefined,
         }),
       });
       const data = await res.json();
@@ -103,6 +118,7 @@ export default function WaitlistJoinPage() {
             <input value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="Your name" className="h-11 w-full border rounded px-3" required />
             <input value={guestPhone} onChange={e => setGuestPhone(e.target.value)} placeholder="Phone number" className="h-11 w-full border rounded px-3" required />
             <input type="number" min={1} value={partySize} onChange={e => setPartySize(e.target.value)} placeholder="Party size" className="h-11 w-full border rounded px-3" required />
+            <input type="date" value={preferredDate} onChange={e => setPreferredDate(e.target.value)} className="h-11 w-full border rounded px-3" />
             {estimate && <p className="text-xs text-gray-500">Current estimate: ~{estimate.estimatedMinutes} min · {estimate.partiesAhead} parties ahead</p>}
             {error && <p className="text-sm text-red-600">{error}</p>}
             <button type="submit" disabled={loading} className="w-full h-11 rounded bg-blue-600 text-white font-medium transition-all duration-200 disabled:opacity-60">

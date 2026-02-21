@@ -68,8 +68,19 @@ interface OrderLine {
   quantity: number;
   specialInstructions: string;
   price: number;
-  section: "starter" | "drink";
+  section: CategoryGroupKey;
 }
+
+type CategoryGroupKey = "starter" | "main" | "side" | "dessert" | "drink" | "other";
+
+const CATEGORY_GROUPS: Array<{ key: CategoryGroupKey; title: string; icon: string }> = [
+  { key: "starter", title: "Starters", icon: "🍽" },
+  { key: "main", title: "Mains", icon: "🥩" },
+  { key: "side", title: "Sides", icon: "🥗" },
+  { key: "dessert", title: "Desserts", icon: "🍰" },
+  { key: "drink", title: "Drinks", icon: "🥂" },
+  { key: "other", title: "Other", icon: "📋" },
+];
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -96,8 +107,14 @@ function tags(value: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
-function categorySection(type?: string | null): "starter" | "drink" {
-  return String(type || "starter").toLowerCase() === "drink" ? "drink" : "starter";
+function categorySection(type?: string | null): CategoryGroupKey {
+  const normalized = String(type || "").trim().toLowerCase();
+  if (normalized === "starter" || normalized === "appetizer" || normalized === "apps") return "starter";
+  if (normalized === "main" || normalized === "entree" || normalized === "entrée") return "main";
+  if (normalized === "side" || normalized === "sides") return "side";
+  if (normalized === "dessert" || normalized === "desserts") return "dessert";
+  if (normalized === "drink" || normalized === "drinks" || normalized === "beverage" || normalized === "cocktail") return "drink";
+  return "other";
 }
 
 function PaymentStep({
@@ -196,12 +213,11 @@ export default function PreOrderPage() {
     [lines],
   );
 
-  const starterCategories = useMemo(
-    () => categories.filter(category => categorySection(category.type) === "starter"),
-    [categories],
-  );
-  const drinkCategories = useMemo(
-    () => categories.filter(category => categorySection(category.type) === "drink"),
+  const groupedCategories = useMemo(
+    () => CATEGORY_GROUPS.map((group) => ({
+      ...group,
+      categories: categories.filter((category) => categorySection(category.type) === group.key),
+    })).filter((group) => group.categories.length > 0),
     [categories],
   );
 
@@ -232,7 +248,6 @@ export default function PreOrderPage() {
 
       const list = Array.isArray(menuData)
         ? (menuData as MenuCategory[])
-            .filter(category => ["starter", "drink"].includes(String(category.type || "starter").toLowerCase()))
             .filter(category => Array.isArray(category.items) && category.items.length > 0)
         : [];
 
@@ -246,7 +261,7 @@ export default function PreOrderPage() {
       setVerified(true);
       setStep("editor");
 
-      const sectionMap = new Map<number, "starter" | "drink">();
+      const sectionMap = new Map<number, CategoryGroupKey>();
       for (const category of list) {
         for (const item of category.items) {
           sectionMap.set(item.id, categorySection(category.type));
@@ -268,7 +283,7 @@ export default function PreOrderPage() {
     }
   }
 
-  function addItem(menuItem: MenuItem, section: "starter" | "drink") {
+  function addItem(menuItem: MenuItem, section: CategoryGroupKey) {
     setLines(prev => {
       const existingIndex = prev.findIndex(line => line.menuItemId === menuItem.id && line.specialInstructions.trim() === "");
       if (existingIndex >= 0) {
@@ -356,7 +371,7 @@ export default function PreOrderPage() {
       }
 
       setStep("done");
-      setSuccessMessage("Starters & drinks submitted successfully.");
+      setSuccessMessage("Pre-order submitted successfully.");
     } finally {
       setLoading(false);
     }
@@ -380,7 +395,7 @@ export default function PreOrderPage() {
     }
     setExisting((data.preOrder || data) as PreOrderRecord);
     setStep("done");
-    setSuccessMessage("Starters & drinks submitted and paid.");
+    setSuccessMessage("Pre-order submitted and paid.");
   }
 
   async function cancelPreOrder() {
@@ -408,12 +423,11 @@ export default function PreOrderPage() {
     }
   }
 
-  const starterLines = useMemo(
-    () => lines.filter(line => line.section === "starter"),
-    [lines],
-  );
-  const drinkLines = useMemo(
-    () => lines.filter(line => line.section === "drink"),
+  const linesBySection = useMemo(
+    () => CATEGORY_GROUPS.map((group) => ({
+      ...group,
+      lines: lines.filter((line) => line.section === group.key),
+    })).filter((group) => group.lines.length > 0),
     [lines],
   );
 
@@ -421,7 +435,7 @@ export default function PreOrderPage() {
     return (
       <div className="min-h-screen bg-gray-50 px-4 py-10">
         <div className="max-w-xl mx-auto bg-white rounded-xl shadow p-6">
-          <h1 className="text-2xl font-bold">Pre-Order Starters & Drinks</h1>
+          <h1 className="text-2xl font-bold">Pre-Order Menu</h1>
           <p className="text-sm text-gray-600 mt-2">
             Enter your phone number to access reservation {code}.
           </p>
@@ -518,93 +532,51 @@ export default function PreOrderPage() {
           </div>
 
           <div className="bg-white rounded-xl shadow p-4 sm:p-6 space-y-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-base">🍽</span>
-                <h2 className="text-lg font-bold">Starters</h2>
-              </div>
-              {starterCategories.length === 0 ? (
-                <p className="text-sm text-gray-500">No starter items available.</p>
-              ) : (
-                <div className="space-y-3">
-                  {starterCategories.map(category => (
-                    <div key={`starter-${category.id}`} className="rounded-lg border border-gray-200 p-3">
-                      <h3 className="text-sm font-semibold mb-2">{category.name}</h3>
-                      <div className="grid sm:grid-cols-2 gap-2">
-                        {category.items.map(item => (
-                          <div key={item.id} className="rounded-lg border border-gray-100 p-2">
-                            <p className="text-sm font-medium">{item.name}</p>
-                            {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
-                            {tags(item.dietaryTags).length > 0 && (
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                {tags(item.dietaryTags).map(tag => (
-                                  <span key={`${item.id}-${tag}`} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{tag}</span>
-                                ))}
-                              </div>
-                            )}
-                            {config.mode === "prices" && typeof item.price === "number" && (
-                              <p className="text-xs font-semibold mt-1">{formatCents(item.price)}</p>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => addItem(item, "starter")}
-                              disabled={!cutoffOpen}
-                              className="mt-2 h-9 px-3 rounded bg-blue-600 text-white text-xs font-medium disabled:opacity-50"
-                            >
-                              + Add
-                            </button>
-                          </div>
-                        ))}
+            {groupedCategories.length === 0 ? (
+              <p className="text-sm text-gray-500">No menu items available.</p>
+            ) : (
+              groupedCategories.map((group) => (
+                <div key={group.key}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-base">{group.icon}</span>
+                    <h2 className="text-lg font-bold">{group.title}</h2>
+                  </div>
+                  <div className="space-y-3">
+                    {group.categories.map((category) => (
+                      <div key={`${group.key}-${category.id}`} className="rounded-lg border border-gray-200 p-3">
+                        <h3 className="mb-2 text-sm font-semibold">{category.name}</h3>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {category.items.map((item) => (
+                            <div key={item.id} className="rounded-lg border border-gray-100 p-2">
+                              <p className="text-sm font-medium">{item.name}</p>
+                              {item.description && <p className="mt-0.5 text-xs text-gray-500">{item.description}</p>}
+                              {tags(item.dietaryTags).length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1">
+                                  {tags(item.dietaryTags).map((tag) => (
+                                    <span key={`${item.id}-${tag}`} className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-700">{tag}</span>
+                                  ))}
+                                </div>
+                              )}
+                              {config.mode === "prices" && typeof item.price === "number" && (
+                                <p className="mt-1 text-xs font-semibold">{formatCents(item.price)}</p>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => addItem(item, group.key)}
+                                disabled={!cutoffOpen}
+                                className="mt-2 h-9 rounded bg-blue-600 px-3 text-xs font-medium text-white disabled:opacity-50"
+                              >
+                                + Add
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-base">🥂</span>
-                <h2 className="text-lg font-bold">Drinks</h2>
-              </div>
-              {drinkCategories.length === 0 ? (
-                <p className="text-sm text-gray-500">No drink items available.</p>
-              ) : (
-                <div className="space-y-3">
-                  {drinkCategories.map(category => (
-                    <div key={`drink-${category.id}`} className="rounded-lg border border-gray-200 p-3">
-                      <h3 className="text-sm font-semibold mb-2">{category.name}</h3>
-                      <div className="grid sm:grid-cols-2 gap-2">
-                        {category.items.map(item => (
-                          <div key={item.id} className="rounded-lg border border-gray-100 p-2">
-                            <p className="text-sm font-medium">{item.name}</p>
-                            {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
-                            {tags(item.dietaryTags).length > 0 && (
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                {tags(item.dietaryTags).map(tag => (
-                                  <span key={`${item.id}-${tag}`} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{tag}</span>
-                                ))}
-                              </div>
-                            )}
-                            {config.mode === "prices" && typeof item.price === "number" && (
-                              <p className="text-xs font-semibold mt-1">{formatCents(item.price)}</p>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => addItem(item, "drink")}
-                              disabled={!cutoffOpen}
-                              className="mt-2 h-9 px-3 rounded bg-blue-600 text-white text-xs font-medium disabled:opacity-50"
-                            >
-                              + Add
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+              ))
+            )}
           </div>
         </section>
 
@@ -615,65 +587,36 @@ export default function PreOrderPage() {
               <p className="text-sm text-gray-500 mt-3">No items added yet.</p>
             ) : (
               <div className="mt-3 space-y-3 max-h-[420px] overflow-auto">
-                <div>
-                  <div className="text-xs font-semibold text-gray-500 mb-1">STARTERS</div>
-                  <div className="space-y-2">
-                    {starterLines.length === 0 && <p className="text-xs text-gray-400">None</p>}
-                    {starterLines.map(line => (
-                      <div key={line.key} className="rounded border p-2">
-                        <div className="flex items-center justify-between gap-2 text-sm">
-                          <span>{line.quantity}x {line.itemName}</span>
-                          <button type="button" onClick={() => removeLine(line.key)} className="text-red-600 text-xs">Remove</button>
+                {linesBySection.map((group) => (
+                  <div key={`summary-${group.key}`}>
+                    <div className="mb-1 text-xs font-semibold text-gray-500">{group.title.toUpperCase()}</div>
+                    <div className="space-y-2">
+                      {group.lines.map((line) => (
+                        <div key={line.key} className="rounded border p-2">
+                          <div className="flex items-center justify-between gap-2 text-sm">
+                            <span>{line.quantity}x {line.itemName}</span>
+                            <button type="button" onClick={() => removeLine(line.key)} className="text-red-600 text-xs">Remove</button>
+                          </div>
+                          <div className="mt-1 grid grid-cols-[88px_1fr] gap-2">
+                            <input
+                              type="number"
+                              min={1}
+                              value={line.quantity}
+                              onChange={e => updateLine(line.key, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                              className="h-8 border rounded px-2 text-xs"
+                            />
+                            <input
+                              value={line.specialInstructions}
+                              onChange={e => updateLine(line.key, { specialInstructions: e.target.value })}
+                              placeholder="Instructions"
+                              className="h-8 border rounded px-2 text-xs"
+                            />
+                          </div>
                         </div>
-                        <div className="mt-1 grid grid-cols-[88px_1fr] gap-2">
-                          <input
-                            type="number"
-                            min={1}
-                            value={line.quantity}
-                            onChange={e => updateLine(line.key, { quantity: Math.max(1, Number(e.target.value) || 1) })}
-                            className="h-8 border rounded px-2 text-xs"
-                          />
-                          <input
-                            value={line.specialInstructions}
-                            onChange={e => updateLine(line.key, { specialInstructions: e.target.value })}
-                            placeholder="Instructions"
-                            className="h-8 border rounded px-2 text-xs"
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-
-                <div>
-                  <div className="text-xs font-semibold text-gray-500 mb-1">DRINKS</div>
-                  <div className="space-y-2">
-                    {drinkLines.length === 0 && <p className="text-xs text-gray-400">None</p>}
-                    {drinkLines.map(line => (
-                      <div key={line.key} className="rounded border p-2">
-                        <div className="flex items-center justify-between gap-2 text-sm">
-                          <span>{line.quantity}x {line.itemName}</span>
-                          <button type="button" onClick={() => removeLine(line.key)} className="text-red-600 text-xs">Remove</button>
-                        </div>
-                        <div className="mt-1 grid grid-cols-[88px_1fr] gap-2">
-                          <input
-                            type="number"
-                            min={1}
-                            value={line.quantity}
-                            onChange={e => updateLine(line.key, { quantity: Math.max(1, Number(e.target.value) || 1) })}
-                            className="h-8 border rounded px-2 text-xs"
-                          />
-                          <input
-                            value={line.specialInstructions}
-                            onChange={e => updateLine(line.key, { specialInstructions: e.target.value })}
-                            placeholder="Instructions"
-                            className="h-8 border rounded px-2 text-xs"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
             )}
 

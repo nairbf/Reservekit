@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     cancel_url: `${baseUrl}/pricing`,
     metadata: {
       plan,
-      addons: JSON.stringify(addons),
+      addons: addons.join(","),
       hosting: selfHost ? "false" : "true",
       hostingTier: selfHost ? "self_hosted" : hostingTierForPlan(plan),
       hostingRenewalDate: selfHost ? "" : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),

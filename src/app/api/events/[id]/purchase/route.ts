@@ -124,7 +124,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const stripeConfigured = Boolean(await getStripeSecretKey());
-  const requiresStripePayment = !manual && event.ticketPrice > 0 && stripeConfigured;
+  if (!manual && event.ticketPrice > 0 && !stripeConfigured) {
+    return NextResponse.json({ error: "Payment processing is not configured" }, { status: 503 });
+  }
+  const requiresStripePayment = !manual && event.ticketPrice > 0;
 
   if (requiresStripePayment && !paymentIntentId) {
     const amount = event.ticketPrice * quantity;

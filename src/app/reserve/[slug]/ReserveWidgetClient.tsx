@@ -364,7 +364,6 @@ export default function ReserveWidgetClient({
 
         const categoryList = Array.isArray(categories)
           ? (categories as ExpressMenuCategory[])
-              .filter(category => ["starter", "drink"].includes(String(category.type || "starter").toLowerCase()))
               .filter(category => Array.isArray(category.items) && category.items.length > 0)
           : [];
 

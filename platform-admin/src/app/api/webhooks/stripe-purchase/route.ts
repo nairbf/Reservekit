@@ -18,11 +18,22 @@ function parsePlan(plan: unknown): RestaurantPlan {
 }
 
 function parseAddons(raw: unknown) {
-  const value = String(raw || "");
-  const parts = value
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
+  const value = String(raw || "").trim();
+  let parts: string[] = [];
+
+  if (value) {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) {
+        parts = parsed.map((part) => String(part || "").trim()).filter(Boolean);
+      } else if (typeof parsed === "string") {
+        parts = parsed.split(",").map((part) => part.trim()).filter(Boolean);
+      }
+    } catch {
+      parts = value.split(",").map((part) => part.trim()).filter(Boolean);
+    }
+  }
+
   const set = new Set(parts);
   return {
     addonSms: set.has("sms"),

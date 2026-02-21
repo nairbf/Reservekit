@@ -197,7 +197,12 @@ export async function POST(request: NextRequest) {
 
   // Run setup script to create customer folder and database on disk
   try {
-    const { stdout, stderr } = await execFileAsync(SETUP_SCRIPT, [slug]);
+    const { stdout, stderr } = await execFileAsync(SETUP_SCRIPT, [
+      slug,
+      email,
+      restaurantName,
+      String(port),
+    ]);
     console.log("[STRIPE-PURCHASE] Setup script completed for", slug, stdout);
     if (stderr) console.warn("[STRIPE-PURCHASE] Setup script stderr:", stderr);
   } catch (err) {

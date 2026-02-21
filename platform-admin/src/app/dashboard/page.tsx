@@ -26,7 +26,7 @@ type OverviewResponse = {
       id: string;
       name: string;
       slug: string;
-    };
+    } | null;
   }>;
 };
 
@@ -186,8 +186,10 @@ export default function DashboardOverviewPage() {
                   <tr key={event.id} className="border-t border-slate-100">
                     <td className="px-4 py-2 text-slate-600">{formatDateTime(event.createdAt)}</td>
                     <td className="px-4 py-2 font-medium text-slate-900">
-                      {event.restaurant.name}
-                      <span className="ml-2 text-xs text-slate-500">({event.restaurant.slug})</span>
+                      {event.restaurant?.name || "Unknown restaurant"}
+                      {event.restaurant?.slug ? (
+                        <span className="ml-2 text-xs text-slate-500">({event.restaurant.slug})</span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-2">{event.event.replaceAll("_", " ")}</td>
                     <td className="px-4 py-2 text-slate-600">{event.details || "-"}</td>

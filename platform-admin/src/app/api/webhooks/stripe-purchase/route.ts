@@ -83,9 +83,13 @@ async function uniqueSlug(baseName: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const secret = request.headers.get("x-webhook-secret");
-  const expectedSecret = process.env.PLATFORM_WEBHOOK_SECRET?.trim();
-  if (!expectedSecret || secret !== expectedSecret) {
+  const expectedSecret = process.env.PLATFORM_WEBHOOK_SECRET;
+  const receivedSecret = request.headers.get("X-Webhook-Secret");
+  if (!expectedSecret || expectedSecret.trim() === "") {
+    console.error("[STRIPE-PURCHASE] PLATFORM_WEBHOOK_SECRET is not set — rejecting request");
+    return NextResponse.json({ error: "Webhook secret not configured on server" }, { status: 500 });
+  }
+  if (receivedSecret !== expectedSecret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -134,6 +138,22 @@ export async function POST(request: NextRequest) {
   const port = await nextAvailablePort(3001);
   const licenseKey = randomUUID();
   const instanceUrl = hosting.hosted ? `https://${slug}.reservesit.com` : "self-hosted";
+
+  if (stripeSessionId) {
+    const existing = await prisma.restaurant.findFirst({
+      where: { notes: { contains: `Session: ${stripeSessionId}` } },
+      select: { id: true, slug: true, licenseKey: true },
+    });
+    if (existing) {
+      console.log("[STRIPE-PURCHASE] Idempotent — already provisioned for session", stripeSessionId);
+      return NextResponse.json({
+        message: "Already provisioned (idempotent)",
+        id: existing.id,
+        slug: existing.slug,
+        licenseKey: existing.licenseKey,
+      });
+    }
+  }
 
   const restaurant = await prisma.restaurant.create({
     data: {

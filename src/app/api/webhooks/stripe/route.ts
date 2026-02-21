@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
   if (!stripe) return NextResponse.json({ error: "Stripe not configured" }, { status: 500 });
   if (!webhookSecret) {
     console.error("STRIPE_WEBHOOK_SECRET is not configured — rejecting webhook");
-    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 400 });
   }
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");

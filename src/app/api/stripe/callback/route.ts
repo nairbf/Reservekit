@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 function redirectWithError(appUrl: string, message: string) {
   return NextResponse.redirect(
-    `${appUrl}/dashboard/settings?tab=reservations&stripe_error=${encodeURIComponent(message)}`,
+    `${appUrl}/dashboard/settings?tab=integrations&stripe_error=${encodeURIComponent(message)}`,
   );
 }
 
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    return NextResponse.redirect(`${appUrl}/dashboard/settings?tab=reservations&stripe_connected=true`);
+    return NextResponse.redirect(`${appUrl}/dashboard/settings?tab=integrations&stripe_connected=true`);
   } catch (err) {
     return redirectWithError(appUrl, String(err));
   }

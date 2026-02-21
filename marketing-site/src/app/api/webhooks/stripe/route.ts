@@ -56,7 +56,11 @@ export async function POST(request: NextRequest) {
 
       try {
         const adminApiUrl = process.env.ADMIN_API_URL || "https://admin.reservesit.com";
-        const sharedSecret = process.env.PLATFORM_WEBHOOK_SECRET || "";
+        const sharedSecret = process.env.PLATFORM_WEBHOOK_SECRET;
+        if (!sharedSecret) {
+          console.error("[STRIPE] PLATFORM_WEBHOOK_SECRET is not configured — cannot forward to platform-admin");
+          return NextResponse.json({ error: "Provisioning secret not configured" }, { status: 500 });
+        }
 
         const response = await fetch(`${adminApiUrl}/api/webhooks/stripe-purchase`, {
           method: "POST",

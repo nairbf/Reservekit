@@ -364,7 +364,7 @@ for i in $(seq 1 90); do
     EMAIL="${EMAIL_LOCAL}@email.com"
     GUEST_ID_SQL="NULL"
 
-    if [ $(( RANDOM % 100 )) -lt 45 ]; then
+    if [ $(( RANDOM % 100 )) -lt 20 ]; then
       GUEST_ID=$(( (RANDOM % 10) + 1 ))
       GUEST_NAME="${GUEST_POOL[$((GUEST_ID - 1))]}"
       NAME="$GUEST_NAME"
@@ -372,6 +372,12 @@ for i in $(seq 1 90); do
       EMAIL_LOCAL=$(printf "%s" "$NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '.')
       EMAIL="${EMAIL_LOCAL}@example.com"
       GUEST_ID_SQL="$GUEST_ID"
+    fi
+
+    if [ "$GUEST_ID_SQL" != "NULL" ] && [ "$STATUS" = "no_show" ]; then
+      if [ $(( RANDOM % 100 )) -lt 80 ]; then
+        STATUS="completed"
+      fi
     fi
 
     CODE="HIST-${i}-${j}"

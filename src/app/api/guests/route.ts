@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   } else if (filter === "returning") {
     and.push({ totalVisits: { gt: 1 } });
   } else if (filter === "noshow") {
-    and.push({ totalNoShows: { gt: 0 } });
+    and.push({ totalNoShows: { gte: 2 } });
   } else if (filter === "allergies") {
     and.push({
       OR: [

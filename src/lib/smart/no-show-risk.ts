@@ -24,19 +24,37 @@ export async function calculateNoShowRisk(reservationId: number): Promise<NoShow
   const reasons: string[] = [];
 
   if (reservation.guestId) {
-    const pastNoShows = await prisma.reservation.count({
-      where: {
-        guestId: reservation.guestId,
-        status: "no_show",
-      },
-    });
+    const [noShowCount, completedCount] = await Promise.all([
+      prisma.reservation.count({
+        where: {
+          guestId: reservation.guestId,
+          status: "no_show",
+        },
+      }),
+      prisma.reservation.count({
+        where: {
+          guestId: reservation.guestId,
+          status: "completed",
+        },
+      }),
+    ]);
 
-    if (pastNoShows >= 2) {
-      score += 40;
-      reasons.push(`${pastNoShows} previous no-shows`);
-    } else if (pastNoShows === 1) {
-      score += 25;
-      reasons.push("1 previous no-show");
+    const totalOutcomes = noShowCount + completedCount;
+    if (totalOutcomes >= 3) {
+      const noShowRate = noShowCount / totalOutcomes;
+      if (noShowRate >= 0.35 && noShowCount >= 3) {
+        score += 45;
+        reasons.push(`High no-show rate (${Math.round(noShowRate * 100)}% of ${totalOutcomes} visits)`);
+      } else if (noShowRate >= 0.20 && noShowCount >= 2) {
+        score += 25;
+        reasons.push(`Elevated no-show rate (${Math.round(noShowRate * 100)}% of ${totalOutcomes} visits)`);
+      } else if (noShowCount >= 2) {
+        score += 10;
+        reasons.push(`${noShowCount} past no-shows (${Math.round(noShowRate * 100)}% rate)`);
+      }
+    } else if (noShowCount >= 1) {
+      score += 15;
+      reasons.push(`${noShowCount} no-show with limited visit history`);
     }
   }
 

@@ -54,8 +54,18 @@ export async function getGuestTags(guestId: number): Promise<GuestTag[]> {
     }
   }
 
-  if (noShowCount > 0) {
-    tags.push({ label: "No-Show History", color: "red", detail: `${noShowCount} no-show${noShowCount > 1 ? "s" : ""}` });
+  if (noShowCount >= 2) {
+    const totalOutcomes = completedCount + noShowCount;
+    if (totalOutcomes >= 3) {
+      const noShowRate = noShowCount / totalOutcomes;
+      if (noShowRate >= 0.15) {
+        tags.push({
+          label: "No-Show Risk",
+          color: noShowCount >= 3 ? "red" : "amber",
+          detail: `${noShowCount} no-shows (${Math.round(noShowRate * 100)}% rate)`,
+        });
+      }
+    }
   }
 
   return tags;

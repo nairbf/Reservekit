@@ -225,6 +225,31 @@ const SETTINGS_WRITE_KEYS = new Set([
   "setupWizardStep",
   "setupWizardCompleted",
   "setupWizardCompletedAt",
+  "heroRestaurantName",
+  "announcementText",
+  "heroSubheading",
+  "primaryCtaText",
+  "primaryCtaLink",
+  "secondaryCtaText",
+  "secondaryCtaLink",
+  "welcomeHeading",
+  "aboutHeading",
+  "aboutDescription",
+  "aboutImageUrl",
+  "socialInstagram",
+  "socialFacebook",
+  "socialTwitter",
+  "socialTiktok",
+  "footerTagline",
+  "menuPreviewEnabled",
+  "eventsMaxCount",
+  "eventsAutoHideWhenEmpty",
+  "hoursShowAddress",
+  "contactPhone",
+  "contactAddress",
+  "restaurantPhone",
+  "restaurantEmail",
+  "restaurantAddress",
 ]);
 
 function planBadge(plan: string) {
@@ -299,6 +324,8 @@ export default function SettingsPage() {
   const [spotOnLoading, setSpotOnLoading] = useState(false);
   const [spotOnMessage, setSpotOnMessage] = useState("");
   const [spotOnSyncing, setSpotOnSyncing] = useState(false);
+  const [spotOnTesting, setSpotOnTesting] = useState(false);
+  const [spotOnTestMessage, setSpotOnTestMessage] = useState("");
   const [spotOnMenuSyncing, setSpotOnMenuSyncing] = useState(false);
   const [spotOnMenuMessage, setSpotOnMenuMessage] = useState("");
   const [spotOnSaving, setSpotOnSaving] = useState(false);
@@ -613,6 +640,29 @@ export default function SettingsPage() {
       setSpotOnMenuMessage(error instanceof Error ? error.message : "SpotOn menu sync failed.");
     } finally {
       setSpotOnMenuSyncing(false);
+    }
+  }
+
+  async function testSpotOnConnection() {
+    setSpotOnTesting(true);
+    setSpotOnTestMessage("");
+    try {
+      const response = await fetch("/api/spoton/test", { method: "POST" });
+      const data = (await response.json().catch(() => ({}))) as {
+        success?: boolean;
+        error?: string;
+        locationName?: string;
+        environment?: string;
+      };
+      if (!response.ok || !data.success) throw new Error(data.error || "SpotOn connection test failed.");
+      const label = data.locationName || (settings.spotonLocationId || "").trim() || "configured location";
+      const env = data.environment ? ` (${data.environment})` : "";
+      setSpotOnTestMessage(`Connected to ${label}${env}.`);
+      await loadSpotOnStatus();
+    } catch (error) {
+      setSpotOnTestMessage(error instanceof Error ? error.message : "SpotOn connection test failed.");
+    } finally {
+      setSpotOnTesting(false);
     }
   }
 
@@ -1178,6 +1228,9 @@ export default function SettingsPage() {
           spotOnSaving={spotOnSaving}
           syncSpotOnNow={syncSpotOnNow}
           spotOnSyncing={spotOnSyncing}
+          testSpotOnConnection={testSpotOnConnection}
+          spotOnTesting={spotOnTesting}
+          spotOnTestMessage={spotOnTestMessage}
           syncSpotOnMenu={syncSpotOnMenu}
           spotOnMenuSyncing={spotOnMenuSyncing}
           spotOnMenuMessage={spotOnMenuMessage}

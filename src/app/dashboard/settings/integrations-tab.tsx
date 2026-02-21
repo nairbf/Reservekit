@@ -34,6 +34,9 @@ export function IntegrationsTab(props: IntegrationsTabProps) {
     spotOnSaving,
     syncSpotOnNow,
     spotOnSyncing,
+    testSpotOnConnection,
+    spotOnTesting,
+    spotOnTestMessage,
     syncSpotOnMenu,
     spotOnMenuSyncing,
     spotOnMenuMessage,
@@ -308,6 +311,16 @@ export function IntegrationsTab(props: IntegrationsTabProps) {
                         >
                           {spotOnSyncing ? "Syncing..." : "Sync Now"}
                         </button>
+                        {(settings.spotonApiKey || "").trim() && (settings.spotonLocationId || "").trim() ? (
+                          <button
+                            type="button"
+                            onClick={testSpotOnConnection}
+                            disabled={!spotOnStatus.licensed || spotOnTesting}
+                            className="h-10 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-60"
+                          >
+                            {spotOnTesting ? "Testing..." : "Test Connection"}
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={syncSpotOnMenu}
@@ -342,6 +355,11 @@ export function IntegrationsTab(props: IntegrationsTabProps) {
                       {spotOnMenuMessage ? (
                         <p className={`text-sm ${spotOnMenuMessage.toLowerCase().includes("failed") || spotOnMenuMessage.toLowerCase().includes("error") ? "text-red-600" : "text-green-700"}`}>
                           {spotOnMenuMessage}
+                        </p>
+                      ) : null}
+                      {spotOnTestMessage ? (
+                        <p className={`text-sm ${spotOnTestMessage.toLowerCase().includes("failed") || spotOnTestMessage.toLowerCase().includes("error") ? "text-red-600" : "text-green-700"}`}>
+                          {spotOnTestMessage}
                         </p>
                       ) : null}
 

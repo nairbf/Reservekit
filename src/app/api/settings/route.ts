@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requirePermission } from "@/lib/auth";
+import { requireAuth, requirePermission } from "@/lib/auth";
 
 function maskValue(value: string, prefixLength: number): string {
   if (!value) return value;
@@ -88,6 +88,44 @@ const WRITABLE_SETTINGS = new Set([
   "setupWizardStep",
   "setupWizardCompleted",
   "setupWizardCompletedAt",
+  "heroRestaurantName",
+  "announcementText",
+  "heroSubheading",
+  "primaryCtaText",
+  "primaryCtaLink",
+  "secondaryCtaText",
+  "secondaryCtaLink",
+  "welcomeHeading",
+  "aboutHeading",
+  "aboutDescription",
+  "aboutImageUrl",
+  "socialInstagram",
+  "socialFacebook",
+  "socialTwitter",
+  "socialTiktok",
+  "footerTagline",
+  "menuPreviewEnabled",
+  "eventsMaxCount",
+  "eventsAutoHideWhenEmpty",
+  "hoursShowAddress",
+  "contactPhone",
+  "contactAddress",
+  "restaurantPhone",
+  "restaurantEmail",
+  "restaurantAddress",
+]);
+
+const SCHEDULE_WRITABLE_SETTINGS = new Set([
+  "openTime",
+  "closeTime",
+  "slotInterval",
+  "lastSeatingBufferMin",
+  "maxCoversPerSlot",
+  "weeklySchedule",
+  "specialDepositRules",
+  "operatingHours",
+  "operatingHoursJson",
+  "scheduleOverrides",
 ]);
 
 function shouldExcludeFromSettingsResponse(key: string) {
@@ -129,9 +167,15 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  let session: Awaited<ReturnType<typeof requireAuth>>;
   try {
-    await requirePermission("manage_settings");
+    session = await requireAuth();
   } catch {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const canManageSettings = session.permissions.has("manage_settings");
+  const canManageSchedule = session.permissions.has("manage_schedule");
+  if (!canManageSettings && !canManageSchedule) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -141,11 +185,16 @@ export async function PUT(req: NextRequest) {
   }
 
   const invalidKeys: string[] = [];
+  const unauthorizedKeys: string[] = [];
   const updates: Array<{ key: string; value: string }> = [];
   for (const [key, value] of Object.entries(data)) {
     if (key === "stripeConnectEnabled") continue;
     if (!WRITABLE_SETTINGS.has(key)) {
       invalidKeys.push(key);
+      continue;
+    }
+    if (!canManageSettings && (!canManageSchedule || !SCHEDULE_WRITABLE_SETTINGS.has(key))) {
+      unauthorizedKeys.push(key);
       continue;
     }
     const nextValue = String(value ?? "");
@@ -159,6 +208,12 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json(
       { error: "One or more settings cannot be updated through this endpoint.", invalidKeys },
       { status: 400 },
+    );
+  }
+  if (unauthorizedKeys.length > 0) {
+    return NextResponse.json(
+      { error: "You do not have permission to update one or more settings.", unauthorizedKeys },
+      { status: 403 },
     );
   }
 

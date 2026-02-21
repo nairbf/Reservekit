@@ -149,6 +149,34 @@ function toPositiveInt(value: string, fallback: number, min: number) {
   return Math.max(min, parsed);
 }
 
+function toSlug(value: string): string {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function isValidSlug(value: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
+}
+
+function centsToDollarInput(value: string): string {
+  const cents = Number(value || "0");
+  if (!Number.isFinite(cents)) return "0";
+  const dollars = cents / 100;
+  const fixed = dollars.toFixed(2);
+  return fixed.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+}
+
+function dollarsToCents(value: string): number {
+  const dollars = Number(value || "0");
+  if (!Number.isFinite(dollars)) return 0;
+  return Math.max(0, Math.round(dollars * 100));
+}
+
 function Field({
   label,
   value,
@@ -183,6 +211,7 @@ export default function SetupWizardPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [settings, setSettings] = useState<SetupSettings>(DEFAULTS);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [tables, setTables] = useState<TableRow[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateKey>("medium");
   const [tutorial, setTutorial] = useState<TutorialChecks>({
@@ -204,6 +233,11 @@ export default function SetupWizardPage() {
     }
     return slug ? `${window.location.origin}/reserve/${slug}` : `${window.location.origin}/`;
   }, [settings.slug]);
+  const bookingPagePreview = useMemo(() => {
+    const slug = String(settings.slug || "").trim() || "your-restaurant";
+    if (typeof window === "undefined") return `demo.reservesit.com/reserve/${slug}`;
+    return `${window.location.host}/reserve/${slug}`;
+  }, [settings.slug]);
 
   useEffect(() => {
     Promise.all([
@@ -223,10 +257,16 @@ export default function SetupWizardPage() {
           depositEnabled: String(loadedSettings.depositEnabled || loadedSettings.depositsEnabled || DEFAULTS.depositEnabled),
           depositMinPartySize: String(loadedSettings.depositMinPartySize || loadedSettings.depositMinParty || DEFAULTS.depositMinPartySize),
         };
+        const restaurantName = String(mergedSettings.restaurantName || DEFAULTS.restaurantName);
+        const existingSlug = toSlug(String(mergedSettings.slug || ""));
+        const nextSlug = existingSlug || toSlug(restaurantName) || "my-restaurant";
         setSettings({
           ...DEFAULTS,
           ...Object.fromEntries(Object.entries(mergedSettings).map(([k, v]) => [k, String(v)])),
+          slug: nextSlug,
+          depositAmount: centsToDollarInput(String(mergedSettings.depositAmount || DEFAULTS.depositAmount)),
         });
+        setSlugManuallyEdited(Boolean(existingSlug));
         setTables(Array.isArray(loadedTables) ? loadedTables : []);
       })
       .finally(() => setLoading(false));
@@ -238,16 +278,24 @@ export default function SetupWizardPage() {
   }
 
   async function saveSettings(payload: Partial<SetupSettings> & Record<string, string>) {
-    await fetch("/api/settings", {
+    const response = await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(data.error || "Failed to save settings.");
+    }
   }
 
   async function goTo(next: StepKey) {
-    setStep(next);
-    await saveSettings({ setupWizardStep: String(next) });
+    try {
+      await saveSettings({ setupWizardStep: String(next) });
+      setStep(next);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to save setup progress.");
+    }
   }
 
   async function saveStepOne() {
@@ -255,11 +303,17 @@ export default function SetupWizardPage() {
       setMessage("Restaurant name is required.");
       return;
     }
+    const normalizedSlug = toSlug(settings.slug || settings.restaurantName);
+    if (!normalizedSlug || !isValidSlug(normalizedSlug)) {
+      setMessage("URL slug must use lowercase letters, numbers, and hyphens only.");
+      return;
+    }
     setSaving(true);
     try {
       const notificationEmail = settings.staffNotificationEmail.trim();
       await saveSettings({
         restaurantName: settings.restaurantName.trim(),
+        slug: normalizedSlug,
         phone: settings.phone.trim(),
         address: settings.address.trim(),
         timezone: settings.timezone.trim() || "America/New_York",
@@ -272,8 +326,11 @@ export default function SetupWizardPage() {
         emailSendReminders: "true",
         setupWizardStep: "2",
       });
+      setSettings((prev) => ({ ...prev, slug: normalizedSlug }));
       setMessage("Restaurant basics saved.");
       await goTo(2);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to save restaurant info. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -311,6 +368,8 @@ export default function SetupWizardPage() {
       }));
       setMessage("Operating rules saved.");
       await goTo(3);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to save operating rules. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -337,7 +396,7 @@ export default function SetupWizardPage() {
         existingNames.add(table.name);
       }
 
-      await Promise.all(
+      const createResponses = await Promise.all(
         toCreate.map(table =>
           fetch("/api/tables", {
             method: "POST",
@@ -346,9 +405,16 @@ export default function SetupWizardPage() {
           }),
         ),
       );
+      const failedResponse = createResponses.find((response) => !response.ok);
+      if (failedResponse) {
+        const data = (await failedResponse.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || "Failed to create starter tables.");
+      }
       const refreshedTables = await (await fetch("/api/tables")).json();
       setTables(Array.isArray(refreshedTables) ? refreshedTables : []);
       setMessage(`Added ${toCreate.length} starter tables.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to create starter tables.");
     } finally {
       setSaving(false);
     }
@@ -359,13 +425,15 @@ export default function SetupWizardPage() {
     try {
       await saveSettings({ setupWizardStep: "4" });
       await goTo(4);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to save setup progress.");
     } finally {
       setSaving(false);
     }
   }
 
   async function saveStepFour() {
-    const depositAmount = Math.max(0, Number(settings.depositAmount || "0"));
+    const depositAmountCents = dollarsToCents(settings.depositAmount);
     const depositMinPartySize = Math.max(1, Number(settings.depositMinPartySize || "2"));
     setSaving(true);
     try {
@@ -374,18 +442,20 @@ export default function SetupWizardPage() {
         reserveSubheading: settings.reserveSubheading.trim() || DEFAULTS.reserveSubheading,
         reserveConfirmationMessage: settings.reserveConfirmationMessage.trim() || DEFAULTS.reserveConfirmationMessage,
         depositEnabled: settings.depositEnabled === "true" ? "true" : "false",
-        depositAmount: String(depositAmount),
+        depositAmount: String(depositAmountCents),
         depositMinPartySize: String(depositMinPartySize),
         depositMessage: settings.depositMessage.trim() || DEFAULTS.depositMessage,
         setupWizardStep: "5",
       });
       setSettings(prev => ({
         ...prev,
-        depositAmount: String(depositAmount),
+        depositAmount: centsToDollarInput(String(depositAmountCents)),
         depositMinPartySize: String(depositMinPartySize),
       }));
       setMessage("Guest communication settings saved.");
       await goTo(5);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to save guest communication settings. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -400,6 +470,8 @@ export default function SetupWizardPage() {
         setupWizardStep: "5",
       });
       router.replace("/dashboard");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to finish setup. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -440,7 +512,34 @@ export default function SetupWizardPage() {
         <div className="bg-white rounded-xl border p-4 sm:p-6 space-y-4">
           <h2 className="font-semibold text-lg">Restaurant Basics</h2>
           <div className="grid sm:grid-cols-2 gap-4">
-            <Field label="Restaurant Name" value={settings.restaurantName} onChange={v => setField("restaurantName", v)} />
+            <Field
+              label="Restaurant Name"
+              value={settings.restaurantName}
+              onChange={v => {
+                setField("restaurantName", v);
+                if (!slugManuallyEdited) {
+                  setField("slug", toSlug(v));
+                }
+              }}
+            />
+            <div>
+              <label className="block text-sm font-medium mb-1">URL Slug</label>
+              <input
+                value={settings.slug}
+                onChange={(event) => {
+                  setSlugManuallyEdited(true);
+                  setField("slug", toSlug(event.target.value));
+                }}
+                placeholder="my-restaurant"
+                className={`h-11 w-full border rounded px-3 text-sm ${!settings.slug || isValidSlug(settings.slug) ? "" : "border-red-300"}`}
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Your booking page: {bookingPagePreview}
+              </p>
+              {settings.slug && !isValidSlug(settings.slug) ? (
+                <p className="mt-1 text-xs text-red-600">Use lowercase letters, numbers, and hyphens only.</p>
+              ) : null}
+            </div>
             <Field label="Phone" value={settings.phone} onChange={v => setField("phone", v)} placeholder="(555) 123-4567" />
             <Field
               label="Notification Email"
@@ -554,8 +653,9 @@ export default function SetupWizardPage() {
             </label>
             {settings.depositEnabled === "true" && (
               <div className="grid sm:grid-cols-2 gap-4">
-                <Field label="Deposit Amount (USD)" type="number" value={settings.depositAmount} onChange={v => setField("depositAmount", v)} />
-                <Field label="Apply at Party Size" type="number" value={settings.depositMinPartySize} onChange={v => setField("depositMinPartySize", v)} />
+              <Field label="Deposit Amount (USD)" type="number" value={settings.depositAmount} onChange={v => setField("depositAmount", v)} />
+              <p className="text-xs text-gray-500 sm:col-span-2">Enter amount in dollars (e.g., 25 for $25.00).</p>
+              <Field label="Apply at Party Size" type="number" value={settings.depositMinPartySize} onChange={v => setField("depositMinPartySize", v)} />
                 <div className="sm:col-span-2">
                   <Field label="Deposit Message" value={settings.depositMessage} onChange={v => setField("depositMessage", v)} />
                 </div>

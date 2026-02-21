@@ -5,6 +5,19 @@ import { Field, Label, Section } from "./shared";
 
 type ReservationsTabProps = SettingsTabProps & { [key: string]: any };
 
+function centsToDollarInput(value: string) {
+  const cents = Number(value || "0");
+  if (!Number.isFinite(cents)) return "0";
+  const fixed = (cents / 100).toFixed(2);
+  return fixed.replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
+}
+
+function dollarsToCents(value: string) {
+  const dollars = Number(value || "0");
+  if (!Number.isFinite(dollars)) return "0";
+  return String(Math.max(0, Math.round(dollars * 100)));
+}
+
 export function ReservationsTab(props: ReservationsTabProps) {
   const {
     settings,
@@ -130,7 +143,18 @@ export function ReservationsTab(props: ReservationsTabProps) {
                     <option value="deposit">Deposit (charge now)</option>
                   </select>
                 </div>
-                <Field label="Deposit Amount (cents)" type="number" value={settings.depositAmount || "0"} onChange={(v) => setField("depositAmount", v)} />
+                <div>
+                  <Label>Deposit Amount (USD)</Label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={centsToDollarInput(settings.depositAmount || "0")}
+                    onChange={(event) => setField("depositAmount", dollarsToCents(event.target.value))}
+                    className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Enter amount in dollars (e.g., 25 for $25.00).</p>
+                </div>
                 <Field
                   label="Apply at Party Size >="
                   type="number"
@@ -161,12 +185,17 @@ export function ReservationsTab(props: ReservationsTabProps) {
 
             {settings.noshowChargeEnabled === "true" && (
               <div className="mt-4 max-w-sm">
-                <Field
-                  label="No-Show Charge Amount (cents)"
-                  type="number"
-                  value={settings.noshowChargeAmount || settings.depositAmount || "0"}
-                  onChange={(v) => setField("noshowChargeAmount", v)}
-                />
+                <div>
+                  <Label>No-Show Charge Amount (USD)</Label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={centsToDollarInput(settings.noshowChargeAmount || settings.depositAmount || "0")}
+                    onChange={(event) => setField("noshowChargeAmount", dollarsToCents(event.target.value))}
+                    className="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm"
+                  />
+                </div>
               </div>
             )}
           </Section>

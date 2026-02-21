@@ -181,6 +181,22 @@ export default function SchedulePage() {
 
   if (!canManageSchedule) return <AccessDenied />;
 
+  async function readApiError(response: Response, fallback: string) {
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
+    return data.error || fallback;
+  }
+
+  async function putSettings(payload: Record<string, string>) {
+    const response = await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      throw new Error(await readApiError(response, "Failed to save schedule settings."));
+    }
+  }
+
   async function load() {
     const [overrideRes, settingsRes] = await Promise.all([fetch("/api/day-overrides"), fetch("/api/settings/public")]);
     const [overrideData, settings] = await Promise.all([overrideRes.json(), settingsRes.json()]);
@@ -256,18 +272,16 @@ export default function SchedulePage() {
         };
       }
 
-      await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          weeklySchedule: JSON.stringify(payload),
-          slotInterval: String(parsedInterval),
-          lastSeatingBufferMin: String(parsedLastSeatingBuffer),
-        }),
+      await putSettings({
+        weeklySchedule: JSON.stringify(payload),
+        slotInterval: String(parsedInterval),
+        lastSeatingBufferMin: String(parsedLastSeatingBuffer),
       });
       setSlotInterval(String(parsedInterval));
       setLastSeatingBufferMin(String(parsedLastSeatingBuffer));
       setWeeklyMessage(`Weekly schedule saved. Slot interval ${parsedInterval} min, last seating buffer ${parsedLastSeatingBuffer} min.`);
+    } catch (error) {
+      setWeeklyMessage(error instanceof Error ? error.message : "Failed to save weekly schedule.");
     } finally {
       setSavingWeekly(false);
     }
@@ -301,7 +315,7 @@ export default function SchedulePage() {
         return;
       }
 
-      await fetch("/api/day-overrides", {
+      const overrideResponse = await fetch("/api/day-overrides", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -313,6 +327,9 @@ export default function SchedulePage() {
           note: specialForm.note || specialForm.label || null,
         }),
       });
+      if (!overrideResponse.ok) {
+        throw new Error(await readApiError(overrideResponse, "Failed to save day override."));
+      }
 
       const nextRules = { ...specialDepositRules };
       const shouldStoreRule = specialForm.requiresDeposit || specialForm.label.trim().length > 0;
@@ -329,11 +346,7 @@ export default function SchedulePage() {
         delete nextRules[specialForm.date];
       }
 
-      await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ specialDepositRules: JSON.stringify(nextRules) }),
-      });
+      await putSettings({ specialDepositRules: JSON.stringify(nextRules) });
 
       setSpecialDepositRules(nextRules);
       setSpecialMessage("Special date schedule saved.");
@@ -351,6 +364,8 @@ export default function SchedulePage() {
         depositMessage: depositDefaults.depositMessage,
       });
       await load();
+    } catch (error) {
+      setSpecialMessage(error instanceof Error ? error.message : "Failed to save special date.");
     } finally {
       setSavingSpecial(false);
     }
@@ -358,21 +373,24 @@ export default function SchedulePage() {
 
   async function removeSpecial(date: string, overrideId: number | null) {
     if (!confirm("Remove this special schedule?")) return;
-    if (overrideId) {
-      await fetch(`/api/day-overrides/${overrideId}`, { method: "DELETE" });
+    try {
+      if (overrideId) {
+        const deleteResponse = await fetch(`/api/day-overrides/${overrideId}`, { method: "DELETE" });
+        if (!deleteResponse.ok) {
+          throw new Error(await readApiError(deleteResponse, "Failed to remove day override."));
+        }
+      }
+      if (specialDepositRules[date]) {
+        const nextRules = { ...specialDepositRules };
+        delete nextRules[date];
+        await putSettings({ specialDepositRules: JSON.stringify(nextRules) });
+        setSpecialDepositRules(nextRules);
+      }
+      setSpecialMessage("Special schedule removed.");
+      await load();
+    } catch (error) {
+      setSpecialMessage(error instanceof Error ? error.message : "Failed to remove special schedule.");
     }
-    if (specialDepositRules[date]) {
-      const nextRules = { ...specialDepositRules };
-      delete nextRules[date];
-      await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ specialDepositRules: JSON.stringify(nextRules) }),
-      });
-      setSpecialDepositRules(nextRules);
-    }
-    setSpecialMessage("Special schedule removed.");
-    await load();
   }
 
   function editSpecial(date: string, override: Override | null, rule: SpecialDepositRule | null) {

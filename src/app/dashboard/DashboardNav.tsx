@@ -81,7 +81,7 @@ export default function DashboardNav({
       .then(s => {
         if (s.restaurantName) setRestaurantName(s.restaurantName);
         const setupDone = s.setupWizardCompleted === "true";
-        if (!canAccessAdmin && !setupDone && pathname !== "/dashboard/setup" && !inSetupPreview) {
+        if (!setupDone && pathname !== "/dashboard/setup" && !inSetupPreview) {
           router.replace("/dashboard/setup");
         }
       })

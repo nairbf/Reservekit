@@ -39,16 +39,17 @@ export function buildRestaurantDbPath(slug: string) {
   return path.join(root, slug, "reservekit.db");
 }
 
-export async function nextAvailablePort(start = 3001) {
-  const rows = await prisma.restaurant.findMany({
-    select: { port: true },
-    orderBy: { port: "asc" },
-  });
+const RESERVED_PORTS = new Set([3001, 3002, 3100, 3200]);
 
-  let candidate = start;
-  for (const row of rows) {
-    if (row.port === candidate) candidate += 1;
-    if (row.port > candidate) break;
+export async function nextAvailablePort(startFrom = 3010): Promise<number> {
+  let port = startFrom;
+  while (true) {
+    if (RESERVED_PORTS.has(port)) {
+      port += 1;
+      continue;
+    }
+    const existing = await prisma.restaurant.findFirst({ where: { port } });
+    if (!existing) return port;
+    port += 1;
   }
-  return candidate;
 }

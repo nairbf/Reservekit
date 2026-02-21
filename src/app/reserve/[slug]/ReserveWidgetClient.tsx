@@ -45,6 +45,15 @@ interface ExpressConfig {
   message: string;
 }
 
+type ExpressSection = "starter" | "main" | "side" | "dessert" | "drink" | "other";
+
+interface ExpressCategoryGroup {
+  section: ExpressSection;
+  title: string;
+  icon: string;
+  categories: ExpressMenuCategory[];
+}
+
 interface ExpressLine {
   key: string;
   menuItemId: number;
@@ -52,7 +61,7 @@ interface ExpressLine {
   quantity: number;
   specialInstructions: string;
   price: number;
-  section: "starter" | "drink";
+  section: ExpressSection;
 }
 
 interface PreOrderRecord {
@@ -127,8 +136,22 @@ function tagList(value: string | null | undefined): string[] {
     .filter(Boolean);
 }
 
-function categorySection(type?: string | null): "starter" | "drink" {
-  return String(type || "starter").toLowerCase() === "drink" ? "drink" : "starter";
+const EXPRESS_SECTION_ORDER: ExpressSection[] = ["starter", "main", "side", "dessert", "drink", "other"];
+const EXPRESS_SECTION_META: Record<ExpressSection, { title: string; icon: string }> = {
+  starter: { title: "Starters", icon: "🍽" },
+  main: { title: "Mains", icon: "🥩" },
+  side: { title: "Sides", icon: "🥗" },
+  dessert: { title: "Desserts", icon: "🍰" },
+  drink: { title: "Drinks", icon: "🥂" },
+  other: { title: "Other", icon: "📋" },
+};
+
+function categorySection(type?: string | null): ExpressSection {
+  const normalized = String(type || "").trim().toLowerCase();
+  if (normalized === "starter" || normalized === "main" || normalized === "side" || normalized === "dessert" || normalized === "drink" || normalized === "other") {
+    return normalized;
+  }
+  return "other";
 }
 
 const defaultStripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
@@ -222,12 +245,15 @@ export default function ReserveWidgetClient({
     ? "w-full border border-zinc-700 rounded px-3 py-2 mb-4 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500"
     : "w-full border rounded px-3 py-2 mb-4";
 
-  const expressStarterCategories = useMemo(
-    () => expressCategories.filter(category => categorySection(category.type) === "starter"),
-    [expressCategories],
-  );
-  const expressDrinkCategories = useMemo(
-    () => expressCategories.filter(category => categorySection(category.type) === "drink"),
+  const expressCategoryGroups = useMemo<ExpressCategoryGroup[]>(
+    () => EXPRESS_SECTION_ORDER
+      .map(section => ({
+        section,
+        title: EXPRESS_SECTION_META[section].title,
+        icon: EXPRESS_SECTION_META[section].icon,
+        categories: expressCategories.filter(category => categorySection(category.type) === section),
+      }))
+      .filter(group => group.categories.length > 0),
     [expressCategories],
   );
   const expressSubtotal = useMemo(
@@ -379,7 +405,7 @@ export default function ReserveWidgetClient({
         setExpressPayNow(config.payment === "precharge");
 
         if (existing && existing.status !== "cancelled") {
-          const sectionMap = new Map<number, "starter" | "drink">();
+          const sectionMap = new Map<number, ExpressSection>();
           for (const category of categoryList) {
             for (const item of category.items) {
               sectionMap.set(item.id, categorySection(category.type));
@@ -392,7 +418,7 @@ export default function ReserveWidgetClient({
             quantity: Math.max(1, Number(item.quantity || 1)),
             specialInstructions: item.specialInstructions || "",
             price: Number(item.price || 0),
-            section: sectionMap.get(item.menuItemId) || "starter",
+            section: sectionMap.get(item.menuItemId) || "other",
           }));
           setExpressLines(mapped);
           setExpressNotes(existing.specialNotes || "");
@@ -433,7 +459,7 @@ export default function ReserveWidgetClient({
     });
   }
 
-  function addExpressItem(item: ExpressMenuItem, section: "starter" | "drink") {
+  function addExpressItem(item: ExpressMenuItem, section: ExpressSection) {
     setExpressLines(prev => {
       const existingIdx = prev.findIndex(
         line => line.menuItemId === item.id && line.specialInstructions.trim() === "",
@@ -671,8 +697,7 @@ export default function ReserveWidgetClient({
         expressDiningMessage={expressDiningMessage}
         setExpressStage={setExpressStage}
         setDismissExpressPrompt={setDismissExpressPrompt}
-        expressStarterCategories={expressStarterCategories}
-        expressDrinkCategories={expressDrinkCategories}
+        expressCategoryGroups={expressCategoryGroups}
         tagList={tagList}
         addExpressItem={addExpressItem}
         expressLines={expressLines}

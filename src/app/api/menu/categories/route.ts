@@ -3,6 +3,15 @@ import { prisma } from "@/lib/db";
 import { requireAuth, requirePermission } from "@/lib/auth";
 import { getExpressDiningConfig } from "@/lib/preorder";
 
+const VALID_CATEGORY_TYPES = new Set(["starter", "main", "side", "dessert", "drink", "other"]);
+
+function parseCategoryType(value: unknown): string | null {
+  const raw = String(value || "").trim();
+  const normalized = raw.toLowerCase();
+  if (!VALID_CATEGORY_TYPES.has(normalized)) return null;
+  return raw;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const isPublic = searchParams.get("public") === "true";
@@ -65,8 +74,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const name = String(body?.name || "").trim();
   if (!name) return NextResponse.json({ error: "Category name is required" }, { status: 400 });
-  const typeRaw = String(body?.type || "starter").toLowerCase();
-  const type = typeRaw === "drink" ? "drink" : "starter";
+  const typeInput = body?.type === undefined ? "starter" : body.type;
+  const type = parseCategoryType(typeInput);
+  if (!type) {
+    return NextResponse.json({ error: "Invalid category type" }, { status: 400 });
+  }
 
   const created = await prisma.menuCategory.create({
     data: {

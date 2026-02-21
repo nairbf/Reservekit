@@ -62,13 +62,12 @@ export async function POST(_req: NextRequest) {
     return NextResponse.json({ error: "POS license required" }, { status: 403 });
   }
 
-  const cfg = await getSpotOnRuntimeConfig();
-  if (!cfg.apiKey || !cfg.locationId) {
-    return NextResponse.json({ error: "SpotOn not configured" }, { status: 400 });
-  }
-
   const mockRow = await prisma.setting.findUnique({ where: { key: "spotonUseMock" } });
   const useMock = String(mockRow?.value || "").toLowerCase() === "true";
+  const cfg = await getSpotOnRuntimeConfig();
+  if (!useMock && (!cfg.apiKey || !cfg.locationId)) {
+    return NextResponse.json({ error: "SpotOn not configured" }, { status: 400 });
+  }
 
   let items: SpotOnMenuItem[] = [];
   if (useMock) {

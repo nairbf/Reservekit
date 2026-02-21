@@ -13,6 +13,7 @@ interface EventTicket {
   guestPhone: string | null;
   quantity: number;
   totalPaid: number;
+  stripePaymentIntentId: string | null;
   status: TicketStatus | string;
   code: string;
   createdAt: string;
@@ -202,6 +203,7 @@ export default function EventsDashboardPage() {
     const statusLabel = ticket.status.replaceAll("_", " ");
     const canCheckIn = ticket.status === "confirmed";
     const canCancel = ticket.status === "confirmed" || ticket.status === "checked_in";
+    const hasStripePayment = Boolean(ticket.stripePaymentIntentId);
     const actionControls = (
       <div className="flex w-full flex-wrap justify-end gap-2">
         {canCheckIn ? (
@@ -221,7 +223,7 @@ export default function EventsDashboardPage() {
           >
             {actionLoadingTicketId === ticket.id
               ? "Working..."
-              : ticket.totalPaid > 0
+              : hasStripePayment
                 ? "Refund"
                 : "Cancel"}
           </button>
@@ -324,11 +326,11 @@ export default function EventsDashboardPage() {
 
   async function cancelOrRefundTicket(ticket: EventTicket) {
     if (!detail) return;
+    const hasStripePayment = Boolean(ticket.stripePaymentIntentId);
     const formattedAmount = formatCents(ticket.totalPaid);
-    const label = ticket.totalPaid > 0 ? "refund" : "cancel";
-    const confirmed = window.confirm(
-      `Cancel this ticket and ${label} ${formattedAmount} to ${ticket.guestName}?`,
-    );
+    const confirmed = window.confirm(hasStripePayment
+      ? `Cancel this ticket and refund ${formattedAmount} to ${ticket.guestName}?`
+      : `Cancel this ticket for ${ticket.guestName}?`);
     if (!confirmed) return;
 
     setMessage("");

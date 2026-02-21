@@ -4,6 +4,26 @@ import type { FormEvent } from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 
 type StripePromise = ReturnType<typeof import("@stripe/stripe-js").loadStripe>;
+type ExpressSection = "starter" | "main" | "side" | "dessert" | "drink" | "other";
+
+interface ExpressMenuCategory {
+  id: number;
+  name: string;
+  items: Array<{
+    id: number;
+    name: string;
+    description: string | null;
+    price?: number;
+    dietaryTags: string | null;
+  }>;
+}
+
+interface ExpressCategoryGroup {
+  section: ExpressSection;
+  title: string;
+  icon: string;
+  categories: ExpressMenuCategory[];
+}
 
 function ExpressPaymentStep({
   subtotal,
@@ -84,10 +104,9 @@ interface ConfirmationProps {
   expressDiningMessage: string;
   setExpressStage: (value: any) => void;
   setDismissExpressPrompt: (value: boolean) => void;
-  expressStarterCategories: any[];
-  expressDrinkCategories: any[];
+  expressCategoryGroups: ExpressCategoryGroup[];
   tagList: (value: string | null | undefined) => string[];
-  addExpressItem: (item: any, section: "starter" | "drink") => void;
+  addExpressItem: (item: any, section: ExpressSection) => void;
   expressLines: any[];
   removeExpressLine: (key: string) => void;
   updateExpressLine: (key: string, patch: any) => void;
@@ -136,8 +155,7 @@ export function Confirmation({
   expressDiningMessage,
   setExpressStage,
   setDismissExpressPrompt,
-  expressStarterCategories,
-  expressDrinkCategories,
+  expressCategoryGroups,
   tagList,
   addExpressItem,
   expressLines,
@@ -187,13 +205,13 @@ export function Confirmation({
         {expressLoading && (
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 flex items-center gap-2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            Loading starters & drinks...
+            Loading menu...
           </div>
         )}
 
         {canShowExpress && expressStage === "prompt" && (
           <div className="rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-900 p-4 text-left">
-            <p className="font-semibold text-sm">🍽 Would you like to pre-order starters & drinks?</p>
+            <p className="font-semibold text-sm">🍽 Would you like to pre-order from the menu?</p>
             <p className="text-xs mt-1">
               {expressConfig?.message || expressDiningMessage}
             </p>
@@ -222,91 +240,52 @@ export function Confirmation({
         {canShowExpress && expressStage === "editor" && (
           <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 space-y-4">
             <div>
-              <h3 className="text-lg font-bold">Starters & Drinks Pre-Order</h3>
+              <h3 className="text-lg font-bold">Pre-Order Menu</h3>
               <p className="text-sm text-gray-500">Optional and skippable. Submit what you want ready on arrival.</p>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🍽</span>
-                <h4 className="font-semibold">Starters</h4>
-              </div>
-              {expressStarterCategories.length === 0 ? (
-                <p className="text-sm text-gray-500">No starter items available.</p>
-              ) : (
-                expressStarterCategories.map((category: any) => (
-                  <div key={`starter-${category.id}`} className="rounded-lg border border-gray-200 p-3">
-                    <p className="text-sm font-semibold mb-2">{category.name}</p>
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      {category.items.map((item: any) => (
-                        <div key={item.id} className="rounded-lg border border-gray-100 p-2">
-                          <p className="text-sm font-medium">{item.name}</p>
-                          {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
-                          {tagList(item.dietaryTags).length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {tagList(item.dietaryTags).map((tag) => (
-                                <span key={`${item.id}-${tag}`} className="text-[10px] rounded-full bg-gray-100 text-gray-700 px-2 py-0.5">{tag}</span>
-                              ))}
-                            </div>
-                          )}
-                          {expressConfig?.mode === "prices" && typeof item.price === "number" && (
-                            <p className="text-xs font-semibold mt-1">{formatCents(item.price)}</p>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => addExpressItem(item, "starter")}
-                            className="mt-2 h-9 px-3 rounded bg-emerald-600 text-white text-xs font-medium"
-                          >
-                            + Add
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+            {expressCategoryGroups.length === 0 ? (
+              <p className="text-sm text-gray-500">No menu items are available yet.</p>
+            ) : (
+              expressCategoryGroups.map((group) => (
+                <div key={group.section} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{group.icon}</span>
+                    <h4 className="font-semibold">{group.title}</h4>
                   </div>
-                ))
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="text-base">🥂</span>
-                <h4 className="font-semibold">Drinks</h4>
-              </div>
-              {expressDrinkCategories.length === 0 ? (
-                <p className="text-sm text-gray-500">No drinks available.</p>
-              ) : (
-                expressDrinkCategories.map((category: any) => (
-                  <div key={`drink-${category.id}`} className="rounded-lg border border-gray-200 p-3">
-                    <p className="text-sm font-semibold mb-2">{category.name}</p>
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      {category.items.map((item: any) => (
-                        <div key={item.id} className="rounded-lg border border-gray-100 p-2">
-                          <p className="text-sm font-medium">{item.name}</p>
-                          {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
-                          {tagList(item.dietaryTags).length > 0 && (
-                            <div className="mt-1 flex flex-wrap gap-1">
-                              {tagList(item.dietaryTags).map((tag) => (
-                                <span key={`${item.id}-${tag}`} className="text-[10px] rounded-full bg-gray-100 text-gray-700 px-2 py-0.5">{tag}</span>
-                              ))}
-                            </div>
-                          )}
-                          {expressConfig?.mode === "prices" && typeof item.price === "number" && (
-                            <p className="text-xs font-semibold mt-1">{formatCents(item.price)}</p>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => addExpressItem(item, "drink")}
-                            className="mt-2 h-9 px-3 rounded bg-emerald-600 text-white text-xs font-medium"
-                          >
-                            + Add
-                          </button>
-                        </div>
-                      ))}
+                  {group.categories.map((category) => (
+                    <div key={`${group.section}-${category.id}`} className="rounded-lg border border-gray-200 p-3">
+                      <p className="text-sm font-semibold mb-2">{category.name}</p>
+                      <div className="grid sm:grid-cols-2 gap-2">
+                        {category.items.map((item) => (
+                          <div key={item.id} className="rounded-lg border border-gray-100 p-2">
+                            <p className="text-sm font-medium">{item.name}</p>
+                            {item.description && <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>}
+                            {tagList(item.dietaryTags).length > 0 && (
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {tagList(item.dietaryTags).map((tag) => (
+                                  <span key={`${item.id}-${tag}`} className="text-[10px] rounded-full bg-gray-100 text-gray-700 px-2 py-0.5">{tag}</span>
+                                ))}
+                              </div>
+                            )}
+                            {expressConfig?.mode === "prices" && typeof item.price === "number" && (
+                              <p className="text-xs font-semibold mt-1">{formatCents(item.price)}</p>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => addExpressItem(item, group.section)}
+                              className="mt-2 h-9 px-3 rounded bg-emerald-600 text-white text-xs font-medium"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
+                  ))}
+                </div>
+              ))
+            )}
 
             <div className="rounded-lg border border-gray-200 p-3">
               <h4 className="font-semibold text-sm mb-2">Order Summary</h4>

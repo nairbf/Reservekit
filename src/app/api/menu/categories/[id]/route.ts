@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 
+const VALID_CATEGORY_TYPES = new Set(["starter", "main", "side", "dessert", "drink", "other"]);
+
 function parseId(id: string): number | null {
   const n = Number(id);
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.trunc(n);
+}
+
+function parseCategoryType(value: unknown): string | null {
+  const raw = String(value || "").trim();
+  const normalized = raw.toLowerCase();
+  if (!VALID_CATEGORY_TYPES.has(normalized)) return null;
+  return raw;
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -19,8 +28,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!categoryId) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   const body = await req.json();
-  const typeRaw = body?.type !== undefined ? String(body.type || "").toLowerCase() : undefined;
-  const type = typeRaw ? (typeRaw === "drink" ? "drink" : "starter") : undefined;
+  let type: string | undefined;
+  if (body?.type !== undefined) {
+    const parsedType = parseCategoryType(body.type);
+    if (!parsedType) return NextResponse.json({ error: "Invalid category type" }, { status: 400 });
+    type = parsedType;
+  }
   const updated = await prisma.menuCategory.update({
     where: { id: categoryId },
     data: {

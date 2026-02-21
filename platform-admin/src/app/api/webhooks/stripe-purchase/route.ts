@@ -1,4 +1,6 @@
 import { randomUUID } from "crypto";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import { NextRequest, NextResponse } from "next/server";
 import { LicenseEventType, RestaurantPlan, RestaurantStatus, HostingStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
@@ -7,6 +9,8 @@ import { createLicenseEvent } from "@/lib/license-events";
 import { buildRestaurantDbPath, nextAvailablePort, slugify as slugifyBase } from "@/lib/platform";
 
 export const runtime = "nodejs";
+const execFileAsync = promisify(execFile);
+const SETUP_SCRIPT = "/home/reservesit/scripts/setup-restaurant.sh";
 
 function parsePlan(plan: unknown): RestaurantPlan {
   const value = String(plan || "").trim();
@@ -190,6 +194,16 @@ export async function POST(request: NextRequest) {
     details: `License activated. Amount=$${((Number(body.amountTotal) || 0) / 100).toFixed(2)}`,
     performedBy: "stripe-webhook",
   });
+
+  // Run setup script to create customer folder and database on disk
+  try {
+    const { stdout, stderr } = await execFileAsync(SETUP_SCRIPT, [slug]);
+    console.log("[STRIPE-PURCHASE] Setup script completed for", slug, stdout);
+    if (stderr) console.warn("[STRIPE-PURCHASE] Setup script stderr:", stderr);
+  } catch (err) {
+    // Log but do not fail — Stripe must receive 200 or it will retry
+    console.error("[STRIPE-PURCHASE] Setup script failed for", slug, err);
+  }
 
   await createPurchaseSequence({
     restaurantId: restaurant.id,

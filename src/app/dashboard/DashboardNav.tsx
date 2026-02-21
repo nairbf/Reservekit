@@ -76,17 +76,55 @@ export default function DashboardNav({
   }, []);
 
   useEffect(() => {
-    fetch("/api/settings/public")
-      .then(r => r.json())
-      .then(s => {
-        if (s.restaurantName) setRestaurantName(s.restaurantName);
-        const setupDone = s.setupWizardCompleted === "true";
-        if (!setupDone && pathname !== "/dashboard/setup" && !inSetupPreview) {
+    let active = true;
+
+    async function loadSetupState() {
+      try {
+        const [settingsResponse, meResponse] = await Promise.all([
+          fetch("/api/settings/public"),
+          fetch("/api/auth/me"),
+        ]);
+        if (!active) return;
+
+        const settings = settingsResponse.ok
+          ? await settingsResponse.json()
+          : {};
+        if (!active) return;
+
+        if (settings.restaurantName) setRestaurantName(settings.restaurantName);
+
+        const setupDone = settings.setupWizardCompleted === "true";
+        const me = meResponse.ok ? await meResponse.json().catch(() => ({})) : {};
+        const role = String(me?.role || "").toLowerCase();
+        const isSetupOwner = role === "admin" || role === "owner";
+
+        const host = (typeof window !== "undefined" ? window.location.host : "").toLowerCase();
+        const isDemoHost = host.includes("demo.reservesit.com");
+        const isPlatformAdminHost = host.includes("admin.reservesit.com");
+        const shouldSkipWizard = isDemoHost || isPlatformAdminHost;
+
+        const shouldShowWizard = !setupDone && isSetupOwner && !shouldSkipWizard;
+
+        if (pathname === "/dashboard/setup") {
+          if (!shouldShowWizard) {
+            router.replace("/dashboard");
+          }
+          return;
+        }
+
+        if (shouldShowWizard && !inSetupPreview) {
           router.replace("/dashboard/setup");
         }
-      })
-      .catch(() => {});
-  }, [canAccessAdmin, inSetupPreview, pathname, router]);
+      } catch {
+        // ignore
+      }
+    }
+
+    loadSetupState();
+    return () => {
+      active = false;
+    };
+  }, [inSetupPreview, pathname, router]);
 
   useEffect(() => {
     setMobileOpen(false);

@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     where: {
       id: { in: menuItemIds },
       isAvailable: true,
-      category: { isActive: true, type: { in: ["starter", "drink"] } },
+      category: { isActive: true },
     },
   });
   const menuMap = new Map(menuItems.map(item => [item.id, item]));

@@ -130,22 +130,48 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
   }
 
-  if (body?.action === "mark_paid") {
-    if (!preOrder.stripePaymentIntentId) {
-      return NextResponse.json({ error: "No payment intent found." }, { status: 400 });
+  if (body?.action === "start_preparing" || body?.action === "mark_ready" || body?.action === "complete") {
+    if (!staff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const transitions: Record<string, { next: string; allowed: string[] }> = {
+      start_preparing: { next: "preparing", allowed: ["submitted", "confirmed_by_staff"] },
+      mark_ready: { next: "ready", allowed: ["preparing"] },
+      complete: { next: "completed", allowed: ["ready"] },
+    };
+    const transition = transitions[String(body.action)];
+    if (!transition) return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    if (!transition.allowed.includes(preOrder.status)) {
+      return NextResponse.json({ error: `Cannot ${body.action} from status '${preOrder.status}'` }, { status: 400 });
     }
-    const stripe = await getStripeClient();
-    const intent = await stripe.paymentIntents.retrieve(preOrder.stripePaymentIntentId);
-    const paid = intent.status === "succeeded" || intent.status === "requires_capture" || intent.status === "processing";
     const updated = await prisma.preOrder.update({
       where: { id: preOrder.id },
-      data: paid
-        ? {
-            isPaid: true,
-            paidAmount: intent.amount_received || preOrder.subtotal,
-            paidAt: new Date(),
-          }
-        : {},
+      data: { status: transition.next, updatedAt: new Date() },
+      include: {
+        reservation: true,
+        items: { include: { menuItem: true }, orderBy: [{ guestLabel: "asc" }, { id: "asc" }] },
+      },
+    });
+    return NextResponse.json(updated);
+  }
+
+  if (body?.action === "mark_paid") {
+    if (!staff) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    let paidAmount = preOrder.subtotal;
+    if (preOrder.stripePaymentIntentId) {
+      try {
+        const stripe = await getStripeClient();
+        const intent = await stripe.paymentIntents.retrieve(preOrder.stripePaymentIntentId);
+        paidAmount = intent.amount_received || paidAmount;
+      } catch {
+        // fall back to manual paid amount if Stripe lookup fails
+      }
+    }
+    const updated = await prisma.preOrder.update({
+      where: { id: preOrder.id },
+      data: {
+        isPaid: true,
+        paidAmount,
+        paidAt: new Date(),
+      },
       include: {
         reservation: true,
         items: { include: { menuItem: true }, orderBy: [{ guestLabel: "asc" }, { id: "asc" }] },
@@ -191,7 +217,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     where: {
       id: { in: menuItemIds },
       isAvailable: true,
-      category: { isActive: true, type: { in: ["starter", "drink"] } },
+      category: { isActive: true },
     },
   });
   const menuMap = new Map(menuItems.map(item => [item.id, item]));

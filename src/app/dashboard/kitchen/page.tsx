@@ -28,6 +28,7 @@ interface PreOrder {
   specialNotes: string | null;
   subtotal: number;
   isPaid: boolean;
+  createdAt: string;
   items: PreOrderItem[];
 }
 
@@ -42,31 +43,57 @@ interface Reservation {
   preOrder: PreOrder | null;
 }
 
+type CategoryKey = "starter" | "main" | "side" | "dessert" | "drink" | "other";
+
+const CATEGORY_GROUPS: Array<{ key: CategoryKey; label: string }> = [
+  { key: "starter", label: "STARTERS" },
+  { key: "main", label: "MAINS" },
+  { key: "side", label: "SIDES" },
+  { key: "dessert", label: "DESSERTS" },
+  { key: "drink", label: "DRINKS" },
+  { key: "other", label: "OTHER" },
+];
+
 function formatCents(cents: number): string {
   return `$${(Math.max(0, Math.trunc(cents)) / 100).toFixed(2)}`;
 }
 
-function formatTime12(value: string): string {
-  const match = (value || "").trim().match(/^(\d{1,2}):(\d{2})$/);
-  if (!match) return value;
+function parseTimeParts(value: string): { hour: number; minute: number; second: number } | null {
+  const match = (value || "").trim().match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return null;
   const hour = Number(match[1]);
   const minute = Number(match[2]);
-  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return value;
-  const h = hour % 12 || 12;
-  return `${h}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+  const second = Number(match[3] || "0");
+  if (!Number.isFinite(hour) || !Number.isFinite(minute) || !Number.isFinite(second)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59) return null;
+  return { hour, minute, second };
+}
+
+function normalizeTimeKey(value: string): string {
+  const parts = parseTimeParts(value);
+  if (!parts) return value;
+  return `${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}`;
+}
+
+function formatTime12(value: string): string {
+  const parts = parseTimeParts(value);
+  if (!parts) return value;
+  const h = parts.hour % 12 || 12;
+  return `${h}:${String(parts.minute).padStart(2, "0")} ${parts.hour >= 12 ? "PM" : "AM"}`;
 }
 
 function minutesUntil(date: string, time: string): number {
-  const dt = new Date(`${date}T${time}:00`);
+  const parts = parseTimeParts(time);
+  if (!parts) return 0;
+  const dt = new Date(`${date}T${String(parts.hour).padStart(2, "0")}:${String(parts.minute).padStart(2, "0")}:${String(parts.second).padStart(2, "0")}`);
+  if (Number.isNaN(dt.getTime())) return 0;
   return Math.round((dt.getTime() - Date.now()) / 60000);
 }
 
-function toneForReservation(res: Reservation): string {
-  if (["arrived", "seated"].includes(res.status)) return "bg-green-50 border-green-300";
-  if (res.preOrder?.status === "confirmed_by_staff") return "bg-blue-50 border-blue-300";
-  const mins = minutesUntil(res.date, res.time);
-  if (mins >= 0 && mins <= 30) return "bg-yellow-50 border-yellow-300";
-  return "bg-white border-gray-200";
+function minutesSince(value: string): number | null {
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return null;
+  return Math.max(0, Math.round((Date.now() - dt.getTime()) / 60000));
 }
 
 function dateInTimezone(timezone: string, dayOffset = 0): string {
@@ -87,25 +114,82 @@ function dateInTimezone(timezone: string, dayOffset = 0): string {
   return `${year}-${month}-${day}`;
 }
 
+function categoryForItem(item: PreOrderItem): CategoryKey {
+  const type = String(item.menuItem.category?.type || "other").toLowerCase();
+  if (type === "starter" || type === "main" || type === "side" || type === "dessert" || type === "drink") return type;
+  return "other";
+}
+
+function groupItemsByCategory(items: PreOrderItem[]) {
+  const grouped: Record<CategoryKey, PreOrderItem[]> = {
+    starter: [],
+    main: [],
+    side: [],
+    dessert: [],
+    drink: [],
+    other: [],
+  };
+  for (const item of items) {
+    grouped[categoryForItem(item)].push(item);
+  }
+  return CATEGORY_GROUPS
+    .map(group => ({ ...group, items: grouped[group.key] }))
+    .filter(group => group.items.length > 0);
+}
+
+function cardToneForStatus(status: string): string {
+  if (status === "confirmed_by_staff") return "bg-blue-50 border-blue-300";
+  if (status === "preparing") return "bg-yellow-50 border-yellow-300";
+  if (status === "ready") return "bg-green-50 border-green-300";
+  if (status === "completed") return "bg-gray-50 border-gray-300 opacity-80";
+  return "bg-white border-gray-200";
+}
+
+function statusLabel(status: string): string {
+  return status.replaceAll("_", " ");
+}
+
+function orderAgeTone(minutes: number | null): string {
+  if (minutes === null) return "bg-gray-100 text-gray-700 border-gray-200";
+  if (minutes < 15) return "bg-emerald-100 text-emerald-800 border-emerald-300";
+  if (minutes <= 30) return "bg-yellow-100 text-yellow-800 border-yellow-300";
+  return "bg-orange-100 text-orange-800 border-orange-300";
+}
+
+function nextWorkflowAction(status: string): { action: string; label: string } | null {
+  if (status === "submitted" || status === "confirmed_by_staff") return { action: "start_preparing", label: "Start Preparing" };
+  if (status === "preparing") return { action: "mark_ready", label: "Mark Ready" };
+  if (status === "ready") return { action: "complete", label: "Complete" };
+  return null;
+}
+
 export default function KitchenPage() {
   const canManageMenu = useHasPermission("manage_menu");
   const [mode, setMode] = useState<"tonight" | "tomorrow">("tonight");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [licensed, setLicensed] = useState<boolean | null>(null);
   const [timezone, setTimezone] = useState("America/New_York");
+  const [actioning, setActioning] = useState<Record<number, string>>({});
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     if (licensed === false) {
       setLoading(false);
       return;
     }
-    const date = dateInTimezone(timezone, mode === "tomorrow" ? 1 : 0);
-    const res = await fetch(`/api/reservations?status=all&date=${date}`);
-    const data = await res.json();
-    const list = Array.isArray(data) ? data as Reservation[] : [];
-    setReservations(list.filter(item => item.preOrder && item.preOrder.status !== "cancelled"));
-    setLoading(false);
+    if (silent) setRefreshing(true);
+    else setLoading(true);
+    try {
+      const date = dateInTimezone(timezone, mode === "tomorrow" ? 1 : 0);
+      const response = await fetch(`/api/reservations?status=all&date=${date}`);
+      const data = await response.json();
+      const list = Array.isArray(data) ? data as Reservation[] : [];
+      setReservations(list.filter(item => item.preOrder && item.preOrder.status !== "cancelled"));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [mode, licensed, timezone]);
 
   useEffect(() => {
@@ -125,40 +209,78 @@ export default function KitchenPage() {
 
   useEffect(() => {
     if (licensed === null) return;
-    load();
-    const timer = setInterval(load, 30000);
+    void load(false);
+    const timer = setInterval(() => {
+      void load(true);
+    }, 30000);
     return () => clearInterval(timer);
   }, [load, licensed]);
+
+  async function runAction(preOrderId: number, action: string) {
+    setActioning(prev => ({ ...prev, [preOrderId]: action }));
+    try {
+      const response = await fetch(`/api/preorder/${preOrderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        alert(body.error || "Action failed");
+        return;
+      }
+      await load(true);
+    } finally {
+      setActioning(prev => {
+        const next = { ...prev };
+        delete next[preOrderId];
+        return next;
+      });
+    }
+  }
 
   const groupedByTime = useMemo(() => {
     const map: Record<string, Reservation[]> = {};
     for (const reservation of reservations) {
-      if (!map[reservation.time]) map[reservation.time] = [];
-      map[reservation.time].push(reservation);
+      const key = normalizeTimeKey(reservation.time);
+      if (!map[key]) map[key] = [];
+      map[key].push(reservation);
     }
     return map;
   }, [reservations]);
 
-  const times = useMemo(() => Object.keys(groupedByTime).sort(), [groupedByTime]);
+  const times = useMemo(
+    () => Object.keys(groupedByTime).sort((a, b) => {
+      const aParts = parseTimeParts(a);
+      const bParts = parseTimeParts(b);
+      if (!aParts || !bParts) return a.localeCompare(b);
+      return (aParts.hour * 3600 + aParts.minute * 60 + aParts.second) - (bParts.hour * 3600 + bParts.minute * 60 + bParts.second);
+    }),
+    [groupedByTime],
+  );
 
   const aggregate = useMemo(() => {
-    const starterCounts = new Map<string, number>();
-    const drinkCounts = new Map<string, number>();
+    const grouped: Record<CategoryKey, Map<string, number>> = {
+      starter: new Map(),
+      main: new Map(),
+      side: new Map(),
+      dessert: new Map(),
+      drink: new Map(),
+      other: new Map(),
+    };
     for (const reservation of reservations) {
       for (const item of reservation.preOrder?.items || []) {
         const key = item.menuItem.name;
-        const type = String(item.menuItem.category?.type || "starter");
-        if (type === "drink") {
-          drinkCounts.set(key, (drinkCounts.get(key) || 0) + item.quantity);
-        } else {
-          starterCounts.set(key, (starterCounts.get(key) || 0) + item.quantity);
-        }
+        const category = categoryForItem(item);
+        grouped[category].set(key, (grouped[category].get(key) || 0) + item.quantity);
       }
     }
-    return {
-      starters: Array.from(starterCounts.entries()).sort((a, b) => b[1] - a[1]),
-      drinks: Array.from(drinkCounts.entries()).sort((a, b) => b[1] - a[1]),
-    };
+    return CATEGORY_GROUPS
+      .map(group => ({
+        ...group,
+        items: Array.from(grouped[group.key].entries()).sort((a, b) => b[1] - a[1]),
+      }))
+      .filter(group => group.items.length > 0);
   }, [reservations]);
 
   if (!canManageMenu) return <AccessDenied />;
@@ -166,7 +288,7 @@ export default function KitchenPage() {
   if (loading) {
     return (
       <div className="flex items-center gap-3 text-gray-500">
-        <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
         Loading kitchen prep...
       </div>
     );
@@ -175,10 +297,10 @@ export default function KitchenPage() {
   if (licensed === false) {
     return (
       <div className="max-w-3xl">
-        <h1 className="text-2xl font-bold mb-4">Kitchen</h1>
-        <div className="bg-white rounded-xl shadow p-6">
-          <p className="text-gray-600 mb-4">Express Dining is a paid add-on.</p>
-          <a href="/#pricing" className="inline-flex items-center h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">Upgrade to Unlock</a>
+        <h1 className="mb-4 text-2xl font-bold">Kitchen</h1>
+        <div className="rounded-xl bg-white p-6 shadow">
+          <p className="mb-4 text-gray-600">Express Dining is a paid add-on.</p>
+          <a href="/#pricing" className="inline-flex h-11 items-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white transition-all duration-200">Upgrade to Unlock</a>
         </div>
       </div>
     );
@@ -198,56 +320,57 @@ export default function KitchenPage() {
           <h1 className="text-2xl font-bold">Kitchen Prep</h1>
           <p className="text-sm text-gray-500">Pre-orders grouped by arrival time.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setMode("tonight")}
-            className={`h-11 px-4 rounded-lg border ${mode === "tonight" ? "bg-blue-600 text-white border-blue-600" : "bg-white border-gray-200 text-gray-700"}`}
+            className={`h-11 rounded-lg border px-4 ${mode === "tonight" ? "border-blue-600 bg-blue-600 text-white" : "border-gray-200 bg-white text-gray-700"}`}
           >
             Tonight
           </button>
           <button
             onClick={() => setMode("tomorrow")}
-            className={`h-11 px-4 rounded-lg border ${mode === "tomorrow" ? "bg-blue-600 text-white border-blue-600" : "bg-white border-gray-200 text-gray-700"}`}
+            className={`h-11 rounded-lg border px-4 ${mode === "tomorrow" ? "border-blue-600 bg-blue-600 text-white" : "border-gray-200 bg-white text-gray-700"}`}
           >
             Tomorrow
           </button>
           <button
+            onClick={() => void load(true)}
+            className="h-11 rounded-lg border border-gray-200 bg-white px-4 text-gray-700"
+          >
+            Refresh
+          </button>
+          <button
             onClick={() => window.print()}
-            className="h-11 px-4 rounded-lg border border-gray-200 bg-white text-gray-700"
+            className="h-11 rounded-lg border border-gray-200 bg-white px-4 text-gray-700"
           >
             Print
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow p-4">
-        <h2 className="font-semibold mb-2">Bulk prep summary</h2>
-        {aggregate.starters.length === 0 && aggregate.drinks.length === 0 ? (
+      <div className="no-print flex items-center gap-2 text-xs text-gray-500">
+        <span>Auto-refreshes every 30s</span>
+        {refreshing ? <span>• Refreshing…</span> : null}
+      </div>
+
+      <div className="rounded-xl bg-white p-3 shadow sm:p-5">
+        <h2 className="mb-3 font-semibold">Bulk prep summary</h2>
+        {aggregate.length === 0 ? (
           <p className="text-sm text-gray-500">No pre-orders for this window.</p>
         ) : (
           <div className="space-y-3">
-            <div>
-              <h3 className="text-xs font-semibold text-gray-600 mb-1">STARTERS</h3>
-              <div className="flex flex-wrap gap-2">
-                {aggregate.starters.length === 0 && <span className="text-xs text-gray-500">None</span>}
-                {aggregate.starters.slice(0, 24).map(([name, count]) => (
-                  <span key={`s-${name}`} className="text-xs px-2 py-1 rounded-full border bg-gray-50">
-                    {count}x {name}
-                  </span>
-                ))}
+            {aggregate.map(group => (
+              <div key={group.key}>
+                <h3 className="mb-1 text-xs font-semibold text-gray-600">{group.label}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {group.items.slice(0, 24).map(([name, count]) => (
+                    <span key={`${group.key}-${name}`} className="rounded-full border bg-gray-50 px-2 py-1 text-xs">
+                      {count}x {name}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div>
-              <h3 className="text-xs font-semibold text-gray-600 mb-1">DRINKS</h3>
-              <div className="flex flex-wrap gap-2">
-                {aggregate.drinks.length === 0 && <span className="text-xs text-gray-500">None</span>}
-                {aggregate.drinks.slice(0, 24).map(([name, count]) => (
-                  <span key={`d-${name}`} className="text-xs px-2 py-1 rounded-full border bg-gray-50">
-                    {count}x {name}
-                  </span>
-                ))}
-              </div>
-            </div>
+            ))}
           </div>
         )}
       </div>
@@ -255,38 +378,44 @@ export default function KitchenPage() {
       <div className="space-y-4">
         {times.map(time => (
           <section key={time}>
-            <h3 className="font-bold text-lg mb-2">{formatTime12(time)}</h3>
+            <h3 className="mb-2 text-lg font-bold">{formatTime12(time)}</h3>
             <div className="space-y-3">
               {groupedByTime[time].map(reservation => {
                 const preOrder = reservation.preOrder!;
-                const starterItems = preOrder.items.filter(item => String(item.menuItem.category?.type || "starter") !== "drink");
-                const drinkItems = preOrder.items.filter(item => String(item.menuItem.category?.type || "starter") === "drink");
+                const categoryGroups = groupItemsByCategory(preOrder.items);
                 const byGuest = preOrder.items.reduce<Record<string, PreOrderItem[]>>((acc, item) => {
                   if (!acc[item.guestLabel]) acc[item.guestLabel] = [];
                   acc[item.guestLabel].push(item);
                   return acc;
                 }, {});
+                const workflow = nextWorkflowAction(preOrder.status);
+                const ageMinutes = minutesSince(preOrder.createdAt);
+                const serviceInMinutes = minutesUntil(reservation.date, reservation.time);
+                const actionState = actioning[preOrder.id];
                 return (
-                  <article key={reservation.id} className={`rounded-xl border p-4 ${toneForReservation(reservation)}`}>
-                    <div className="border-b pb-2 mb-2">
-                      <div className="font-semibold">TABLE: {reservation.table?.name || "unassigned"}</div>
-                      <div className="text-sm">
+                  <article key={reservation.id} className={`rounded-xl border p-3 sm:p-5 ${cardToneForStatus(preOrder.status)}`}>
+                    <div className="mb-3 border-b pb-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="font-semibold">TABLE: {reservation.table?.name || "unassigned"}</div>
+                        <span className={`rounded-full border px-2 py-1 text-xs font-medium ${orderAgeTone(ageMinutes)}`}>
+                          Ordered {ageMinutes !== null ? `${ageMinutes} min ago` : "time unknown"}
+                        </span>
+                      </div>
+                      <div className="text-sm sm:text-base">
                         PARTY: {reservation.guestName} ({reservation.partySize} guests) - {formatTime12(reservation.time)}
                       </div>
                       <div className="text-xs text-gray-600">
-                        STATUS: {reservation.status.replaceAll("_", " ")}
-                        {preOrder.status === "confirmed_by_staff" ? " · confirmed by staff ✓" : ""}
+                        STATUS: {reservation.status.replaceAll("_", " ")} · PREORDER: {statusLabel(preOrder.status)}
+                        {serviceInMinutes >= 0 ? ` · service in ${serviceInMinutes}m` : ` · service started ${Math.abs(serviceInMinutes)}m ago`}
                       </div>
                     </div>
 
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <div className="font-semibold">STARTERS:</div>
-                        {starterItems.length === 0 ? (
-                          <div className="text-gray-500 text-xs">None</div>
-                        ) : (
-                          <ul className="list-disc pl-5">
-                            {starterItems.map(item => (
+                    <div className="space-y-3 text-sm sm:text-base">
+                      {categoryGroups.map(group => (
+                        <div key={`${preOrder.id}-${group.key}`}>
+                          <div className="font-semibold">{group.label}:</div>
+                          <ul className="list-disc pl-5 text-sm sm:text-base">
+                            {group.items.map(item => (
                               <li key={item.id}>
                                 {item.quantity}x {item.menuItem.name}
                                 {item.specialInstructions ? ` (${item.specialInstructions})` : ""}
@@ -294,31 +423,16 @@ export default function KitchenPage() {
                               </li>
                             ))}
                           </ul>
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-semibold">DRINKS:</div>
-                        {drinkItems.length === 0 ? (
-                          <div className="text-gray-500 text-xs">None</div>
-                        ) : (
-                          <ul className="list-disc pl-5">
-                            {drinkItems.map(item => (
-                              <li key={item.id}>
-                                {item.quantity}x {item.menuItem.name}
-                                {item.specialInstructions ? ` (${item.specialInstructions})` : ""}
-                                {String(item.menuItem.dietaryTags || "").includes("N") ? " ⚠" : ""}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      {Object.keys(byGuest).length > 1 && (
+                        </div>
+                      ))}
+
+                      {Object.keys(byGuest).length > 1 ? (
                         <details>
                           <summary className="cursor-pointer text-xs text-gray-600">Per guest breakdown</summary>
                           {Object.entries(byGuest).map(([guestLabel, items]) => (
                             <div key={guestLabel}>
                               <div className="font-medium">{guestLabel}:</div>
-                              <ul className="list-disc pl-5">
+                              <ul className="list-disc pl-5 text-sm sm:text-base">
                                 {items.map(item => (
                                   <li key={`guest-${item.id}`}>
                                     {item.quantity}x {item.menuItem.name}
@@ -329,16 +443,39 @@ export default function KitchenPage() {
                             </div>
                           ))}
                         </details>
-                      )}
+                      ) : null}
                     </div>
 
-                    {preOrder.specialNotes && (
-                      <div className="mt-3 text-sm">
+                    {preOrder.specialNotes ? (
+                      <div className="mt-3 text-sm sm:text-base">
                         <span className="font-medium">NOTES:</span> {preOrder.specialNotes}
                       </div>
-                    )}
-                    <div className="mt-2 text-sm">
+                    ) : null}
+
+                    <div className="mt-2 text-sm sm:text-base">
                       <span className="font-medium">PAID:</span> {preOrder.isPaid ? `${formatCents(preOrder.subtotal)} ✓` : "No"}
+                    </div>
+
+                    <div className="no-print mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                      {workflow ? (
+                        <button
+                          onClick={() => void runAction(preOrder.id, workflow.action)}
+                          disabled={Boolean(actionState)}
+                          className="h-11 w-full rounded-lg bg-slate-900 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
+                        >
+                          {actionState === workflow.action ? "Updating..." : workflow.label}
+                        </button>
+                      ) : null}
+
+                      {!preOrder.isPaid && preOrder.subtotal > 0 ? (
+                        <button
+                          onClick={() => void runAction(preOrder.id, "mark_paid")}
+                          disabled={Boolean(actionState)}
+                          className="h-11 w-full rounded-lg border border-emerald-300 bg-emerald-50 px-4 text-sm font-medium text-emerald-800 transition-all duration-200 disabled:opacity-60 sm:w-auto"
+                        >
+                          {actionState === "mark_paid" ? "Updating..." : "Mark Paid"}
+                        </button>
+                      ) : null}
                     </div>
                   </article>
                 );
@@ -348,11 +485,11 @@ export default function KitchenPage() {
         ))}
       </div>
 
-      {times.length === 0 && (
-        <div className="bg-white rounded-xl shadow p-8 text-center text-gray-500">
+      {times.length === 0 ? (
+        <div className="rounded-xl bg-white p-8 text-center text-gray-500 shadow">
           No pre-orders found for {mode}.
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -76,8 +76,9 @@ export default function TermsPage() {
         <section className="space-y-3">
           <SectionHeading id="service-description">2. Description of Service</SectionHeading>
           <p className="text-sm leading-7 text-slate-700">
-            ReserveSit is a restaurant reservation and operations platform that provides booking workflows, guest
-            communication tools, waitlist features, and related management functions through a multi-tenant SaaS model.
+            ReserveSit is a restaurant reservation and operations platform sold as software you can license and own.
+            We provide booking workflows, guest communication tools, waitlist features, and optional managed hosting
+            services for customers who prefer a fully managed deployment.
           </p>
         </section>
 

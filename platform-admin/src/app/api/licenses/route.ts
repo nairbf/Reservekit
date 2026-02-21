@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireSessionFromRequest } from "@/lib/auth";
 import { unauthorized } from "@/lib/api";
 import { prisma } from "@/lib/db";
+import { isAdminOrSuper } from "@/lib/rbac";
 
 export async function GET(req: NextRequest) {
+  let session;
   try {
-    requireSessionFromRequest(req);
+    session = requireSessionFromRequest(req);
   } catch {
     return unauthorized();
+  }
+  if (!isAdminOrSuper(session.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);

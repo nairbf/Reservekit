@@ -137,6 +137,12 @@ export default function InboxPage() {
   const [loaded, setLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [counterModal, setCounterModal] = useState<{
+    reservationId: number;
+    guestName: string;
+    timeInput: string;
+    error: string;
+  } | null>(null);
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "inbox";
 
   const load = useCallback(async () => {
@@ -205,6 +211,17 @@ export default function InboxPage() {
       body: JSON.stringify({ action, ...extra }),
     });
     load();
+  }
+
+  async function submitCounterOffer() {
+    if (!counterModal) return;
+    const normalized = normalizeTimeInput(counterModal.timeInput);
+    if (!normalized) {
+      setCounterModal((prev) => (prev ? { ...prev, error: "Enter a valid time like 7:30 PM or 19:30." } : prev));
+      return;
+    }
+    await doAction(counterModal.reservationId, "counter", { newTime: normalized });
+    setCounterModal(null);
   }
 
   if (!loaded) {
@@ -361,16 +378,12 @@ export default function InboxPage() {
                 </button>
                 <button onClick={() => doAction(r.id, "decline")} className="h-11 w-full rounded bg-red-600 text-white text-sm font-medium transition-all duration-200">Decline</button>
                 <button
-                  onClick={() => {
-                    const t = prompt("Propose new time (h:mm AM/PM or HH:MM):", fmt12(r.time));
-                    if (!t) return;
-                    const normalized = normalizeTimeInput(t);
-                    if (!normalized) {
-                      alert("Enter a valid time like 7:30 PM or 19:30.");
-                      return;
-                    }
-                    doAction(r.id, "counter", { newTime: normalized });
-                  }}
+                  onClick={() => setCounterModal({
+                    reservationId: r.id,
+                    guestName: r.guestName || "Guest",
+                    timeInput: fmt12(r.time),
+                    error: "",
+                  })}
                   className="h-11 w-full rounded bg-amber-500 text-white text-sm font-medium transition-all duration-200"
                 >
                   Counter
@@ -380,6 +393,45 @@ export default function InboxPage() {
           );
         })}
       </div>
+
+      {counterModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl sm:p-5">
+            <div className="mb-3">
+              <h2 className="text-lg font-semibold">Propose New Time</h2>
+              <p className="text-sm text-gray-500">{counterModal.guestName}</p>
+            </div>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-gray-700">New time</span>
+              <input
+                value={counterModal.timeInput}
+                onChange={(event) => setCounterModal((prev) => (prev ? { ...prev, timeInput: event.target.value, error: "" } : prev))}
+                placeholder="7:30 PM or 19:30"
+                className="h-11 w-full rounded border border-gray-300 px-3 text-sm"
+              />
+            </label>
+            {counterModal.error ? (
+              <p className="mt-2 text-sm text-red-600">{counterModal.error}</p>
+            ) : null}
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setCounterModal(null)}
+                className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => submitCounterOffer()}
+                className="h-10 w-full rounded bg-amber-500 px-4 text-sm font-medium text-white transition-all duration-200 sm:w-auto"
+              >
+                Send Counter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

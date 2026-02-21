@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 const faqs = [
-  { q: "How is ReserveSit different from OpenTable?", a: "OpenTable charges per cover and per month, owns your guest data, and can cost $3,000-$7,000/year. ReserveSit is a one-time license - you own it outright, keep all your data, and pay nothing per cover." },
+  { q: "How is ReserveSit different from OpenTable?", a: "OpenTable charges per cover and per month, owns your guest data, and starts around ~$3,000-$3,600/year on entry-level plans. ReserveSit is a one-time license ($2,199 / $2,999 / $3,799) - you own it outright, keep all your data, and pay nothing per cover." },
   { q: "How do I migrate from OpenTable/Resy?", a: "We'll help you set up your instance and import your existing reservation data. The setup wizard walks you through restaurant basics, tables, and operating rules in under 30 minutes. Your guests can start booking immediately." },
   { q: "Can I try it before buying?", a: "Yes! Our live demo at demo.reservesit.com is a fully working instance with real data that resets nightly. No sign-up required." },
   { q: "What happens after I purchase?", a: "You receive onboarding instructions immediately. Hosted setup is completed within 24 hours." },
@@ -25,7 +25,7 @@ const faqs = [
   { q: "How does data migration work?", a: "We offer guided CSV import and migration assistance during onboarding." },
   { q: "Do you integrate with my POS?", a: "We support one-way POS sync options where available and can tailor setup for your stack." },
   { q: "What happens if I don't renew managed hosting?", a: "Your software license is permanent - it never expires. If you don't renew managed hosting, you can self-host the software on your own server. We'll help you transition if needed." },
-  { q: "What happens if I want to cancel?", a: "Monthly hosted plans can be canceled anytime. One-time license purchases include a 30-day money-back guarantee. Your data is always exportable." },
+  { q: "What happens if I want to cancel?", a: "Your one-time license fee is permanent - you own the software forever. Annual managed hosting ($1,200/year) covers your dedicated server, SSL, backups, updates, and monitoring. If you cancel hosting, you keep your license and can self-host the software." },
 ];
 
 export function FaqAccordion() {

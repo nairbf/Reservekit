@@ -306,6 +306,22 @@ export default function TonightPage() {
   } | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
+  const [walkinModalOpen, setWalkinModalOpen] = useState(false);
+  const [walkinForm, setWalkinForm] = useState({
+    guestName: "",
+    partySize: "2",
+    tableId: "",
+  });
+  const [walkinSaving, setWalkinSaving] = useState(false);
+  const [walkinError, setWalkinError] = useState("");
+  const [seatModal, setSeatModal] = useState<{
+    reservationId: number;
+    guestName: string;
+    partySize: number;
+    tableId: string;
+  } | null>(null);
+  const [seatSaving, setSeatSaving] = useState(false);
+  const [seatError, setSeatError] = useState("");
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "tonight";
 
   if (!canViewTonight) return <AccessDenied />;
@@ -406,11 +422,71 @@ export default function TonightPage() {
   }
 
   async function addWalkin() {
-    const name = prompt("Guest name:"); if (!name) return;
-    const size = prompt("Party size:", "2"); if (!size) return;
-    const tid = prompt("Table ID (or leave blank):");
-    await fetch("/api/reservations/staff-create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ guestName: name, partySize: parseInt(size), source: "walkin", tableId: tid ? parseInt(tid) : null }) });
-    Promise.all([load(), loadUpcoming()]);
+    const guestName = walkinForm.guestName.trim();
+    const partySize = Math.max(1, Math.trunc(Number(walkinForm.partySize) || 0));
+    const tableId = walkinForm.tableId ? Number(walkinForm.tableId) : null;
+    if (!guestName) {
+      setWalkinError("Guest name is required.");
+      return;
+    }
+    if (!Number.isFinite(partySize) || partySize < 1) {
+      setWalkinError("Party size must be at least 1.");
+      return;
+    }
+
+    setWalkinSaving(true);
+    setWalkinError("");
+    try {
+      const response = await fetch("/api/reservations/staff-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guestName,
+          partySize,
+          source: "walkin",
+          tableId,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setWalkinError(String(payload?.error || "Unable to add walk-in."));
+        return;
+      }
+      setWalkinModalOpen(false);
+      setWalkinForm({ guestName: "", partySize: "2", tableId: "" });
+      await Promise.all([load(), loadUpcoming()]);
+    } finally {
+      setWalkinSaving(false);
+    }
+  }
+
+  function openSeatModal(reservation: Reservation) {
+    setSeatError("");
+    setSeatModal({
+      reservationId: reservation.id,
+      guestName: reservation.guestName || "Guest",
+      partySize: Math.max(1, reservation.partySize || 1),
+      tableId: reservation.table?.id ? String(reservation.table.id) : "",
+    });
+  }
+
+  async function confirmSeat() {
+    if (!seatModal) return;
+    setSeatSaving(true);
+    setSeatError("");
+    try {
+      const tableId = seatModal.tableId ? Number(seatModal.tableId) : null;
+      await doAction(
+        seatModal.reservationId,
+        "seat",
+        tableId ? { tableId } : {},
+      );
+      setSeatModal(null);
+    } catch {
+      setSeatError("Unable to seat this reservation right now.");
+    } finally {
+      setSeatSaving(false);
+    }
   }
 
   function openEditModal(reservation: Reservation) {
@@ -595,7 +671,15 @@ export default function TonightPage() {
           >
             Today
           </button>
-          <button onClick={addWalkin} className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">+ Walk-in</button>
+          <button
+            onClick={() => {
+              setWalkinError("");
+              setWalkinModalOpen(true);
+            }}
+            className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200"
+          >
+            + Walk-in
+          </button>
         </div>
       </div>
 
@@ -787,7 +871,12 @@ export default function TonightPage() {
                       <button onClick={() => doAction(r.id, "arrive")} className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 text-xs transition-all duration-200">Arrived</button>
                     )}
                     {(["arrived", "approved", "confirmed"].includes(r.status)) && (
-                      <button onClick={() => { const tid = prompt("Table ID:"); doAction(r.id, "seat", tid ? { tableId: parseInt(tid) } : {}); }} className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-green-50 text-green-800 border border-green-200 text-xs transition-all duration-200">Seat</button>
+                      <button
+                        onClick={() => openSeatModal(r)}
+                        className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-green-50 text-green-800 border border-green-200 text-xs transition-all duration-200"
+                      >
+                        Seat
+                      </button>
                     )}
                     {r.status === "seated" && (
                       <button onClick={() => doAction(r.id, "complete")} className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-gray-100 text-gray-700 border border-gray-200 text-xs transition-all duration-200">Complete</button>
@@ -805,6 +894,138 @@ export default function TonightPage() {
 
       {flowSections.length === 0 && (
         <div className="bg-white rounded-xl shadow p-8 text-center text-gray-500">No reservations for today yet.</div>
+      )}
+
+      {walkinModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl sm:p-5">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Add Walk-in</h2>
+                <p className="text-xs text-gray-500">Create a walk-in reservation for the service board.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !walkinSaving && setWalkinModalOpen(false)}
+                className="h-9 w-9 rounded border border-gray-200 text-gray-600"
+                aria-label="Close walk-in modal"
+              >
+                X
+              </button>
+            </div>
+            <div className="space-y-3">
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-gray-700">Guest name</span>
+                <input
+                  value={walkinForm.guestName}
+                  onChange={(event) => setWalkinForm((prev) => ({ ...prev, guestName: event.target.value }))}
+                  className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-gray-700">Party size</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={walkinForm.partySize}
+                    onChange={(event) => setWalkinForm((prev) => ({ ...prev, partySize: event.target.value }))}
+                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-gray-700">Table</span>
+                  <select
+                    value={walkinForm.tableId}
+                    onChange={(event) => setWalkinForm((prev) => ({ ...prev, tableId: event.target.value }))}
+                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                  >
+                    <option value="">Unassigned</option>
+                    {tables.map((table) => (
+                      <option key={table.id} value={table.id}>
+                        {table.name} ({table.maxCapacity}-top)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+            {walkinError && <p className="mt-3 text-sm text-red-600">{walkinError}</p>}
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setWalkinModalOpen(false)}
+                className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={addWalkin}
+                disabled={walkinSaving}
+                className="h-10 w-full rounded bg-blue-600 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
+              >
+                {walkinSaving ? "Adding..." : "Add walk-in"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {seatModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl sm:p-5">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Seat Reservation</h2>
+                <p className="text-xs text-gray-500">{seatModal.guestName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !seatSaving && setSeatModal(null)}
+                className="h-9 w-9 rounded border border-gray-200 text-gray-600"
+                aria-label="Close seat modal"
+              >
+                X
+              </button>
+            </div>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-gray-700">Assign table (optional)</span>
+              <select
+                value={seatModal.tableId}
+                onChange={(event) => setSeatModal((prev) => (prev ? { ...prev, tableId: event.target.value } : prev))}
+                className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+              >
+                <option value="">Unassigned</option>
+                {tables
+                  .filter((table) => table.maxCapacity >= seatModal.partySize)
+                  .map((table) => (
+                    <option key={table.id} value={table.id}>
+                      {table.name} ({table.maxCapacity}-top)
+                    </option>
+                  ))}
+              </select>
+            </label>
+            {seatError && <p className="mt-3 text-sm text-red-600">{seatError}</p>}
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setSeatModal(null)}
+                className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmSeat}
+                disabled={seatSaving}
+                className="h-10 w-full rounded bg-green-600 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
+              >
+                {seatSaving ? "Seating..." : "Confirm Seat"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {editingReservation && (

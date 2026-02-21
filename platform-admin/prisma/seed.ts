@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient, PlatformRole, RestaurantPlan, RestaurantStatus, LicenseEventType, HostingStatus } from "../src/generated/prisma/client";
@@ -9,7 +9,10 @@ const adapter = new PrismaBetterSqlite3({
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const passwordHash = await bcrypt.hash("admin123", 12);
+  // Change this password immediately after first login.
+  const generatedSeedPassword = randomBytes(24).toString("base64url");
+  const seedPassword = process.env.PLATFORM_ADMIN_SEED_PASSWORD?.trim() || generatedSeedPassword;
+  const passwordHash = await bcrypt.hash(seedPassword, 12);
 
   await prisma.platformUser.upsert({
     where: { email: "admin@reservesit.com" },
@@ -91,7 +94,12 @@ async function main() {
     });
   }
 
-  console.log("Seed complete.");
+  if (process.env.PLATFORM_ADMIN_SEED_PASSWORD?.trim()) {
+    console.log("Seed complete. Platform admin password loaded from PLATFORM_ADMIN_SEED_PASSWORD.");
+  } else {
+    console.log("Seed complete.");
+    console.log(`Generated platform admin password for admin@reservesit.com: ${seedPassword}`);
+  }
 }
 
 main()

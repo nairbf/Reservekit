@@ -147,10 +147,14 @@ async function seedRestaurantDatabase(options: {
 }
 
 export async function GET(req: NextRequest) {
+  let session;
   try {
-    requireSessionFromRequest(req);
+    session = requireSessionFromRequest(req);
   } catch {
     return unauthorized();
+  }
+  if (!isAdminOrSuper(session.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);

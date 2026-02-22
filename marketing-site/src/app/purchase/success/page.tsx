@@ -93,7 +93,7 @@ export default async function PurchaseSuccessPage({ searchParams }: SuccessPageP
           </ol>
           {showTrial ? (
             <p className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
-              Your 14-day managed hosting trial starts now.
+              Your first year of managed hosting is included free.
             </p>
           ) : null}
         </div>

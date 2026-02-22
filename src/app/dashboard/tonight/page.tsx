@@ -958,244 +958,266 @@ export default function TonightPage() {
       )}
 
       {walkinModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl sm:p-5">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">Add Walk-in</h2>
-                <p className="text-xs text-gray-500">Create a walk-in reservation for the service board.</p>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-screen w-full flex-col overflow-hidden rounded-t-xl bg-white shadow-xl sm:max-h-[90vh] sm:max-w-md sm:rounded-xl">
+            <div className="sticky top-0 z-10 border-b border-gray-200 bg-white p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Add Walk-in</h2>
+                  <p className="text-xs text-gray-500">Create a walk-in reservation for the service board.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !walkinSaving && setWalkinModalOpen(false)}
+                  className="h-9 w-9 rounded border border-gray-200 text-gray-600"
+                  aria-label="Close walk-in modal"
+                >
+                  X
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => !walkinSaving && setWalkinModalOpen(false)}
-                className="h-9 w-9 rounded border border-gray-200 text-gray-600"
-                aria-label="Close walk-in modal"
-              >
-                X
-              </button>
             </div>
-            <div className="space-y-3">
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium text-gray-700">Guest name</span>
-                <input
-                  value={walkinForm.guestName}
-                  onChange={(event) => setWalkinForm((prev) => ({ ...prev, guestName: event.target.value }))}
-                  className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
-                />
-              </label>
-              <div className="grid gap-3 sm:grid-cols-2">
+
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+              <div className="space-y-3">
                 <label className="block text-sm">
-                  <span className="mb-1 block font-medium text-gray-700">Party size</span>
+                  <span className="mb-1 block font-medium text-gray-700">Guest name</span>
                   <input
-                    type="number"
-                    min={1}
-                    value={walkinForm.partySize}
-                    onChange={(event) => setWalkinForm((prev) => ({ ...prev, partySize: event.target.value }))}
+                    value={walkinForm.guestName}
+                    onChange={(event) => setWalkinForm((prev) => ({ ...prev, guestName: event.target.value }))}
                     className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
                   />
                 </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium text-gray-700">Table</span>
-                  <select
-                    value={walkinForm.tableId}
-                    onChange={(event) => setWalkinForm((prev) => ({ ...prev, tableId: event.target.value }))}
-                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
-                  >
-                    <option value="">Unassigned</option>
-                    {tables.map((table) => (
-                      <option key={table.id} value={table.id}>
-                        {table.name} ({table.maxCapacity}-top)
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-gray-700">Party size</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={walkinForm.partySize}
+                      onChange={(event) => setWalkinForm((prev) => ({ ...prev, partySize: event.target.value }))}
+                      className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-gray-700">Table</span>
+                    <select
+                      value={walkinForm.tableId}
+                      onChange={(event) => setWalkinForm((prev) => ({ ...prev, tableId: event.target.value }))}
+                      className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                    >
+                      <option value="">Unassigned</option>
+                      {tables.map((table) => (
+                        <option key={table.id} value={table.id}>
+                          {table.name} ({table.maxCapacity}-top)
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </div>
+              {walkinError && <p className="mt-3 text-sm text-red-600">{walkinError}</p>}
             </div>
-            {walkinError && <p className="mt-3 text-sm text-red-600">{walkinError}</p>}
-            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setWalkinModalOpen(false)}
-                className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={addWalkin}
-                disabled={walkinSaving}
-                className="h-10 w-full rounded bg-blue-600 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
-              >
-                {walkinSaving ? "Adding..." : "Add walk-in"}
-              </button>
+
+            <div className="sticky bottom-0 border-t border-gray-200 bg-white p-3 sm:p-4">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setWalkinModalOpen(false)}
+                  className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={addWalkin}
+                  disabled={walkinSaving}
+                  className="h-10 w-full rounded bg-blue-600 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
+                >
+                  {walkinSaving ? "Adding..." : "Add walk-in"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {seatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl sm:p-5">
-            <div className="mb-3 flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">Seat Reservation</h2>
-                <p className="text-xs text-gray-500">{seatModal.guestName}</p>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-screen w-full flex-col overflow-hidden rounded-t-xl bg-white shadow-xl sm:max-h-[90vh] sm:max-w-md sm:rounded-xl">
+            <div className="sticky top-0 z-10 border-b border-gray-200 bg-white p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Seat Reservation</h2>
+                  <p className="text-xs text-gray-500">{seatModal.guestName}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !seatSaving && setSeatModal(null)}
+                  className="h-9 w-9 rounded border border-gray-200 text-gray-600"
+                  aria-label="Close seat modal"
+                >
+                  X
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => !seatSaving && setSeatModal(null)}
-                className="h-9 w-9 rounded border border-gray-200 text-gray-600"
-                aria-label="Close seat modal"
-              >
-                X
-              </button>
             </div>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-gray-700">Assign table (optional)</span>
-              <select
-                value={seatModal.tableId}
-                onChange={(event) => setSeatModal((prev) => (prev ? { ...prev, tableId: event.target.value } : prev))}
-                className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
-              >
-                <option value="">Unassigned</option>
-                {tables
-                  .filter((table) => table.maxCapacity >= seatModal.partySize)
-                  .map((table) => (
-                    <option key={table.id} value={table.id}>
-                      {table.name} ({table.maxCapacity}-top)
-                    </option>
-                  ))}
-              </select>
-            </label>
-            {seatError && <p className="mt-3 text-sm text-red-600">{seatError}</p>}
-            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setSeatModal(null)}
-                className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmSeat}
-                disabled={seatSaving}
-                className="h-10 w-full rounded bg-green-600 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
-              >
-                {seatSaving ? "Seating..." : "Confirm Seat"}
-              </button>
+
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-gray-700">Assign table (optional)</span>
+                <select
+                  value={seatModal.tableId}
+                  onChange={(event) => setSeatModal((prev) => (prev ? { ...prev, tableId: event.target.value } : prev))}
+                  className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                >
+                  <option value="">Unassigned</option>
+                  {tables
+                    .filter((table) => table.maxCapacity >= seatModal.partySize)
+                    .map((table) => (
+                      <option key={table.id} value={table.id}>
+                        {table.name} ({table.maxCapacity}-top)
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {seatError && <p className="mt-3 text-sm text-red-600">{seatError}</p>}
+            </div>
+
+            <div className="sticky bottom-0 border-t border-gray-200 bg-white p-3 sm:p-4">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSeatModal(null)}
+                  className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmSeat}
+                  disabled={seatSaving}
+                  className="h-10 w-full rounded bg-green-600 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
+                >
+                  {seatSaving ? "Seating..." : "Confirm Seat"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {editingReservation && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-4 shadow-xl sm:p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">Edit Reservation</h2>
-                <p className="text-xs text-gray-500">Update booking details and table assignment.</p>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-screen w-full flex-col overflow-hidden rounded-t-xl bg-white shadow-xl sm:max-h-[90vh] sm:max-w-lg sm:rounded-xl">
+            <div className="sticky top-0 z-10 border-b border-gray-200 bg-white p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Edit Reservation</h2>
+                  <p className="text-xs text-gray-500">Update booking details and table assignment.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="h-9 w-9 rounded border border-gray-200 text-gray-600"
+                  aria-label="Close edit modal"
+                >X</button>
               </div>
-              <button
-                type="button"
-                onClick={closeEditModal}
-                className="h-9 w-9 rounded border border-gray-200 text-gray-600"
-                aria-label="Close edit modal"
-              >X</button>
             </div>
 
-            <div className="space-y-3">
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium text-gray-700">Guest name</span>
-                <input
-                  value={editingReservation.guestName}
-                  onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, guestName: event.target.value } : prev))}
-                  className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
-                />
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+              <div className="space-y-3">
                 <label className="block text-sm">
-                  <span className="mb-1 block font-medium text-gray-700">Date</span>
+                  <span className="mb-1 block font-medium text-gray-700">Guest name</span>
                   <input
-                    type="date"
-                    value={editingReservation.date}
-                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, date: event.target.value } : prev))}
+                    value={editingReservation.guestName}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, guestName: event.target.value } : prev))}
                     className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
                   />
                 </label>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-gray-700">Date</span>
+                    <input
+                      type="date"
+                      value={editingReservation.date}
+                      onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, date: event.target.value } : prev))}
+                      className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-gray-700">Time</span>
+                    <input
+                      type="time"
+                      value={editingReservation.time}
+                      onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, time: event.target.value } : prev))}
+                      className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-gray-700">Party size</span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={editingReservation.partySize}
+                      onChange={(event) => {
+                        const parsed = Math.max(1, Math.trunc(Number(event.target.value) || 1));
+                        setEditingReservation((prev) => (prev ? { ...prev, partySize: parsed } : prev));
+                      }}
+                      className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-gray-700">Table</span>
+                    <select
+                      value={editingReservation.tableId}
+                      onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, tableId: event.target.value } : prev))}
+                      className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                    >
+                      <option value="">Unassigned</option>
+                      {tables.map((table) => (
+                        <option key={table.id} value={table.id}>
+                          {table.name} ({table.maxCapacity}-top)
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
                 <label className="block text-sm">
-                  <span className="mb-1 block font-medium text-gray-700">Time</span>
-                  <input
-                    type="time"
-                    value={editingReservation.time}
-                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, time: event.target.value } : prev))}
-                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
+                  <span className="mb-1 block font-medium text-gray-700">Special requests</span>
+                  <textarea
+                    rows={3}
+                    value={editingReservation.specialRequests}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, specialRequests: event.target.value } : prev))}
+                    className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
                   />
                 </label>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium text-gray-700">Party size</span>
-                  <input
-                    type="number"
-                    min={1}
-                    value={editingReservation.partySize}
-                    onChange={(event) => {
-                      const parsed = Math.max(1, Math.trunc(Number(event.target.value) || 1));
-                      setEditingReservation((prev) => (prev ? { ...prev, partySize: parsed } : prev));
-                    }}
-                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium text-gray-700">Table</span>
-                  <select
-                    value={editingReservation.tableId}
-                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, tableId: event.target.value } : prev))}
-                    className="h-10 w-full rounded border border-gray-300 px-3 text-sm"
-                  >
-                    <option value="">Unassigned</option>
-                    {tables.map((table) => (
-                      <option key={table.id} value={table.id}>
-                        {table.name} ({table.maxCapacity}-top)
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium text-gray-700">Special requests</span>
-                <textarea
-                  rows={3}
-                  value={editingReservation.specialRequests}
-                  onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, specialRequests: event.target.value } : prev))}
-                  className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
-                />
-              </label>
+              {editError && <p className="mt-3 text-sm text-red-600">{editError}</p>}
             </div>
 
-            {editError && <p className="mt-3 text-sm text-red-600">{editError}</p>}
-
-            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={closeEditModal}
-                className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={saveReservationEdit}
-                disabled={editSaving}
-                className="h-10 w-full rounded bg-blue-600 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
-              >
-                {editSaving ? "Saving..." : "Save changes"}
-              </button>
+            <div className="sticky bottom-0 border-t border-gray-200 bg-white p-3 sm:p-4">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className="h-10 w-full rounded border border-gray-300 px-4 text-sm text-gray-700 sm:w-auto"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveReservationEdit}
+                  disabled={editSaving}
+                  className="h-10 w-full rounded bg-blue-600 px-4 text-sm font-medium text-white transition-all duration-200 disabled:opacity-60 sm:w-auto"
+                >
+                  {editSaving ? "Saving..." : "Save changes"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

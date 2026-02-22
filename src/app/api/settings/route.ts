@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, requirePermission } from "@/lib/auth";
+import { ensureLicenseSettings } from "@/lib/license-sync";
 
 function maskValue(value: string, prefixLength: number): string {
   if (!value) return value;
@@ -153,11 +154,14 @@ function maskSensitiveSetting(key: string, value: string): string | null {
 }
 
 export async function GET() {
+  let session: Awaited<ReturnType<typeof requirePermission>>;
   try {
-    await requirePermission("manage_settings");
+    session = await requirePermission("manage_settings");
   } catch {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  await ensureLicenseSettings(session.email);
 
   const rows = await prisma.setting.findMany();
   const response: Record<string, string> = {};

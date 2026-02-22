@@ -30,6 +30,83 @@ type OverviewResponse = {
   }>;
 };
 
+function emptyOverview(): OverviewResponse {
+  return {
+    totals: {
+      restaurants: 0,
+      activeRestaurants: 0,
+      oneTimeRevenue: 0,
+      monthlyRevenue: 0,
+      totalRevenue: 0,
+    },
+    byPlan: {
+      CORE: 0,
+      SERVICE_PRO: 0,
+      FULL_SUITE: 0,
+    },
+    byStatus: {
+      ACTIVE: 0,
+      SUSPENDED: 0,
+      TRIAL: 0,
+      CANCELLED: 0,
+    },
+    healthSummary: {
+      HEALTHY: 0,
+      UNHEALTHY: 0,
+      UNREACHABLE: 0,
+    },
+    recentLicenseEvents: [],
+  };
+}
+
+function normalizeOverview(payload: unknown): OverviewResponse {
+  const base = emptyOverview();
+  if (!payload || typeof payload !== "object") return base;
+
+  const row = payload as Partial<OverviewResponse>;
+  return {
+    totals: {
+      restaurants: Number(row.totals?.restaurants || 0),
+      activeRestaurants: Number(row.totals?.activeRestaurants || 0),
+      oneTimeRevenue: Number(row.totals?.oneTimeRevenue || 0),
+      monthlyRevenue: Number(row.totals?.monthlyRevenue || 0),
+      totalRevenue: Number(row.totals?.totalRevenue || 0),
+    },
+    byPlan: {
+      CORE: Number(row.byPlan?.CORE || 0),
+      SERVICE_PRO: Number(row.byPlan?.SERVICE_PRO || 0),
+      FULL_SUITE: Number(row.byPlan?.FULL_SUITE || 0),
+    },
+    byStatus: {
+      ACTIVE: Number(row.byStatus?.ACTIVE || 0),
+      SUSPENDED: Number(row.byStatus?.SUSPENDED || 0),
+      TRIAL: Number(row.byStatus?.TRIAL || 0),
+      CANCELLED: Number(row.byStatus?.CANCELLED || 0),
+    },
+    healthSummary: {
+      HEALTHY: Number(row.healthSummary?.HEALTHY || 0),
+      UNHEALTHY: Number(row.healthSummary?.UNHEALTHY || 0),
+      UNREACHABLE: Number(row.healthSummary?.UNREACHABLE || 0),
+    },
+    recentLicenseEvents: Array.isArray(row.recentLicenseEvents)
+      ? row.recentLicenseEvents.map((event) => ({
+        id: String(event.id || ""),
+        event: String(event.event || ""),
+        details: event.details || null,
+        performedBy: event.performedBy || null,
+        createdAt: String(event.createdAt || ""),
+        restaurant: event.restaurant
+          ? {
+            id: String(event.restaurant.id || ""),
+            name: String(event.restaurant.name || ""),
+            slug: String(event.restaurant.slug || ""),
+          }
+          : null,
+      }))
+      : [],
+  };
+}
+
 function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -56,22 +133,25 @@ function BarRow({ label, value, max }: { label: string; value: number; max: numb
 }
 
 export default function DashboardOverviewPage() {
-  const [data, setData] = useState<OverviewResponse | null>(null);
-  const [error, setError] = useState("");
+  const [data, setData] = useState<OverviewResponse>(emptyOverview());
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    setError("");
+    setError(null);
     try {
       const res = await fetch("/api/dashboard/overview", { cache: "no-store" });
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        throw new Error(payload?.error || "Failed to load dashboard overview");
+        setError("Using fallback data while overview service recovers.");
+        setData(emptyOverview());
+        return;
       }
-      const payload = (await res.json()) as OverviewResponse;
-      setData(payload);
+      const payload = await res.json().catch(() => ({}));
+      setData(normalizeOverview(payload));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard overview");
+      console.error("[PLATFORM DASHBOARD] Overview fetch failed", err);
+      setError("Using fallback data while overview service recovers.");
+      setData(emptyOverview());
     } finally {
       setLoading(false);
     }
@@ -85,19 +165,16 @@ export default function DashboardOverviewPage() {
     return <div className="rounded-2xl border border-slate-200 bg-white p-5">Loading overview...</div>;
   }
 
-  if (error || !data) {
-    return (
-      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
-        {error || "Could not load overview"}
-      </div>
-    );
-  }
-
   const maxPlan = Math.max(...Object.values(data.byPlan), 0);
   const maxStatus = Math.max(...Object.values(data.byStatus), 0);
 
   return (
     <div className="space-y-6">
+      {error ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          {error}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Platform Overview</h1>

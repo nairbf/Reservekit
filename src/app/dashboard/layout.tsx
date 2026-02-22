@@ -4,7 +4,6 @@ import { getAppUrl } from "@/lib/app-url";
 import { getEnabledFeatures } from "@/lib/features";
 import { PermissionsProvider } from "@/hooks/use-permissions";
 import DashboardNav from "./DashboardNav";
-import SetupTourCoach from "./SetupTourCoach";
 import { DemoModeBanner } from "./demo-mode-banner";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -29,7 +28,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <PermissionsProvider permissions={permissionList}>{children}</PermissionsProvider>
         </div>
       </main>
-      <SetupTourCoach />
     </div>
   );
 }

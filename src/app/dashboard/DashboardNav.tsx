@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Menu, PanelLeftClose } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { PermissionKey } from "@/lib/permissions";
 
@@ -45,7 +45,6 @@ export default function DashboardNav({
   const [restaurantName, setRestaurantName] = useState("ReserveSit");
 
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   const permissionSet = useMemo(() => new Set(permissions as PermissionKey[]), [permissions]);
@@ -57,7 +56,6 @@ export default function DashboardNav({
     if (item.href === "/dashboard/admin" && !canAccessAdmin) return false;
     return permissionSet.has(item.permission as PermissionKey);
   });
-  const inSetupPreview = searchParams.get("fromSetup") === "1";
 
   useEffect(() => {
     const persisted = typeof window !== "undefined" ? window.localStorage.getItem(SIDEBAR_STORAGE_KEY) : null;
@@ -79,53 +77,25 @@ export default function DashboardNav({
   useEffect(() => {
     let active = true;
 
-    async function loadSetupState() {
+    async function loadRestaurantSettings() {
       try {
-        const [settingsResponse, meResponse] = await Promise.all([
-          fetch("/api/settings/public"),
-          fetch("/api/auth/me"),
-        ]);
+        const settingsResponse = await fetch("/api/settings/public");
         if (!active) return;
 
-        const settings = settingsResponse.ok
-          ? await settingsResponse.json()
-          : {};
+        const settings = settingsResponse.ok ? await settingsResponse.json() : {};
         if (!active) return;
 
         if (settings.restaurantName) setRestaurantName(settings.restaurantName);
-
-        const setupDone = settings.setupWizardCompleted === "true";
-        const me = meResponse.ok ? await meResponse.json().catch(() => ({})) : {};
-        const role = String(me?.role || "").toLowerCase();
-        const isSetupOwner = role === "admin" || role === "owner";
-
-        const host = (typeof window !== "undefined" ? window.location.host : "").toLowerCase();
-        const isDemoHost = host.includes("demo.reservesit.com");
-        const isPlatformAdminHost = host.includes("admin.reservesit.com");
-        const shouldSkipWizard = isDemoHost || isPlatformAdminHost;
-
-        const shouldShowWizard = !setupDone && isSetupOwner && !shouldSkipWizard;
-
-        if (pathname === "/dashboard/setup") {
-          if (!shouldShowWizard) {
-            router.replace("/dashboard");
-          }
-          return;
-        }
-
-        if (shouldShowWizard && !inSetupPreview) {
-          router.replace("/dashboard/setup");
-        }
       } catch {
         // ignore
       }
     }
 
-    loadSetupState();
+    loadRestaurantSettings();
     return () => {
       active = false;
     };
-  }, [inSetupPreview, pathname, router]);
+  }, []);
 
   useEffect(() => {
     setMobileOpen(false);

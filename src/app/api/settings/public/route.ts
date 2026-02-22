@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { ensureLicenseSettings } from "@/lib/license-sync";
 
 const PUBLIC_SETTINGS_KEYS = new Set([
   "restaurantName",
@@ -69,6 +70,10 @@ const PUBLIC_SETTINGS_KEYS = new Set([
   "feature_reporting",
   "feature_guest_history",
   "feature_event_ticketing",
+  "license_plan",
+  "license_status",
+  "license_valid",
+  "license_last_check",
   "license_expressdining",
 ]);
 
@@ -81,11 +86,14 @@ function isSafePublicKey(key: string) {
 }
 
 export async function GET() {
+  let session: Awaited<ReturnType<typeof requireAuth>>;
   try {
-    await requireAuth();
+    session = await requireAuth();
   } catch {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  await ensureLicenseSettings(session.email);
 
   const settings = await prisma.setting.findMany();
   const response: Record<string, string> = {};

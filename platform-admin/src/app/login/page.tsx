@@ -41,22 +41,9 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-8">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,#1e293b_0%,#020617_55%)]" />
       <div className="relative grid w-full max-w-4xl gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-slate-100 shadow-2xl backdrop-blur">
-          <p className="text-xs uppercase tracking-[0.2em] text-sky-300">ReserveSit</p>
-          <h1 className="mt-2 text-3xl font-semibold">Platform Control Center</h1>
-          <p className="mt-3 text-sm text-slate-300">
-            Manage customer restaurants, licenses, and system health from one internal admin portal.
-          </p>
-          <ul className="mt-6 space-y-2 text-sm text-slate-300">
-            <li>• Provision new restaurants with auto ports and license keys</li>
-            <li>• Track health checks and license activity in real time</li>
-            <li>• Manage team roles: super admin, admin, and support</li>
-          </ul>
-        </div>
-
         <form
           onSubmit={onSubmit}
-          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl md:order-last"
         >
           <h2 className="text-2xl font-semibold text-slate-900">Admin Login</h2>
           <p className="mt-1 text-sm text-slate-500">Use your platform credentials.</p>
@@ -98,6 +85,19 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
+
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-slate-100 shadow-2xl backdrop-blur md:order-first">
+          <p className="text-xs uppercase tracking-[0.2em] text-sky-300">ReserveSit</p>
+          <h1 className="mt-2 text-3xl font-semibold">Platform Control Center</h1>
+          <p className="mt-3 text-sm text-slate-300">
+            Manage customer restaurants, licenses, and system health from one internal admin portal.
+          </p>
+          <ul className="mt-6 space-y-2 text-sm text-slate-300">
+            <li>• Provision new restaurants with auto ports and license keys</li>
+            <li>• Track health checks and license activity in real time</li>
+            <li>• Manage team roles: super admin, admin, and support</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

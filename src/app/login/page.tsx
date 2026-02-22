@@ -24,39 +24,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 px-4 py-10 md:py-16">
       <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-6">
-        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-2">ReserveSit Platform</p>
-          <h1 className="text-3xl font-bold text-gray-900">Run service, not spreadsheets.</h1>
-          <p className="mt-3 text-gray-600">
-            ReserveSit helps your team manage reservations, waitlists, floor plans, deposits, and event ticketing in one place.
-          </p>
-          <div className="mt-6 space-y-3 text-sm text-gray-700">
-            <div className="flex items-start gap-2">
-              <span className="text-blue-700 font-bold">•</span>
-              <span>Live dashboard for inbox, tonight&apos;s service, guests, and table flow.</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-700 font-bold">•</span>
-              <span>Automated email + SMS notifications, reminders, and no-show protection.</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <span className="text-blue-700 font-bold">•</span>
-              <span>Optional SpotOn status sync, event ticketing, and self-service guest changes.</span>
-            </div>
-          </div>
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
-              <p className="text-2xl font-bold text-blue-700">24/7</p>
-              <p className="text-xs text-blue-900/80">Guest booking access</p>
-            </div>
-            <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
-              <p className="text-2xl font-bold text-emerald-700">One</p>
-              <p className="text-xs text-emerald-900/80">Dashboard for host team</p>
-            </div>
-          </div>
-        </section>
-
-        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 w-full">
+        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 w-full md:order-last">
           <div className="text-center mb-6">
             <div className="text-3xl font-bold text-gray-900">ReserveSit</div>
             <div className="text-sm text-gray-500 mt-1">Staff Login</div>
@@ -96,6 +64,38 @@ export default function LoginPage() {
             Log In
           </button>
         </form>
+
+        <section className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8 md:order-first">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 mb-2">ReserveSit Platform</p>
+          <h1 className="text-3xl font-bold text-gray-900">Run service, not spreadsheets.</h1>
+          <p className="mt-3 text-gray-600">
+            ReserveSit helps your team manage reservations, waitlists, floor plans, deposits, and event ticketing in one place.
+          </p>
+          <div className="mt-6 space-y-3 text-sm text-gray-700">
+            <div className="flex items-start gap-2">
+              <span className="text-blue-700 font-bold">•</span>
+              <span>Live dashboard for inbox, tonight&apos;s service, guests, and table flow.</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-700 font-bold">•</span>
+              <span>Automated email + SMS notifications, reminders, and no-show protection.</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-700 font-bold">•</span>
+              <span>Optional SpotOn status sync, event ticketing, and self-service guest changes.</span>
+            </div>
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
+              <p className="text-2xl font-bold text-blue-700">24/7</p>
+              <p className="text-xs text-blue-900/80">Guest booking access</p>
+            </div>
+            <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3">
+              <p className="text-2xl font-bold text-emerald-700">One</p>
+              <p className="text-xs text-emerald-900/80">Dashboard for host team</p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

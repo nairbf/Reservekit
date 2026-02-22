@@ -11,6 +11,7 @@ import {
 import { useHasPermission } from "@/hooks/use-permissions";
 
 type Role = "superadmin" | "admin" | "manager" | "host";
+type AssignableRole = Exclude<Role, "superadmin">;
 
 interface AdminUser {
   id: number;
@@ -45,7 +46,7 @@ interface OverviewData {
   };
 }
 
-const ROLES: Role[] = ["superadmin", "admin", "manager", "host"];
+const ASSIGNABLE_ROLES: AssignableRole[] = ["admin", "manager", "host"];
 const ROLE_LABEL: Record<Role, string> = {
   superadmin: "Super Admin",
   admin: "Admin",
@@ -97,7 +98,7 @@ export default function AdminPage() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
-  const [newRole, setNewRole] = useState<Role>("host");
+  const [newRole, setNewRole] = useState<AssignableRole>("host");
   const [newPermissions, setNewPermissions] = useState<PermissionKey[]>(() => asSortedPermissions(getRoleDefaultPermissions("host")));
   const [showCreatePermissions, setShowCreatePermissions] = useState(false);
 
@@ -306,10 +307,10 @@ export default function AdminPage() {
             <input value={newPassword} onChange={e => setNewPassword(e.target.value)} type="password" placeholder="Password (min 8)" className="h-11 border rounded px-3 text-sm" required />
             <select
               value={newRole}
-              onChange={e => setNewRole(e.target.value as Role)}
+              onChange={e => setNewRole(e.target.value as AssignableRole)}
               className="h-11 border rounded px-3 text-sm"
             >
-              {ROLES.map(role => <option key={role} value={role}>{ROLE_LABEL[role]}</option>)}
+              {ASSIGNABLE_ROLES.map(role => <option key={role} value={role}>{ROLE_LABEL[role]}</option>)}
             </select>
           </div>
 
@@ -342,7 +343,7 @@ export default function AdminPage() {
                         const defaults = getRoleDefaultPermissions(newRole);
                         const isDefault = defaults.has(key);
                         const checked = newPermissions.includes(key);
-                        const disabled = key === "view_dashboard" || newRole === "admin" || newRole === "superadmin";
+                        const disabled = key === "view_dashboard" || newRole === "admin";
                         return (
                           <label key={key} className="flex items-start gap-2 rounded border p-2 text-sm">
                             <input
@@ -398,17 +399,27 @@ export default function AdminPage() {
                 </div>
 
                 <div className="mt-3 grid sm:grid-cols-3 gap-2">
-                  <select
-                    value={user.role}
-                    onChange={e => {
-                      const nextRole = e.target.value as Role;
-                      const defaultPermissions = asSortedPermissions(getRoleDefaultPermissions(nextRole)).filter((key) => availablePermissions.includes(key));
-                      updateUser(user, { role: nextRole, permissions: defaultPermissions });
-                    }}
-                    className="h-10 border rounded px-3 text-sm"
-                  >
-                    {ROLES.map(role => <option key={role} value={role}>{ROLE_LABEL[role]}</option>)}
-                  </select>
+                  {user.role === "superadmin" ? (
+                    <select
+                      value={user.role}
+                      disabled
+                      className="h-10 border rounded px-3 text-sm bg-gray-50 text-gray-500"
+                    >
+                      <option value="superadmin">{ROLE_LABEL.superadmin}</option>
+                    </select>
+                  ) : (
+                    <select
+                      value={user.role}
+                      onChange={e => {
+                        const nextRole = e.target.value as AssignableRole;
+                        const defaultPermissions = asSortedPermissions(getRoleDefaultPermissions(nextRole)).filter((key) => availablePermissions.includes(key));
+                        updateUser(user, { role: nextRole, permissions: defaultPermissions });
+                      }}
+                      className="h-10 border rounded px-3 text-sm"
+                    >
+                      {ASSIGNABLE_ROLES.map(role => <option key={role} value={role}>{ROLE_LABEL[role]}</option>)}
+                    </select>
+                  )}
                   <button
                     onClick={() => updateUser(user, { isActive: !user.isActive })}
                     className="h-10 border rounded px-3 text-sm transition-all duration-200"

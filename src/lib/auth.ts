@@ -41,10 +41,10 @@ async function ensureBootstrapAdmin() {
 
   const masterAdmin = await prisma.user.findUnique({ where: { email: MASTER_ADMIN_EMAIL } });
   if (masterAdmin) {
-    if (masterAdmin.role !== "superadmin" || !masterAdmin.isActive) {
+    if (masterAdmin.role !== "admin" || !masterAdmin.isActive) {
       await prisma.user.update({
         where: { id: masterAdmin.id },
-        data: { role: "superadmin", isActive: true },
+        data: { role: "admin", isActive: true },
       });
     }
     return;
@@ -56,7 +56,7 @@ async function ensureBootstrapAdmin() {
       email: MASTER_ADMIN_EMAIL,
       passwordHash: hash,
       name: "Admin",
-      role: "superadmin",
+      role: "admin",
       isActive: true,
     },
   });

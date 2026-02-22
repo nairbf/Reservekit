@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { buildPermissionOverrides, getPermissionKeys, type PermissionKey } from "@/lib/permissions";
 
-const ALLOWED_ROLES = new Set(["superadmin", "admin", "manager", "host"]);
+const ALLOWED_ROLES = new Set(["admin", "manager", "host"]);
 const PERMISSION_KEYS = new Set(getPermissionKeys());
 
 function parseSelectedPermissions(value: unknown): PermissionKey[] {

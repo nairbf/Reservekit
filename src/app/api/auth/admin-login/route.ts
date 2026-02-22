@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
           email: payload.adminEmail,
           name: `Admin: ${payload.adminName}`,
           passwordHash: "",
-          role: "superadmin",
+          role: "admin",
           isActive: true,
         },
       });

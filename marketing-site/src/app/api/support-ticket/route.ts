@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { getServerEnv } from "@/lib/server-env";
 
 export const runtime = "nodejs";
 
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY?.trim();
+  const apiKey = getServerEnv("RESEND_API_KEY");
   if (!apiKey) {
     console.error("[support-ticket] RESEND_API_KEY not configured");
     return NextResponse.json({ error: "Email not configured" }, { status: 500 });

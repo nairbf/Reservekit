@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
 import { getSessionFromRequest } from "@/lib/customer-auth";
+import { getServerEnv } from "@/lib/server-env";
 
 export const runtime = "nodejs";
 
@@ -50,7 +51,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Please enter a valid domain" }, { status: 400 });
   }
 
-  if (!process.env.RESEND_API_KEY) {
+  const apiKey = getServerEnv("RESEND_API_KEY");
+  if (!apiKey) {
     console.warn("[domain-request] RESEND_API_KEY is not configured; email notification skipped.");
     return NextResponse.json({
       ok: true,
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(apiKey);
     await resend.emails.send({
       from: "ReserveSit <reservations@reservesit.com>",
       to: "support@reservesit.com",

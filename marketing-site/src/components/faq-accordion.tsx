@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 
-const faqs = [
+export interface FaqAccordionItem {
+  q: string;
+  a: string;
+}
+
+const defaultFaqs: FaqAccordionItem[] = [
   { q: "How is ReserveSit different from OpenTable?", a: "OpenTable charges per cover and per month, owns your guest data, and starts around ~$3,000-$3,600/year on entry-level plans. ReserveSit is a one-time license ($2,199 / $2,999 / $3,799) - you own it outright, keep all your data, and pay nothing per cover." },
   { q: "How do I migrate from OpenTable/Resy?", a: "We'll help you set up your instance and import your existing reservation data. The setup wizard walks you through restaurant basics, tables, and operating rules in under 30 minutes. Your guests can start booking immediately." },
   { q: "Can I try it before buying?", a: "Yes! Our live demo at demo.reservesit.com is a fully working instance with real data that resets nightly. No sign-up required." },
@@ -28,12 +33,12 @@ const faqs = [
   { q: "What happens if I want to cancel?", a: "Your one-time license fee is permanent - you own the software forever. Annual managed hosting ($1,200/year) covers your dedicated server, SSL, backups, updates, and monitoring. If you cancel hosting, you keep your license and can self-host the software." },
 ];
 
-export function FaqAccordion() {
+export function FaqAccordion({ items = defaultFaqs }: { items?: FaqAccordionItem[] }) {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
     <div className="space-y-3">
-      {faqs.map((item, index) => (
+      {items.map((item, index) => (
         <div key={item.q} className="rounded-xl border border-slate-200 bg-white">
           <button
             type="button"

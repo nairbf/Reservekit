@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { fetchMarketingSettings, withMarketingDefaults } from "@/lib/marketing-settings";
 
 export const metadata: Metadata = {
   title: "About",
@@ -28,15 +29,17 @@ const differentiators = [
   },
 ];
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const settings = withMarketingDefaults(await fetchMarketingSettings());
+
   return (
     <div className="bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_55%)]">
       <div className="mx-auto w-full max-w-5xl space-y-14 px-4 py-16 sm:px-6">
         <section>
           <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-700">About ReserveSit</p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Built by operators, for operators.</h1>
+          <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">{settings.about_headline}</h1>
           <p className="mt-4 max-w-3xl text-lg text-slate-700">
-            ReserveSit was created to give independent restaurants the same technology as the big chains - without the recurring fees.
+            {settings.about_body}
           </p>
         </section>
 

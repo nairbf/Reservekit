@@ -388,7 +388,8 @@ export const ModelName = {
   Restaurant: 'Restaurant',
   LicenseEvent: 'LicenseEvent',
   HealthCheck: 'HealthCheck',
-  EmailSequenceEvent: 'EmailSequenceEvent'
+  EmailSequenceEvent: 'EmailSequenceEvent',
+  MarketingSetting: 'MarketingSetting'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -404,7 +405,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "platformUser" | "restaurant" | "licenseEvent" | "healthCheck" | "emailSequenceEvent"
+    modelProps: "platformUser" | "restaurant" | "licenseEvent" | "healthCheck" | "emailSequenceEvent" | "marketingSetting"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -778,6 +779,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    MarketingSetting: {
+      payload: Prisma.$MarketingSettingPayload<ExtArgs>
+      fields: Prisma.MarketingSettingFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.MarketingSettingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.MarketingSettingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload>
+        }
+        findFirst: {
+          args: Prisma.MarketingSettingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.MarketingSettingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload>
+        }
+        findMany: {
+          args: Prisma.MarketingSettingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload>[]
+        }
+        create: {
+          args: Prisma.MarketingSettingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload>
+        }
+        createMany: {
+          args: Prisma.MarketingSettingCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.MarketingSettingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload>[]
+        }
+        delete: {
+          args: Prisma.MarketingSettingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload>
+        }
+        update: {
+          args: Prisma.MarketingSettingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload>
+        }
+        deleteMany: {
+          args: Prisma.MarketingSettingDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.MarketingSettingUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.MarketingSettingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload>[]
+        }
+        upsert: {
+          args: Prisma.MarketingSettingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$MarketingSettingPayload>
+        }
+        aggregate: {
+          args: Prisma.MarketingSettingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateMarketingSetting>
+        }
+        groupBy: {
+          args: Prisma.MarketingSettingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MarketingSettingGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.MarketingSettingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.MarketingSettingCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -904,6 +979,15 @@ export const EmailSequenceEventScalarFieldEnum = {
 } as const
 
 export type EmailSequenceEventScalarFieldEnum = (typeof EmailSequenceEventScalarFieldEnum)[keyof typeof EmailSequenceEventScalarFieldEnum]
+
+
+export const MarketingSettingScalarFieldEnum = {
+  key: 'key',
+  value: 'value',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MarketingSettingScalarFieldEnum = (typeof MarketingSettingScalarFieldEnum)[keyof typeof MarketingSettingScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1104,6 +1188,7 @@ export type GlobalOmitConfig = {
   licenseEvent?: Prisma.LicenseEventOmit
   healthCheck?: Prisma.HealthCheckOmit
   emailSequenceEvent?: Prisma.EmailSequenceEventOmit
+  marketingSetting?: Prisma.MarketingSettingOmit
 }
 
 /* Types for Logging */

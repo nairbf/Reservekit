@@ -151,3 +151,9 @@ model EmailSequenceEvent {
   @@index([restaurantId, scheduledAt])
   @@index([status, scheduledAt])
 }
+
+model MarketingSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

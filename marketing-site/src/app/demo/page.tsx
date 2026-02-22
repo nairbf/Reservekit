@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import { DemoForm } from "@/components/demo-form";
+import { fetchMarketingSettings, withMarketingDefaults } from "@/lib/marketing-settings";
 
 export const metadata: Metadata = {
   title: "Demo",
   description: "Try ReserveSit live - explore a fully working demo instance with real data. No sign-up required.",
 };
 
-export default function DemoPage() {
+export default async function DemoPage() {
+  const settings = withMarketingDefaults(await fetchMarketingSettings());
+
   return (
     <div className="bg-[linear-gradient(180deg,#eff6ff_0%,#ffffff_60%)]">
       <div className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6">
         <section className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm sm:p-8">
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900">Try ReserveSit right now</h1>
-          <p className="mt-3 text-slate-700">Our demo instance has real data and resets nightly. No sign-up required.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900">{settings.demo_page_headline}</h1>
+          <p className="mt-3 text-slate-700">{settings.demo_page_body}</p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <a

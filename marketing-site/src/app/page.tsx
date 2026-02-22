@@ -31,34 +31,34 @@ export default async function LandingPage() {
           <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:gap-12">
             <div className="flex-1">
               <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                🚀 Now in production - restaurants are live
+                {settings.hero_badge}
               </span>
               <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-blue-700">ReserveSit</p>
               <h1 className="mt-4 max-w-3xl text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-                The reservation platform you buy once and own.
+                {settings.hero_headline}
               </h1>
               <p className="mt-5 max-w-2xl text-lg text-slate-700">
-                OpenTable and similar platforms start at $3,000-$3,600/year on their lowest plans - and go up from there. ReserveSit starts at a one-time $2,199 license.
+                {settings.hero_subheadline}
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
-                  href="/pricing"
+                  href={settings.hero_cta_primary_url}
                   className="inline-flex h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition-all duration-200 hover:bg-blue-700"
                 >
-                  See Pricing
+                  {settings.hero_cta_primary_text}
                 </Link>
                 <Link
-                  href="/demo"
+                  href={settings.hero_cta_secondary_url}
                   className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-800 transition-all duration-200 hover:bg-slate-100"
                 >
-                  Book a Demo Call
+                  {settings.hero_cta_secondary_text}
                 </Link>
               </div>
             </div>
             <div className="flex w-[280px] sm:w-[340px] lg:w-[480px] lg:shrink-0 lg:items-center lg:justify-end">
               <img
-                src="/dashboard-mockup.png"
+                src={settings.hero_image}
                 alt="ReserveSit dashboard"
                 className="w-full drop-shadow-2xl"
                 loading="eager"
@@ -70,9 +70,9 @@ export default async function LandingPage() {
 
       <section id="demo-preview" className="mx-auto w-full max-w-6xl px-4 pt-6 sm:px-6">
         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6 sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-700">👀 See it in action</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.12em] text-blue-700">{settings.demo_section_headline}</p>
           <p className="mt-3 max-w-2xl text-slate-700">
-            Explore a fully working demo instance with real data. No sign-up required.
+            {settings.demo_section_body}
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <a
@@ -97,8 +97,8 @@ export default async function LandingPage() {
       </section>
 
       <section id="features" className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
-        <h2 className="text-3xl font-semibold text-slate-900">Features Built for Real Service</h2>
-        <p className="mt-2 text-slate-600">Everything your team needs to run reservations without subscription lock-in.</p>
+        <h2 className="text-3xl font-semibold text-slate-900">{settings.features_headline}</h2>
+        <p className="mt-2 text-slate-600">{settings.features_subheadline}</p>
         <div className="mt-6 grid gap-3 md:grid-cols-3">
           {featureCategories.map((category) => (
             <div key={category.title} className="rounded-xl border border-slate-200 bg-slate-50 p-4">

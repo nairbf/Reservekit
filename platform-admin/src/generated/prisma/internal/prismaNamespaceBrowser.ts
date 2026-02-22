@@ -55,7 +55,8 @@ export const ModelName = {
   Restaurant: 'Restaurant',
   LicenseEvent: 'LicenseEvent',
   HealthCheck: 'HealthCheck',
-  EmailSequenceEvent: 'EmailSequenceEvent'
+  EmailSequenceEvent: 'EmailSequenceEvent',
+  MarketingSetting: 'MarketingSetting'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -161,6 +162,15 @@ export const EmailSequenceEventScalarFieldEnum = {
 } as const
 
 export type EmailSequenceEventScalarFieldEnum = (typeof EmailSequenceEventScalarFieldEnum)[keyof typeof EmailSequenceEventScalarFieldEnum]
+
+
+export const MarketingSettingScalarFieldEnum = {
+  key: 'key',
+  value: 'value',
+  updatedAt: 'updatedAt'
+} as const
+
+export type MarketingSettingScalarFieldEnum = (typeof MarketingSettingScalarFieldEnum)[keyof typeof MarketingSettingScalarFieldEnum]
 
 
 export const SortOrder = {

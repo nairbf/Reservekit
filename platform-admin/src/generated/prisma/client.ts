@@ -64,3 +64,8 @@ export type HealthCheck = Prisma.HealthCheckModel
  * 
  */
 export type EmailSequenceEvent = Prisma.EmailSequenceEventModel
+/**
+ * Model MarketingSetting
+ * 
+ */
+export type MarketingSetting = Prisma.MarketingSettingModel

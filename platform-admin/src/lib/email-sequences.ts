@@ -56,7 +56,7 @@ ${info.hosted ? `Your Dashboard: ${info.instanceUrl}/login` : `Your License Key:
 
 ${credentialsSection}
 
-${info.hosted ? `We're setting up your hosted instance now. You'll receive a follow-up email within 24 hours with your login credentials and a link to complete your setup.` : `Please follow the self-hosting guide included in your welcome package to install ReserveSit on your server.`}
+${info.hosted ? `Your dashboard is live and ready. Use the credentials above to log in and complete your setup wizard — it only takes a few minutes.` : `Please follow the self-hosting guide included in your welcome package to install ReserveSit on your server.`}
 
 Quick Start Checklist:
 1. Log in to your dashboard

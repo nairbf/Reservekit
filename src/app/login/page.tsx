@@ -7,18 +7,27 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
+    setLoading(true);
     setError("");
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    if (res.ok) router.push("/dashboard");
-    else setError("Invalid email or password");
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.ok) router.push("/dashboard");
+      else setError("Invalid email or password");
+    } catch {
+      setError("Unable to sign in right now. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -60,8 +69,12 @@ export default function LoginPage() {
               Back to site
             </Link>
           </div>
-          <button type="submit" className="w-full h-11 mt-5 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 transition-all duration-200">
-            Log In
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full h-11 mt-5 rounded bg-blue-600 font-medium text-white transition-all duration-200 hover:bg-blue-700 disabled:opacity-60"
+          >
+            {loading ? "Signing in..." : "Log In"}
           </button>
         </form>
 

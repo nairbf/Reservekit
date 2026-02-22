@@ -293,6 +293,7 @@ export default function TonightPage() {
   const [smartData, setSmartData] = useState<SmartTonightResponse | null>(null);
   const [dismissPacingAlerts, setDismissPacingAlerts] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState("");
   const [today, setToday] = useState(() => dateInTimezone("America/New_York"));
   const [selectedDate, setSelectedDate] = useState(() => dateInTimezone("America/New_York"));
   const [editingReservation, setEditingReservation] = useState<{
@@ -327,10 +328,29 @@ export default function TonightPage() {
   if (!canViewTonight) return <AccessDenied />;
 
   const load = useCallback(async () => {
-    const [r, t] = await Promise.all([fetch(`/api/reservations?status=all&date=${selectedDate}`), fetch("/api/tables")]);
-    setReservations(await r.json());
-    setTables(await t.json());
-    setLoaded(true);
+    try {
+      const [reservationResponse, tableResponse] = await Promise.all([
+        fetch(`/api/reservations?status=all&date=${selectedDate}`),
+        fetch("/api/tables"),
+      ]);
+      if (!reservationResponse.ok) {
+        const data = await reservationResponse.json().catch(() => ({}));
+        throw new Error(String(data?.error || "Failed to load reservations."));
+      }
+      if (!tableResponse.ok) {
+        const data = await tableResponse.json().catch(() => ({}));
+        throw new Error(String(data?.error || "Failed to load tables."));
+      }
+      const reservationData = await reservationResponse.json();
+      const tableData = await tableResponse.json();
+      setReservations(Array.isArray(reservationData) ? reservationData : []);
+      setTables(Array.isArray(tableData) ? tableData : []);
+      setError("");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Something went wrong. Please try again.");
+    } finally {
+      setLoaded(true);
+    }
   }, [selectedDate]);
 
   const loadUpcoming = useCallback(async () => {
@@ -338,30 +358,36 @@ export default function TonightPage() {
     try {
       const res = await fetch(`/api/reservations/upcoming?fromDate=${selectedDate}&days=14`);
       if (!res.ok) {
+        setError("Failed to load upcoming reservations.");
         setUpcoming([]);
         return;
       }
       const data = await res.json() as UpcomingResponse;
       setUpcoming(Array.isArray(data.reservations) ? data.reservations : []);
+      setError("");
     } finally {
       setLoadingUpcoming(false);
     }
   }, [selectedDate]);
 
   const loadPosStatus = useCallback(async () => {
-    const res = await fetch("/api/spoton/sync");
-    if (!res.ok) {
+    try {
+      const res = await fetch("/api/spoton/sync");
+      if (!res.ok) {
+        setPosStatusMap({});
+        return;
+      }
+      const data = await res.json();
+      const nextMap: Record<number, PosStatusEntry> = {};
+      const list = Array.isArray(data.status) ? data.status as PosStatusEntry[] : [];
+      for (const item of list) {
+        if (!item || !item.tableId) continue;
+        nextMap[item.tableId] = item;
+      }
+      setPosStatusMap(nextMap);
+    } catch {
       setPosStatusMap({});
-      return;
     }
-    const data = await res.json();
-    const nextMap: Record<number, PosStatusEntry> = {};
-    const list = Array.isArray(data.status) ? data.status as PosStatusEntry[] : [];
-    for (const item of list) {
-      if (!item || !item.tableId) continue;
-      nextMap[item.tableId] = item;
-    }
-    setPosStatusMap(nextMap);
   }, []);
 
   const loadSmartData = useCallback(async () => {
@@ -393,7 +419,10 @@ export default function TonightPage() {
   useEffect(() => {
     let cancelled = false;
     fetch("/api/settings/public")
-      .then((response) => response.json())
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed to load settings.");
+        return response.json();
+      })
       .then((settings) => {
         if (cancelled) return;
         const timezone = String(settings?.timezone || "America/New_York");
@@ -401,24 +430,50 @@ export default function TonightPage() {
         setToday(localToday);
         setSelectedDate(localToday);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setError("Failed to load settings.");
+      });
     return () => {
       cancelled = true;
     };
   }, []);
 
   async function doAction(id: number, action: string, extra?: Record<string, unknown>) {
-    await fetch(`/api/reservations/${id}/action`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, ...extra }) });
-    Promise.all([load(), loadUpcoming()]);
+    try {
+      const res = await fetch(`/api/reservations/${id}/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...extra }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(String(data?.error || "Something went wrong. Please try again."));
+        return;
+      }
+      setError("");
+      await Promise.all([load(), loadUpcoming()]);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    }
   }
 
   async function confirmPreOrder(preOrderId: number) {
-    await fetch("/api/preorder/confirm", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preOrderId }),
-    });
-    load();
+    try {
+      const res = await fetch("/api/preorder/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preOrderId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(String(data?.error || "Something went wrong. Please try again."));
+        return;
+      }
+      setError("");
+      await load();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    }
   }
 
   async function addWalkin() {
@@ -682,6 +737,12 @@ export default function TonightPage() {
           </button>
         </div>
       </div>
+
+      {error ? (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
 
       {visiblePacingAlerts.length > 0 && !dismissPacingAlerts && (
         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">

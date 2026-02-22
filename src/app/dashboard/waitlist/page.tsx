@@ -51,6 +51,7 @@ export default function WaitlistPage() {
   const [smartEstimates, setSmartEstimates] = useState<Record<number, SmartEstimate>>({});
   const [smartWaitlistEnabled, setSmartWaitlistEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<AddFormState>({
@@ -105,13 +106,22 @@ export default function WaitlistPage() {
   }, []);
 
   const load = useCallback(async () => {
-    const res = await fetch("/api/waitlist");
-    if (!res.ok) return;
-    const data = await res.json();
-    const rows = Array.isArray(data) ? data : [];
-    setEntries(rows);
-    loadSmartEstimates(rows).catch(() => undefined);
-    setLoading(false);
+    try {
+      const res = await fetch("/api/waitlist");
+      if (!res.ok) {
+        setError("Failed to load waitlist.");
+        return;
+      }
+      const data = await res.json();
+      const rows = Array.isArray(data) ? data : [];
+      setEntries(rows);
+      setError("");
+      loadSmartEstimates(rows).catch(() => undefined);
+    } catch {
+      setError("Failed to load waitlist.");
+    } finally {
+      setLoading(false);
+    }
   }, [loadSmartEstimates]);
 
   useEffect(() => {
@@ -186,6 +196,11 @@ export default function WaitlistPage() {
 
   return (
     <div className="space-y-4">
+      {error ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Waitlist</h1>

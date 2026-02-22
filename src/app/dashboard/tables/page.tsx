@@ -13,20 +13,37 @@ export default function TablesPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", section: "", minCapacity: 1, maxCapacity: 4 });
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState("");
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "tables";
 
   if (!canManageTables) return <AccessDenied />;
 
   const load = useCallback(async () => {
-    setTables(await (await fetch("/api/tables")).json());
-    setLoaded(true);
+    try {
+      const res = await fetch("/api/tables");
+      if (!res.ok) {
+        setError("Failed to load tables. Please try again.");
+        return;
+      }
+      const data = await res.json();
+      setTables(Array.isArray(data) ? data : []);
+      setError("");
+    } catch {
+      setError("Failed to load tables. Please try again.");
+    } finally {
+      setLoaded(true);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   async function addTable(e: React.FormEvent) {
     e.preventDefault();
-    await fetch("/api/tables", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    const res = await fetch("/api/tables", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+    if (!res.ok) {
+      alert("Failed to save table. Please try again.");
+      return;
+    }
     setForm({ name: "", section: "", minCapacity: 1, maxCapacity: 4 });
     setShowForm(false);
     load();
@@ -34,7 +51,11 @@ export default function TablesPage() {
 
   async function deleteTable(id: number) {
     if (!confirm("Delete this table?")) return;
-    await fetch(`/api/tables/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/tables/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert("Failed to delete table. Please try again.");
+      return;
+    }
     load();
   }
 
@@ -47,6 +68,12 @@ export default function TablesPage() {
         </div>
         <button onClick={() => setShowForm(true)} className="h-11 px-4 rounded-lg bg-blue-600 text-white text-sm font-medium transition-all duration-200">+ Add Table</button>
       </div>
+
+      {error ? (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      ) : null}
 
       {!loaded ? (
         <div className="flex items-center gap-3 text-gray-500">

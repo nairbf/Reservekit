@@ -31,7 +31,7 @@ export const DEFAULT_MARKETING_SETTINGS: MarketingSettings = {
   hero_cta_primary_url: "/pricing",
   hero_cta_secondary_text: "Book a Demo Call",
   hero_cta_secondary_url: "/demo",
-  hero_image: "/dashboard-preview.png",
+  hero_image: "/dashboard-mockup.png",
   features_headline: "Features Built for Real Service",
   features_subheadline: "Everything your team needs to run reservations without subscription lock-in.",
   integrations_list: "📍 SpotOn, 🟩 Square, 🍞 Toast, 🍀 Clover, 💳 Stripe",

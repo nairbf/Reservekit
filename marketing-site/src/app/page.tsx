@@ -3,6 +3,7 @@ import { FeatureGrid } from "@/components/feature-grid";
 import { PricingCards } from "@/components/pricing-cards";
 import { ComparisonTable } from "@/components/comparison-table";
 import { DemoForm } from "@/components/demo-form";
+import { fetchMarketingSettings, parseIntegrations, withMarketingDefaults } from "@/lib/marketing-settings";
 
 const featureCategories = [
   {
@@ -19,9 +20,10 @@ const featureCategories = [
   },
 ];
 
-const integrations = ["📍 SpotOn", "🟩 Square", "🍞 Toast", "🍀 Clover", "💳 Stripe"];
+export default async function LandingPage() {
+  const settings = withMarketingDefaults(await fetchMarketingSettings());
+  const integrations = parseIntegrations(settings.integrations_list);
 
-export default function LandingPage() {
   return (
     <div>
       <section className="bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_35%,#f8fafc_72%)]">
@@ -54,7 +56,7 @@ export default function LandingPage() {
                 </Link>
               </div>
             </div>
-            <div className="hidden md:flex md:w-[380px] lg:w-[480px] lg:shrink-0 lg:items-center lg:justify-end">
+            <div className="flex w-[280px] sm:w-[340px] lg:w-[480px] lg:shrink-0 lg:items-center lg:justify-end">
               <img
                 src="/dashboard-mockup.png"
                 alt="ReserveSit dashboard"

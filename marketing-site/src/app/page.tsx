@@ -51,6 +51,21 @@ export default function LandingPage() {
               Book a Demo Call
             </Link>
           </div>
+
+          {/* Product screenshot */}
+          <div className="mt-12 w-full">
+            <div className="relative mx-auto max-w-5xl">
+              <div className="rounded-2xl border border-blue-100 bg-white p-2 shadow-[0_24px_80px_-20px_rgba(37,99,235,0.25)] sm:p-3">
+                <img
+                  src="/dashboard-preview.jpg"
+                  alt="ReserveSit dashboard on desktop and tablet"
+                  className="w-full rounded-xl"
+                  loading="lazy"
+                />
+              </div>
+              <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-blue-100/40 blur-2xl" />
+            </div>
+          </div>
         </div>
       </section>
 

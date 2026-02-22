@@ -54,7 +54,7 @@ export default function LandingPage() {
                 </Link>
               </div>
             </div>
-            <div className="hidden lg:flex lg:w-[480px] lg:shrink-0 lg:items-center lg:justify-end">
+            <div className="hidden md:flex md:w-[380px] lg:w-[480px] lg:shrink-0 lg:items-center lg:justify-end">
               <img
                 src="/dashboard-mockup.png"
                 alt="ReserveSit dashboard"

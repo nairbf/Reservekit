@@ -11,6 +11,7 @@ const navItems = [
   { href: "/dashboard/restaurants", label: "Restaurants", icon: "▤" },
   { href: "/dashboard/licenses", label: "Licenses", icon: "⌘" },
   { href: "/dashboard/health", label: "Health", icon: "◉" },
+  { href: "/dashboard/traffic", label: "Traffic", icon: "📈" },
   { href: "/dashboard/marketing", label: "Marketing Site", icon: "✦" },
   { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
 ];

@@ -349,6 +349,7 @@ export default function SettingsPage() {
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [testRecipient, setTestRecipient] = useState("");
   const [clockMs, setClockMs] = useState(() => Date.now());
+  const [licenseSyncedOnLoad, setLicenseSyncedOnLoad] = useState(false);
 
   const smsEnabled = settings.feature_sms === "true";
 
@@ -377,6 +378,24 @@ export default function SettingsPage() {
       .catch(() => setSettings({}))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (loading || licenseSyncedOnLoad) return;
+    setLicenseSyncedOnLoad(true);
+
+    async function syncLicenseOnLoad() {
+      try {
+        const response = await fetch("/api/license/validate", { method: "POST" });
+        if (response.ok) {
+          await loadSettings();
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    syncLicenseOnLoad().catch(() => undefined);
+  }, [loading, licenseSyncedOnLoad]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

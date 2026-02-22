@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { LicenseEventType, RestaurantStatus } from "@/generated/prisma/client";
+import { LicenseEventType, RestaurantPlan, RestaurantStatus } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db";
 import { createLicenseEvent } from "@/lib/license-events";
 
@@ -7,6 +7,34 @@ export const runtime = "nodejs";
 
 function isBlockedStatus(status: RestaurantStatus) {
   return status === "SUSPENDED" || status === "CANCELLED";
+}
+
+function planFeatures(plan: RestaurantPlan) {
+  if (plan === "FULL_SUITE") {
+    return {
+      sms: true,
+      floorPlan: true,
+      reporting: true,
+      guestHistory: true,
+      eventTicketing: true,
+    };
+  }
+  if (plan === "SERVICE_PRO") {
+    return {
+      sms: true,
+      floorPlan: true,
+      reporting: true,
+      guestHistory: false,
+      eventTicketing: false,
+    };
+  }
+  return {
+    sms: false,
+    floorPlan: false,
+    reporting: false,
+    guestHistory: false,
+    eventTicketing: false,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -59,18 +87,33 @@ export async function POST(request: NextRequest) {
     performedBy: "system",
   });
 
+  const baseFeatures = planFeatures(restaurant.plan);
+  const addOns = {
+    sms: Boolean(restaurant.addonSms),
+    floorPlan: Boolean(restaurant.addonFloorPlan),
+    reporting: Boolean(restaurant.addonReporting),
+    guestHistory: Boolean(restaurant.addonGuestHistory),
+    eventTicketing: Boolean(restaurant.addonEventTicketing),
+  };
+  const features = {
+    sms: baseFeatures.sms || addOns.sms,
+    floorPlan: baseFeatures.floorPlan || addOns.floorPlan,
+    reporting: baseFeatures.reporting || addOns.reporting,
+    guestHistory: baseFeatures.guestHistory || addOns.guestHistory,
+    eventTicketing: baseFeatures.eventTicketing || addOns.eventTicketing,
+  };
+  const enabledAddons = Object.entries(addOns)
+    .filter(([, enabled]) => enabled)
+    .map(([key]) => key);
+
   return NextResponse.json({
     valid: true,
     status: restaurant.status,
     plan: restaurant.plan,
     restaurantName: restaurant.name,
-    features: {
-      sms: restaurant.addonSms,
-      floorPlan: restaurant.addonFloorPlan,
-      reporting: restaurant.addonReporting,
-      guestHistory: restaurant.addonGuestHistory,
-      eventTicketing: restaurant.addonEventTicketing,
-    },
+    features,
+    addons: addOns,
+    enabledAddons,
     expiresAt: restaurant.licenseExpiry?.toISOString() || null,
   });
 }

@@ -92,6 +92,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [creating, setCreating] = useState(false);
   const [savingPermissions, setSavingPermissions] = useState<number | null>(null);
 
@@ -128,35 +129,52 @@ export default function AdminPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [overviewRes, usersRes] = await Promise.all([
-      fetch("/api/admin/overview"),
-      fetch("/api/admin/users"),
-    ]);
+    setLoadError("");
+    try {
+      const [overviewRes, usersRes] = await Promise.all([
+        fetch("/api/admin/overview"),
+        fetch("/api/admin/users"),
+      ]);
 
-    if (overviewRes.status === 403 || usersRes.status === 403) {
-      setMessage("You do not have permission to manage staff accounts.");
+      if (overviewRes.status === 403 || usersRes.status === 403) {
+        setMessage("You do not have permission to manage staff accounts.");
+        setOverview(null);
+        setUsers([]);
+        return;
+      }
+
+      if (!overviewRes.ok || !usersRes.ok) {
+        const [overviewPayload, usersPayload] = await Promise.all([
+          overviewRes.json().catch(() => ({})),
+          usersRes.json().catch(() => ({})),
+        ]);
+        const overviewError = String((overviewPayload as { error?: string })?.error || "");
+        const usersError = String((usersPayload as { error?: string })?.error || "");
+        throw new Error(overviewError || usersError || "Failed to load staff settings.");
+      }
+
+      const [overviewData, usersData] = await Promise.all([
+        overviewRes.json(),
+        usersRes.json(),
+      ]);
+
+      const nextUsers = Array.isArray(usersData) ? (usersData as AdminUser[]) : [];
+      setOverview((overviewData || null) as OverviewData | null);
+      setUsers(nextUsers);
+      setPermissionDrafts(() => {
+        const drafts: Record<number, PermissionKey[]> = {};
+        for (const user of nextUsers) {
+          drafts[user.id] = asSortedPermissions(getUserPermissions(user.role, user.permissions));
+        }
+        return drafts;
+      });
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Failed to load admin data.");
       setOverview(null);
       setUsers([]);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const [overviewData, usersData] = await Promise.all([
-      overviewRes.json(),
-      usersRes.json(),
-    ]);
-
-    const nextUsers = Array.isArray(usersData) ? (usersData as AdminUser[]) : [];
-    setOverview(overviewData as OverviewData);
-    setUsers(nextUsers);
-    setPermissionDrafts(() => {
-      const drafts: Record<number, PermissionKey[]> = {};
-      for (const user of nextUsers) {
-        drafts[user.id] = asSortedPermissions(getUserPermissions(user.role, user.permissions));
-      }
-      return drafts;
-    });
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -164,10 +182,7 @@ export default function AdminPage() {
       setLoading(false);
       return;
     }
-    load().catch(() => {
-      setMessage("Failed to load admin data.");
-      setLoading(false);
-    });
+    load().catch(() => undefined);
   }, [canManageStaff, load]);
 
   useEffect(() => {
@@ -226,6 +241,8 @@ export default function AdminPage() {
       setNewRole("host");
       setMessage(`Created user ${data.email}.`);
       await load();
+    } catch {
+      setMessage("Failed to create user.");
     } finally {
       setCreating(false);
     }
@@ -233,18 +250,22 @@ export default function AdminPage() {
 
   async function updateUser(user: AdminUser, patch: Partial<{ role: Role; isActive: boolean; password: string; permissions: PermissionKey[] }>) {
     setMessage("");
-    const res = await fetch(`/api/admin/users/${user.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setMessage(data.error || "Failed to update user.");
-      return;
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(String((data as { error?: string })?.error || "Failed to update user."));
+        return;
+      }
+      setMessage(`Updated ${(data as { email?: string }).email || user.email}.`);
+      await load();
+    } catch {
+      setMessage("Failed to update user.");
     }
-    setMessage(`Updated ${data.email}.`);
-    await load();
   }
 
   async function saveUserPermissions(user: AdminUser) {
@@ -276,6 +297,19 @@ export default function AdminPage() {
         <h1 className="text-2xl font-bold">Staff Permissions</h1>
         <p className="text-sm text-gray-500">Role defaults with per-user permission overrides.</p>
       </div>
+
+      {loadError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="h-9 rounded border border-red-200 bg-white px-3 text-xs font-medium text-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       {message && <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">{message}</div>}
 

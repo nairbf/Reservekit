@@ -323,6 +323,7 @@ export default function TonightPage() {
   } | null>(null);
   const [seatSaving, setSeatSaving] = useState(false);
   const [seatError, setSeatError] = useState("");
+  const [actionBusy, setActionBusy] = useState<{ id: number; action: string } | null>(null);
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "tonight";
 
   if (!canViewTonight) return <AccessDenied />;
@@ -439,7 +440,11 @@ export default function TonightPage() {
   }, []);
 
   async function doAction(id: number, action: string, extra?: Record<string, unknown>) {
+    if (actionBusy) return false;
+    if (action === "noshow" && !confirm("Mark this reservation as no-show?")) return false;
+    if (action === "complete" && !confirm("Mark this table as completed?")) return false;
     try {
+      setActionBusy({ id, action });
       const res = await fetch(`/api/reservations/${id}/action`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -448,12 +453,16 @@ export default function TonightPage() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(String(data?.error || "Something went wrong. Please try again."));
-        return;
+        return false;
       }
       setError("");
       await Promise.all([load(), loadUpcoming()]);
+      return true;
     } catch {
       setError("Something went wrong. Please try again.");
+      return false;
+    } finally {
+      setActionBusy(null);
     }
   }
 
@@ -531,12 +540,12 @@ export default function TonightPage() {
     setSeatError("");
     try {
       const tableId = seatModal.tableId ? Number(seatModal.tableId) : null;
-      await doAction(
+      const ok = await doAction(
         seatModal.reservationId,
         "seat",
         tableId ? { tableId } : {},
       );
-      setSeatModal(null);
+      if (ok) setSeatModal(null);
     } catch {
       setSeatError("Unable to seat this reservation right now.");
     } finally {
@@ -739,8 +748,20 @@ export default function TonightPage() {
       </div>
 
       {error ? (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => {
+              load();
+              loadUpcoming();
+              loadPosStatus();
+              loadSmartData();
+            }}
+            className="h-8 rounded border border-red-200 bg-white px-3 text-xs font-medium text-red-700"
+          >
+            Retry
+          </button>
         </div>
       ) : null}
 
@@ -923,27 +944,47 @@ export default function TonightPage() {
                     {!["completed", "cancelled"].includes(r.status) && (
                       <button
                         onClick={() => openEditModal(r)}
-                        className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-white text-gray-700 border border-gray-200 text-xs transition-all duration-200"
+                        className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-white text-gray-700 border border-gray-200 text-xs transition-all duration-200 disabled:opacity-60"
+                        disabled={Boolean(actionBusy)}
                       >
                         Edit
                       </button>
                     )}
                     {(["approved", "confirmed"].includes(r.status)) && (
-                      <button onClick={() => doAction(r.id, "arrive")} className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 text-xs transition-all duration-200">Arrived</button>
+                      <button
+                        onClick={() => doAction(r.id, "arrive")}
+                        className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 text-xs transition-all duration-200 disabled:opacity-60"
+                        disabled={Boolean(actionBusy)}
+                      >
+                        {actionBusy?.id === r.id && actionBusy.action === "arrive" ? "Saving..." : "Arrived"}
+                      </button>
                     )}
                     {(["arrived", "approved", "confirmed"].includes(r.status)) && (
                       <button
                         onClick={() => openSeatModal(r)}
-                        className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-green-50 text-green-800 border border-green-200 text-xs transition-all duration-200"
+                        className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-green-50 text-green-800 border border-green-200 text-xs transition-all duration-200 disabled:opacity-60"
+                        disabled={Boolean(actionBusy)}
                       >
                         Seat
                       </button>
                     )}
                     {r.status === "seated" && (
-                      <button onClick={() => doAction(r.id, "complete")} className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-gray-100 text-gray-700 border border-gray-200 text-xs transition-all duration-200">Complete</button>
+                      <button
+                        onClick={() => doAction(r.id, "complete")}
+                        className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-gray-100 text-gray-700 border border-gray-200 text-xs transition-all duration-200 disabled:opacity-60"
+                        disabled={Boolean(actionBusy)}
+                      >
+                        {actionBusy?.id === r.id && actionBusy.action === "complete" ? "Saving..." : "Complete"}
+                      </button>
                     )}
                     {(["approved", "confirmed"].includes(r.status)) && (
-                      <button onClick={() => doAction(r.id, "noshow")} className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-red-50 text-red-700 border border-red-200 text-xs transition-all duration-200">No-show</button>
+                      <button
+                        onClick={() => doAction(r.id, "noshow")}
+                        className="h-11 sm:h-9 px-4 sm:px-3 rounded bg-red-50 text-red-700 border border-red-200 text-xs transition-all duration-200 disabled:opacity-60"
+                        disabled={Boolean(actionBusy)}
+                      >
+                        {actionBusy?.id === r.id && actionBusy.action === "noshow" ? "Saving..." : "No-show"}
+                      </button>
                     )}
                   </div>
                 </div>

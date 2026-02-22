@@ -54,6 +54,8 @@ export default function WaitlistPage() {
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [actionBusy, setActionBusy] = useState<{ id: number; action: "notify" | "seat" | "remove" | "cancel" } | null>(null);
+  const [statusMessage, setStatusMessage] = useState("");
   const [form, setForm] = useState<AddFormState>({
     guestName: "",
     guestPhone: "",
@@ -153,21 +155,48 @@ export default function WaitlistPage() {
   if (!canManageWaitlist) return <AccessDenied />;
 
   async function updateStatus(id: number, action: "notify" | "seat" | "remove" | "cancel") {
+    if (actionBusy) return;
+    if (action === "remove" && !confirm("Remove this guest from the waitlist?")) return;
+    if (action === "seat" && !confirm("Seat this waitlist guest now?")) return;
+
+    setActionBusy({ id, action });
+    setStatusMessage("");
+    setError("");
     const payload: Record<string, unknown> = { action };
     if (action === "seat") payload.createReservation = true;
-    await fetch(`/api/waitlist/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    load();
+    try {
+      const response = await fetch(`/api/waitlist/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(String((data as { error?: string })?.error || "Failed to update waitlist status."));
+        return;
+      }
+      setStatusMessage(
+        action === "notify"
+          ? "Guest notified."
+          : action === "seat"
+            ? "Guest seated and reservation created."
+            : "Guest removed from waitlist.",
+      );
+      await load();
+    } catch {
+      setError("Failed to update waitlist status.");
+    } finally {
+      setActionBusy(null);
+    }
   }
 
   async function addToWaitlist(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    setStatusMessage("");
+    setError("");
     try {
-      await fetch("/api/waitlist", {
+      const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -177,9 +206,17 @@ export default function WaitlistPage() {
           notes: form.notes || null,
         }),
       });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(String((data as { error?: string })?.error || "Unable to add waitlist party."));
+        return;
+      }
       setForm({ guestName: "", guestPhone: "", partySize: "2", notes: "" });
       setShowAdd(false);
-      load();
+      setStatusMessage("Added to waitlist.");
+      await load();
+    } catch {
+      setError("Unable to add waitlist party.");
     } finally {
       setSaving(false);
     }
@@ -197,8 +234,20 @@ export default function WaitlistPage() {
   return (
     <div className="space-y-4">
       {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="h-8 rounded border border-red-200 bg-white px-3 text-xs font-medium text-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
+      {statusMessage ? (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {statusMessage}
         </div>
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -279,13 +328,31 @@ export default function WaitlistPage() {
               {entry.notes && <div className="text-sm text-gray-600 mt-2">{entry.notes}</div>}
               <div className="mt-3 flex flex-wrap gap-2">
                 {entry.status === "waiting" && (
-                  <button onClick={() => updateStatus(entry.id, "notify")} className="h-11 px-4 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 text-sm transition-all duration-200">Notify</button>
+                  <button
+                    onClick={() => updateStatus(entry.id, "notify")}
+                    className="h-11 px-4 rounded bg-yellow-50 text-yellow-800 border border-yellow-200 text-sm transition-all duration-200 disabled:opacity-60"
+                    disabled={Boolean(actionBusy)}
+                  >
+                    {actionBusy?.id === entry.id && actionBusy.action === "notify" ? "Notifying..." : "Notify"}
+                  </button>
                 )}
                 {["waiting", "notified"].includes(entry.status) && (
-                  <button onClick={() => updateStatus(entry.id, "seat")} className="h-11 px-4 rounded bg-green-50 text-green-800 border border-green-200 text-sm transition-all duration-200">Seat</button>
+                  <button
+                    onClick={() => updateStatus(entry.id, "seat")}
+                    className="h-11 px-4 rounded bg-green-50 text-green-800 border border-green-200 text-sm transition-all duration-200 disabled:opacity-60"
+                    disabled={Boolean(actionBusy)}
+                  >
+                    {actionBusy?.id === entry.id && actionBusy.action === "seat" ? "Seating..." : "Seat"}
+                  </button>
                 )}
                 {["waiting", "notified"].includes(entry.status) && (
-                  <button onClick={() => updateStatus(entry.id, "remove")} className="h-11 px-4 rounded bg-gray-100 text-gray-700 border border-gray-200 text-sm transition-all duration-200">Remove</button>
+                  <button
+                    onClick={() => updateStatus(entry.id, "remove")}
+                    className="h-11 px-4 rounded bg-gray-100 text-gray-700 border border-gray-200 text-sm transition-all duration-200 disabled:opacity-60"
+                    disabled={Boolean(actionBusy)}
+                  >
+                    {actionBusy?.id === entry.id && actionBusy.action === "remove" ? "Removing..." : "Remove"}
+                  </button>
                 )}
               </div>
             </div>

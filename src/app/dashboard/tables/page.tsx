@@ -14,6 +14,9 @@ export default function TablesPage() {
   const [form, setForm] = useState({ name: "", section: "", minCapacity: 1, maxCapacity: 4 });
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [savingTable, setSavingTable] = useState(false);
+  const [deletingTableId, setDeletingTableId] = useState<number | null>(null);
   const showTourHighlight = searchParams.get("fromSetup") === "1" && searchParams.get("tour") === "tables";
 
   if (!canManageTables) return <AccessDenied />;
@@ -28,6 +31,7 @@ export default function TablesPage() {
       const data = await res.json();
       setTables(Array.isArray(data) ? data : []);
       setError("");
+      setStatusMessage("");
     } catch {
       setError("Failed to load tables. Please try again.");
     } finally {
@@ -39,24 +43,48 @@ export default function TablesPage() {
 
   async function addTable(e: React.FormEvent) {
     e.preventDefault();
-    const res = await fetch("/api/tables", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
-    if (!res.ok) {
-      alert("Failed to save table. Please try again.");
-      return;
+    if (savingTable) return;
+    setSavingTable(true);
+    setError("");
+    setStatusMessage("");
+    try {
+      const res = await fetch("/api/tables", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(String((payload as { error?: string })?.error || "Failed to save table. Please try again."));
+        return;
+      }
+      setForm({ name: "", section: "", minCapacity: 1, maxCapacity: 4 });
+      setShowForm(false);
+      setStatusMessage("Table created.");
+      await load();
+    } catch {
+      setError("Failed to save table. Please try again.");
+    } finally {
+      setSavingTable(false);
     }
-    setForm({ name: "", section: "", minCapacity: 1, maxCapacity: 4 });
-    setShowForm(false);
-    load();
   }
 
   async function deleteTable(id: number) {
+    if (deletingTableId) return;
     if (!confirm("Delete this table?")) return;
-    const res = await fetch(`/api/tables/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      alert("Failed to delete table. Please try again.");
-      return;
+    setDeletingTableId(id);
+    setError("");
+    setStatusMessage("");
+    try {
+      const res = await fetch(`/api/tables/${id}`, { method: "DELETE" });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(String((payload as { error?: string })?.error || "Failed to delete table. Please try again."));
+        return;
+      }
+      setStatusMessage("Table deleted.");
+      await load();
+    } catch {
+      setError("Failed to delete table. Please try again.");
+    } finally {
+      setDeletingTableId(null);
     }
-    load();
   }
 
   return (
@@ -70,8 +98,20 @@ export default function TablesPage() {
       </div>
 
       {error ? (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="h-8 rounded border border-red-200 bg-white px-3 text-xs font-medium text-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
+      {statusMessage ? (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {statusMessage}
         </div>
       ) : null}
 
@@ -90,7 +130,13 @@ export default function TablesPage() {
                     <div className="font-bold text-lg">{t.name}</div>
                     {t.section && <div className="text-sm text-gray-500">{t.section}</div>}
                   </div>
-                  <button onClick={() => deleteTable(t.id)} className="h-11 px-3 rounded-lg border border-red-200 text-red-600 text-sm transition-all duration-200">Delete</button>
+                  <button
+                    onClick={() => deleteTable(t.id)}
+                    disabled={deletingTableId !== null}
+                    className="h-11 px-3 rounded-lg border border-red-200 text-red-600 text-sm transition-all duration-200 disabled:opacity-60"
+                  >
+                    {deletingTableId === t.id ? "Deleting..." : "Delete"}
+                  </button>
                 </div>
                 <div className="text-sm text-gray-600 mt-2">Seats {t.minCapacity}–{t.maxCapacity}</div>
                 <div className="text-xs text-gray-400 mt-1">ID: {t.id}</div>
@@ -116,7 +162,13 @@ export default function TablesPage() {
                     <td className="p-4 text-gray-500">{t.section || "—"}</td>
                     <td className="p-4 text-gray-600">{t.minCapacity}–{t.maxCapacity}</td>
                     <td className="p-4 text-right">
-                      <button onClick={() => deleteTable(t.id)} className="text-red-600 text-sm">Delete</button>
+                      <button
+                        onClick={() => deleteTable(t.id)}
+                        disabled={deletingTableId !== null}
+                        className="text-red-600 text-sm disabled:opacity-60"
+                      >
+                        {deletingTableId === t.id ? "Deleting..." : "Delete"}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -156,9 +208,22 @@ export default function TablesPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-5 flex gap-2">
-              <button type="button" onClick={() => setShowForm(false)} className="h-11 flex-1 rounded-lg border border-gray-200 text-gray-700 transition-all duration-200">Cancel</button>
-              <button type="submit" className="h-11 flex-1 rounded-lg bg-blue-600 text-white font-medium transition-all duration-200">Save Table</button>
+            <div className="sticky bottom-0 mt-5 flex gap-2 bg-white pb-1">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="h-11 flex-1 rounded-lg border border-gray-200 text-gray-700 transition-all duration-200"
+                disabled={savingTable}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="h-11 flex-1 rounded-lg bg-blue-600 text-white font-medium transition-all duration-200 disabled:opacity-60"
+                disabled={savingTable}
+              >
+                {savingTable ? "Saving..." : "Save Table"}
+              </button>
             </div>
           </form>
         </div>

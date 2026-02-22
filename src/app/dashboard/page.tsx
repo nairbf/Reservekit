@@ -204,6 +204,7 @@ export default function ReservationsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [activeView, setActiveView] = useState<SubView>("incoming");
   const [workingAction, setWorkingAction] = useState<{ id: number; label: string } | null>(null);
 
@@ -308,6 +309,7 @@ export default function ReservationsPage() {
   async function reservationAction(id: number, action: string, extra?: Record<string, unknown>) {
     setWorkingAction({ id, label: action });
     setActionError("");
+    setStatusMessage("");
     try {
       const response = await fetch(`/api/reservations/${id}/action`, {
         method: "POST",
@@ -319,6 +321,17 @@ export default function ReservationsPage() {
         setActionError(String(payload?.error || "Unable to update reservation."));
         return false;
       }
+      const nextMessage =
+        action === "approve"
+          ? "Reservation approved."
+          : action === "decline"
+            ? "Reservation declined."
+            : action === "counter"
+              ? "Counter-offer sent."
+              : action === "cancel"
+                ? "Reservation cancelled."
+                : "Reservation updated.";
+      setStatusMessage(nextMessage);
       await load();
       return true;
     } catch {
@@ -332,6 +345,7 @@ export default function ReservationsPage() {
   async function updateReservation(id: number, data: Record<string, unknown>, actionLabel = "update") {
     setWorkingAction({ id, label: actionLabel });
     setActionError("");
+    setStatusMessage("");
     try {
       const response = await fetch(`/api/reservations/${id}`, {
         method: "PUT",
@@ -343,6 +357,7 @@ export default function ReservationsPage() {
         setActionError(String(payload?.error || "Unable to save reservation."));
         return false;
       }
+      setStatusMessage("Reservation updated.");
       await load();
       return true;
     } catch {
@@ -366,6 +381,7 @@ export default function ReservationsPage() {
 
   function openCreateModal(source: ReservationSource = "staff") {
     setCreateError("");
+    setStatusMessage("");
     setReservationForm(createDefaultReservationForm(today, source));
     setCreateModalOpen(true);
   }
@@ -404,6 +420,7 @@ export default function ReservationsPage() {
         return;
       }
       setCreateModalOpen(false);
+      setStatusMessage("Reservation created.");
       await load();
     } catch {
       setCreateError("Unable to create reservation.");
@@ -448,6 +465,7 @@ export default function ReservationsPage() {
         return;
       }
       setEditingReservation(null);
+      setStatusMessage("Reservation updated.");
       await load();
     } catch {
       setEditError("Unable to save reservation changes.");
@@ -599,14 +617,26 @@ export default function ReservationsPage() {
       </div>
 
       {loadError ? (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          {loadError}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <span>{loadError}</span>
+          <button
+            type="button"
+            onClick={() => load()}
+            className="h-8 rounded border border-amber-200 bg-white px-3 text-xs font-medium text-amber-900"
+          >
+            Retry
+          </button>
         </div>
       ) : null}
 
       {actionError ? (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {actionError}
+        </div>
+      ) : null}
+      {statusMessage ? (
+        <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {statusMessage}
         </div>
       ) : null}
 
@@ -719,7 +749,10 @@ export default function ReservationsPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => reservationAction(reservation.id, "decline")}
+                        onClick={() => {
+                          if (!confirm("Decline this reservation request?")) return;
+                          reservationAction(reservation.id, "decline");
+                        }}
                         className="h-11 w-full rounded bg-red-600 text-sm font-medium text-white transition-all duration-200 hover:bg-red-500"
                         disabled={workingAction?.id === reservation.id}
                       >
@@ -831,7 +864,10 @@ export default function ReservationsPage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => reservationAction(reservation.id, "cancel")}
+                                onClick={() => {
+                                  if (!confirm("Cancel this reservation?")) return;
+                                  reservationAction(reservation.id, "cancel");
+                                }}
                                 className="h-10 w-full rounded border border-red-200 bg-red-50 px-3 text-sm font-medium text-red-700 sm:w-auto"
                                 disabled={workingAction?.id === reservation.id}
                               >
@@ -955,7 +991,10 @@ export default function ReservationsPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => reservationAction(reservation.id, "cancel")}
+                            onClick={() => {
+                              if (!confirm("Cancel this reservation?")) return;
+                              reservationAction(reservation.id, "cancel");
+                            }}
                             className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 disabled:opacity-50"
                             disabled={!canEdit || workingAction?.id === reservation.id}
                           >
@@ -1020,278 +1059,290 @@ export default function ReservationsPage() {
       ) : null}
 
       {createModalOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-4 shadow-xl sm:p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">New Reservation</h2>
-                <p className="text-sm text-slate-500">Create a reservation from the dashboard.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => !createSaving && setCreateModalOpen(false)}
-                className="h-9 w-9 rounded-lg border border-slate-300 text-sm text-slate-600"
-                aria-label="Close reservation modal"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Guest Name</span>
-                <input
-                  value={reservationForm.guestName}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, guestName: event.target.value }))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Phone</span>
-                <input
-                  value={reservationForm.guestPhone}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, guestPhone: event.target.value }))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                />
-              </label>
-              <label className="text-sm sm:col-span-2">
-                <span className="mb-1 block font-medium text-slate-700">Email (optional)</span>
-                <input
-                  value={reservationForm.guestEmail}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, guestEmail: event.target.value }))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Party Size</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={reservationForm.partySize}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, partySize: event.target.value }))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Duration (min)</span>
-                <input
-                  type="number"
-                  min={30}
-                  value={reservationForm.durationMin}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, durationMin: event.target.value }))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                  placeholder="Default"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Date</span>
-                <input
-                  type="date"
-                  value={reservationForm.date}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, date: event.target.value }))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                  disabled={reservationForm.source === "walkin"}
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Time</span>
-                <input
-                  type="time"
-                  value={reservationForm.time}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, time: event.target.value }))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                  disabled={reservationForm.source === "walkin"}
-                />
-              </label>
-              <label className="text-sm sm:col-span-2">
-                <span className="mb-1 block font-medium text-slate-700">Table Assignment (optional)</span>
-                <select
-                  value={reservationForm.tableId}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, tableId: event.target.value }))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-screen w-full flex-col overflow-hidden rounded-t-xl bg-white shadow-xl sm:max-h-[90vh] sm:max-w-2xl sm:rounded-xl">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">New Reservation</h2>
+                  <p className="text-sm text-slate-500">Create a reservation from the dashboard.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !createSaving && setCreateModalOpen(false)}
+                  className="h-9 w-9 rounded-lg border border-slate-300 text-sm text-slate-600"
+                  aria-label="Close reservation modal"
                 >
-                  <option value="">Unassigned</option>
-                  {tables.map((table) => (
-                    <option key={table.id} value={table.id}>
-                      {table.name} ({table.maxCapacity}-top)
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-sm sm:col-span-2">
-                <span className="mb-1 block font-medium text-slate-700">Special Requests / Notes</span>
-                <textarea
-                  value={reservationForm.specialRequests}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, specialRequests: event.target.value }))}
-                  className="min-h-[88px] w-full rounded border border-slate-300 px-3 py-2"
-                />
-              </label>
-            </div>
-
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-wrap gap-2">
-                {([
-                  { key: "phone", label: "Phone Call" },
-                  { key: "walkin", label: "Walk-in" },
-                  { key: "staff", label: "Staff Entry" },
-                ] as Array<{ key: ReservationSource; label: string }>).map((sourceOption) => (
-                  <button
-                    key={sourceOption.key}
-                    type="button"
-                    onClick={() => setReservationForm((prev) => ({
-                      ...prev,
-                      source: sourceOption.key,
-                      autoApprove: sourceOption.key === "walkin" ? true : prev.autoApprove,
-                    }))}
-                    className={`h-9 rounded-lg border px-3 text-sm ${
-                      reservationForm.source === sourceOption.key
-                        ? "border-blue-200 bg-blue-50 text-blue-700"
-                        : "border-slate-300 bg-white text-slate-700"
-                    }`}
-                  >
-                    {sourceOption.label}
-                  </button>
-                ))}
+                  ✕
+                </button>
               </div>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={reservationForm.source === "walkin" ? true : reservationForm.autoApprove}
-                  onChange={(event) => setReservationForm((prev) => ({ ...prev, autoApprove: event.target.checked }))}
-                  disabled={reservationForm.source === "walkin"}
-                />
-                Auto-approve
-              </label>
             </div>
 
-            {createError ? <p className="mt-3 text-sm text-red-600">{createError}</p> : null}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Guest Name</span>
+                  <input
+                    value={reservationForm.guestName}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, guestName: event.target.value }))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Phone</span>
+                  <input
+                    value={reservationForm.guestPhone}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, guestPhone: event.target.value }))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  />
+                </label>
+                <label className="text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium text-slate-700">Email (optional)</span>
+                  <input
+                    value={reservationForm.guestEmail}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, guestEmail: event.target.value }))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Party Size</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={reservationForm.partySize}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, partySize: event.target.value }))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Duration (min)</span>
+                  <input
+                    type="number"
+                    min={30}
+                    value={reservationForm.durationMin}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, durationMin: event.target.value }))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                    placeholder="Default"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Date</span>
+                  <input
+                    type="date"
+                    value={reservationForm.date}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, date: event.target.value }))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                    disabled={reservationForm.source === "walkin"}
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Time</span>
+                  <input
+                    type="time"
+                    value={reservationForm.time}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, time: event.target.value }))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                    disabled={reservationForm.source === "walkin"}
+                  />
+                </label>
+                <label className="text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium text-slate-700">Table Assignment (optional)</span>
+                  <select
+                    value={reservationForm.tableId}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, tableId: event.target.value }))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  >
+                    <option value="">Unassigned</option>
+                    {tables.map((table) => (
+                      <option key={table.id} value={table.id}>
+                        {table.name} ({table.maxCapacity}-top)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium text-slate-700">Special Requests / Notes</span>
+                  <textarea
+                    value={reservationForm.specialRequests}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, specialRequests: event.target.value }))}
+                    className="min-h-[88px] w-full rounded border border-slate-300 px-3 py-2"
+                  />
+                </label>
+              </div>
 
-            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setCreateModalOpen(false)}
-                className="h-10 w-full rounded border border-slate-300 px-4 text-sm text-slate-700 sm:w-auto"
-                disabled={createSaving}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => submitCreateReservation()}
-                className="h-10 w-full rounded bg-slate-900 px-4 text-sm font-medium text-white transition-all duration-200 hover:bg-slate-800 sm:w-auto"
-                disabled={createSaving}
-              >
-                {createSaving ? "Saving..." : "Create Reservation"}
-              </button>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { key: "phone", label: "Phone Call" },
+                    { key: "walkin", label: "Walk-in" },
+                    { key: "staff", label: "Staff Entry" },
+                  ] as Array<{ key: ReservationSource; label: string }>).map((sourceOption) => (
+                    <button
+                      key={sourceOption.key}
+                      type="button"
+                      onClick={() => setReservationForm((prev) => ({
+                        ...prev,
+                        source: sourceOption.key,
+                        autoApprove: sourceOption.key === "walkin" ? true : prev.autoApprove,
+                      }))}
+                      className={`h-9 rounded-lg border px-3 text-sm ${
+                        reservationForm.source === sourceOption.key
+                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                          : "border-slate-300 bg-white text-slate-700"
+                      }`}
+                    >
+                      {sourceOption.label}
+                    </button>
+                  ))}
+                </div>
+                <label className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={reservationForm.source === "walkin" ? true : reservationForm.autoApprove}
+                    onChange={(event) => setReservationForm((prev) => ({ ...prev, autoApprove: event.target.checked }))}
+                    disabled={reservationForm.source === "walkin"}
+                  />
+                  Auto-approve
+                </label>
+              </div>
+
+              {createError ? <p className="mt-3 text-sm text-red-600">{createError}</p> : null}
+            </div>
+
+            <div className="sticky bottom-0 border-t border-slate-200 bg-white p-3 sm:p-4">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  className="h-10 w-full rounded border border-slate-300 px-4 text-sm text-slate-700 sm:w-auto"
+                  disabled={createSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => submitCreateReservation()}
+                  className="h-10 w-full rounded bg-slate-900 px-4 text-sm font-medium text-white transition-all duration-200 hover:bg-slate-800 sm:w-auto"
+                  disabled={createSaving}
+                >
+                  {createSaving ? "Saving..." : "Create Reservation"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       ) : null}
 
       {editingReservation ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-xl rounded-xl bg-white p-4 shadow-xl sm:p-5">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Edit Reservation</h2>
-                <p className="text-sm text-slate-500">Update guest details, timing, and table assignment.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => !editSaving && setEditingReservation(null)}
-                className="h-9 w-9 rounded-lg border border-slate-300 text-sm text-slate-600"
-                aria-label="Close edit modal"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="text-sm sm:col-span-2">
-                <span className="mb-1 block font-medium text-slate-700">Guest Name</span>
-                <input
-                  value={editingReservation.guestName}
-                  onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, guestName: event.target.value } : prev))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Date</span>
-                <input
-                  type="date"
-                  value={editingReservation.date}
-                  onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, date: event.target.value } : prev))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Time</span>
-                <input
-                  type="time"
-                  value={editingReservation.time}
-                  onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, time: event.target.value } : prev))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Party Size</span>
-                <input
-                  type="number"
-                  min={1}
-                  value={editingReservation.partySize}
-                  onChange={(event) => {
-                    const parsed = Math.max(1, Math.trunc(Number(event.target.value) || 1));
-                    setEditingReservation((prev) => (prev ? { ...prev, partySize: parsed } : prev));
-                  }}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
-                />
-              </label>
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Table</span>
-                <select
-                  value={editingReservation.tableId}
-                  onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, tableId: event.target.value } : prev))}
-                  className="h-11 w-full rounded border border-slate-300 px-3"
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+          <div className="flex max-h-screen w-full flex-col overflow-hidden rounded-t-xl bg-white shadow-xl sm:max-h-[90vh] sm:max-w-xl sm:rounded-xl">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Edit Reservation</h2>
+                  <p className="text-sm text-slate-500">Update guest details, timing, and table assignment.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !editSaving && setEditingReservation(null)}
+                  className="h-9 w-9 rounded-lg border border-slate-300 text-sm text-slate-600"
+                  aria-label="Close edit modal"
                 >
-                  <option value="">Unassigned</option>
-                  {tables
-                    .filter((table) => table.maxCapacity >= editingReservation.partySize)
-                    .map((table) => (
-                      <option key={table.id} value={table.id}>
-                        {table.name} ({table.maxCapacity}-top)
-                      </option>
-                    ))}
-                </select>
-              </label>
-              <label className="text-sm sm:col-span-2">
-                <span className="mb-1 block font-medium text-slate-700">Special Requests</span>
-                <textarea
-                  value={editingReservation.specialRequests}
-                  onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, specialRequests: event.target.value } : prev))}
-                  className="min-h-[88px] w-full rounded border border-slate-300 px-3 py-2"
-                />
-              </label>
+                  ✕
+                </button>
+              </div>
             </div>
 
-            {editError ? <p className="mt-3 text-sm text-red-600">{editError}</p> : null}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium text-slate-700">Guest Name</span>
+                  <input
+                    value={editingReservation.guestName}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, guestName: event.target.value } : prev))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Date</span>
+                  <input
+                    type="date"
+                    value={editingReservation.date}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, date: event.target.value } : prev))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Time</span>
+                  <input
+                    type="time"
+                    value={editingReservation.time}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, time: event.target.value } : prev))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Party Size</span>
+                  <input
+                    type="number"
+                    min={1}
+                    value={editingReservation.partySize}
+                    onChange={(event) => {
+                      const parsed = Math.max(1, Math.trunc(Number(event.target.value) || 1));
+                      setEditingReservation((prev) => (prev ? { ...prev, partySize: parsed } : prev));
+                    }}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  />
+                </label>
+                <label className="text-sm">
+                  <span className="mb-1 block font-medium text-slate-700">Table</span>
+                  <select
+                    value={editingReservation.tableId}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, tableId: event.target.value } : prev))}
+                    className="h-11 w-full rounded border border-slate-300 px-3"
+                  >
+                    <option value="">Unassigned</option>
+                    {tables
+                      .filter((table) => table.maxCapacity >= editingReservation.partySize)
+                      .map((table) => (
+                        <option key={table.id} value={table.id}>
+                          {table.name} ({table.maxCapacity}-top)
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label className="text-sm sm:col-span-2">
+                  <span className="mb-1 block font-medium text-slate-700">Special Requests</span>
+                  <textarea
+                    value={editingReservation.specialRequests}
+                    onChange={(event) => setEditingReservation((prev) => (prev ? { ...prev, specialRequests: event.target.value } : prev))}
+                    className="min-h-[88px] w-full rounded border border-slate-300 px-3 py-2"
+                  />
+                </label>
+              </div>
 
-            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setEditingReservation(null)}
-                className="h-10 w-full rounded border border-slate-300 px-4 text-sm text-slate-700 sm:w-auto"
-                disabled={editSaving}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => saveEditReservation()}
-                className="h-10 w-full rounded bg-slate-900 px-4 text-sm font-medium text-white transition-all duration-200 hover:bg-slate-800 sm:w-auto"
-                disabled={editSaving}
-              >
-                {editSaving ? "Saving..." : "Save Changes"}
-              </button>
+              {editError ? <p className="mt-3 text-sm text-red-600">{editError}</p> : null}
+            </div>
+
+            <div className="sticky bottom-0 border-t border-slate-200 bg-white p-3 sm:p-4">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingReservation(null)}
+                  className="h-10 w-full rounded border border-slate-300 px-4 text-sm text-slate-700 sm:w-auto"
+                  disabled={editSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveEditReservation()}
+                  className="h-10 w-full rounded bg-slate-900 px-4 text-sm font-medium text-white transition-all duration-200 hover:bg-slate-800 sm:w-auto"
+                  disabled={editSaving}
+                >
+                  {editSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -198,7 +198,7 @@ export default function PricingPageClient() {
   }
 
   return (
-    <div className="bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_28%,#ffffff_68%)]">
+    <div className="bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_28%,#ffffff_68%)] pb-24 xl:pb-0">
       <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <section className="rounded-3xl border border-blue-100 bg-white/90 p-8 shadow-[0_24px_70px_-35px_rgba(37,99,235,0.35)] sm:p-12">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">ReserveSit Pricing</p>
@@ -215,7 +215,7 @@ export default function PricingPageClient() {
           <div className="space-y-8">
             <section>
               <h2 className="text-2xl font-semibold text-slate-900">Choose a Plan</h2>
-              <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {plans.map((item) => {
                   const active = item.key === plan;
                   return (
@@ -354,8 +354,21 @@ export default function PricingPageClient() {
 
             <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-6 sm:p-8">
               <h2 className="text-2xl font-semibold text-slate-900">💰 How much will you save?</h2>
-              <div className="mt-5 overflow-x-auto rounded-xl border border-blue-200 bg-white">
-                <table className="min-w-[760px] w-full text-sm">
+              <div className="mt-5 md:hidden space-y-3">
+                {savingsRows.map((row) => (
+                  <div key={row.label} className={`rounded-xl border p-4 ${row.reserveSit ? "border-blue-200 bg-blue-50" : "border-slate-200 bg-white"}`}>
+                    <p className={`font-semibold text-sm ${row.reserveSit ? "text-blue-700" : "text-slate-700"}`}>{row.label}</p>
+                    <div className="mt-2 grid grid-cols-2 gap-1 text-xs">
+                      <span className="text-slate-500">Year 1</span><span className={`font-semibold ${row.reserveSit ? "text-blue-700" : "text-slate-700"}`}>{row.year1}</span>
+                      <span className="text-slate-500">Year 2</span><span className={`font-semibold ${row.reserveSit ? "text-blue-700" : "text-slate-700"}`}>{row.year2}</span>
+                      <span className="text-slate-500">Year 3</span><span className={`font-semibold ${row.reserveSit ? "text-blue-700" : "text-slate-700"}`}>{row.year3}</span>
+                      <span className="text-slate-500">3-Year Total</span><span className={`font-bold ${row.reserveSit ? "text-blue-700" : "text-slate-700"}`}>{row.total}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto rounded-xl border border-blue-200 bg-white">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
                       <th className="px-4 py-3">Plan</th>
@@ -464,6 +477,25 @@ export default function PricingPageClient() {
             ))}
           </div>
         </section>
+      </div>
+
+      <div className="xl:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white px-4 py-3 shadow-lg">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
+          <div>
+            <p className="text-xs text-slate-500">Total due today</p>
+            <p className="text-lg font-bold text-slate-900">{usd(oneTimeTotal)}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCheckoutError("");
+              setShowCheckoutModal(true);
+            }}
+            className="h-11 rounded-lg bg-blue-600 px-6 text-sm font-semibold text-white"
+          >
+            Checkout
+          </button>
+        </div>
       </div>
 
       {showCheckoutModal ? (
